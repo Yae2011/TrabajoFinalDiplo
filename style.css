@@ -1,0 +1,137 @@
+/* Definición de variables de color para fácil personalización */
+:root {
+    --input-bg-color: #FFFDE7;
+    /* Restaurado a amarillo muy suave */
+    /* Borde de inputs (Amarillo más oscuro) */
+    --input-border-color: #FDD835;
+    /* Color del texto */
+    --text-color: #000000;
+    /* Fondo del botón (Amarillo intenso/oro) */
+    --button-bg-color: #FFEB3B;
+    /* Fondo del botón al pasar el mouse */
+    --button-hover-bg-color: #FDD835;
+    /* Fondo de los contenedores principales */
+    --container-bg-color: #FFF176;
+    /* Fondo de los títulos de pestañas */
+    --title-bg-color: #aaff3b;
+
+    /* Variables de sombras */
+    --shadow-light: rgba(0, 0, 0, 0.1);
+    --shadow-medium: rgba(0, 0, 0, 0.15);
+    --shadow-strong: rgba(0, 0, 0, 0.3);
+}
+
+
+/* Estilos generales */
+.custom-input {
+    background-color: var(--input-bg-color) !important;
+    color: var(--text-color) !important;
+    border: 1px solid var(--input-border-color) !important;
+    /* Sombra explícita: 5px derecha, 5px abajo, difuminado, color oscuro */
+    box-shadow: 5px 5px 8px rgba(0, 0, 0, 0.3) !important;
+    border-radius: 8px !important;
+}
+
+/* Para asegurar que el texto de las opciones sea legible y los títulos en negrita */
+.custom-input span,
+.custom-input label,
+.custom-radio span,
+.custom-radio label,
+.block-label {
+    color: var(--text-color) !important;
+    font-weight: bold !important;
+}
+
+/* Botones con efecto 3D más pronunciado */
+.custom-button {
+    background-color: var(--button-bg-color) !important;
+    color: var(--text-color) !important;
+    border: none !important;
+    box-shadow: 4px 4px 8px var(--shadow-strong) !important;
+    border-radius: 8px !important;
+    font-weight: bold !important;
+    transition: all 0.2s ease;
+}
+
+.custom-button:hover {
+    background-color: var(--button-hover-bg-color) !important;
+    transform: translateY(-1px);
+}
+
+.custom-button:active {
+    transform: translateY(2px);
+    box-shadow: 2px 2px 4px var(--shadow-strong) !important;
+}
+
+/* Radio buttons (Grupo de opciones) */
+.custom-radio {
+    background-color: var(--input-bg-color) !important;
+    padding: 10px !important;
+    border-radius: 8px !important;
+    box-shadow: 3px 3px 5px var(--shadow-light) !important;
+}
+
+/* Dataframe */
+.custom-df {
+    background-color: var(--container-bg-color);
+    border-radius: 10px;
+    padding: 15px;
+    box-shadow: 4px 4px 10px var(--shadow-medium);
+    font-weight: bold !important;
+    font-size: 24px !important;
+    color: var(--text-color) !important;
+}
+
+/* Contenedores de pestañas o áreas principales */
+.custom-tab-bg {
+    background-color: var(--container-bg-color);
+    border-radius: 10px;
+    padding: 15px;
+    box-shadow: 4px 4px 10px var(--shadow-medium);
+    font-weight: bold !important;
+    font-size: 14px !important;
+    color: var(--text-color) !important;
+}
+
+/* Contenedores para salida de datos */
+.custom-output {
+    background-color: var(--button-bg-color) !important;
+    color: var(--text-color) !important;
+    border: none !important;
+    box-shadow: 4px 4px 8px var(--shadow-strong) !important;
+    border-radius: 8px !important;
+    font-weight: bold !important;
+    font-size: 18px !important;
+    height: 40px !important;
+    width: 100% !important;
+    text-align: left !important;
+    padding: 10px !important;
+    /*margin: 10px !important;*/
+}
+
+/* Títulos de pestañas */
+.title-tab {
+    background-color: var(--title-bg-color) !important;
+    border: none !important;
+    box-shadow: 4px 4px 8px var(--shadow-strong) !important;
+    border-radius: 8px !important;
+    height: 40px !important;
+    width: 100% !important;
+    /*margin: 10px !important;*/
+}
+
+.title-text {
+    font-weight: bold !important;
+    font-size: 22px !important;
+    color: var(--text-color) !important;
+    text-align: left !important;
+    padding-top: 3px !important;
+    padding-left: 5px !important;
+}
+
+/* --- Info Display (Label next to button) --- */
+/* --- Info Display (Label styled as a badge) --- */
+.info-display {
+    font-weight: bold !important;
+    font-size: 16px !important;
+}
