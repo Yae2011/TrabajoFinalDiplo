@@ -178,7 +178,7 @@ def filter_data(df, provincia, departamento, sector, ambito):
     # final_df = filtered # Mostrar todas las filas y todas las columnas
 
     # Information string
-    info_text = f"{provincia} - {departamento}: \n{len(filtered)} registros \n{len(data_cols)} campos"
+    info_text = f"{provincia} - {departamento}: {len(filtered)} registros {len(data_cols)} campos"
     
     return stats, final_df, info_text
 
@@ -196,7 +196,7 @@ with open(image_path, "rb") as image_file:
 
 css_content += f"""
     .gradio-container {{
-        background-image: url('data:image/png;base64,{encoded_string}') !important;
+        /*background-image: url('data:image/png;base64,{encoded_string}') !important;*/
         background-size: cover !important;
         background-attachment: fixed !important;
         background-repeat: no-repeat !important;
@@ -240,11 +240,12 @@ with gr.Blocks(title="Análisis Educativo") as app:
                     sector = gr.Radio(label="Sector", choices=["Estatal", "Privado", "Ambos"], value="Ambos", elem_classes=["custom-radio", "vertical-radio"])
                     ambito = gr.Radio(label="Ámbito", choices=["Urbano", "Rural", "Ambos"], value="Ambos", elem_classes=["custom-radio", "vertical-radio"])
                 
-                    # info_label ahora es un HTML con estilo propio
-                    info_label = gr.HTML(value=" ", elem_classes="info-display")
+                    
                     btn_mostrar = gr.Button("Mostrar Datos", variant="primary", elem_classes="custom-button")
         
                 with gr.Column(scale=20, elem_classes="custom-tab-bg"):
+                    # info_label ahora es un HTML con estilo propio
+                    info_label = gr.HTML(value=" ", elem_classes="info-display")
                     gr.HTML(value="Estadísticas del Dataset", elem_classes="info-display")
                     stats_table = gr.Dataframe(interactive=False)
                     gr.HTML(value="Muestra del Dataset", elem_classes="info-display")
@@ -298,10 +299,6 @@ with gr.Blocks(title="Análisis Educativo") as app:
             # Initial Load Trigger (Optional, to load the default selection)
             app.load(fn=on_dataset_change, inputs=[tipo_consulta], outputs=[dataset_state, jurisdiccion, departamento])
 
-        with gr.Tab("Algoritmos Genéticos"):
-            with gr.Row(elem_classes="title-tab"):
-                gr.HTML("OPTIMIZACIÓN DEL MODELADO DE SERIES TEMPORALES MEDIANTE ALGORITMOS GENÉTICOS", elem_classes="title-text")
-            
         with gr.Tab("Series Temporales"):
             with gr.Row(elem_classes="title-tab"):
                 gr.HTML("DEFINICIÓN DE LAS SERIES TEMPORALES A SER COMPARADAS", elem_classes="title-text")
@@ -309,18 +306,22 @@ with gr.Blocks(title="Análisis Educativo") as app:
         with gr.Tab("Series de Fourier"):
             with gr.Row(elem_classes="title-tab"):
                 gr.HTML("ANÁLISIS DE SERIES TEMPORALES MEDIANTE SERIES DE FOURIER", elem_classes="title-text")
-        
-        with gr.Tab("Probabilidad Bayesiana"):
+
+        with gr.Tab("Yael - Bosques Aleatorios"):
+            with gr.Row(elem_classes="title-tab"):
+                gr.HTML("ANÁLISIS DE INDICADORES EDUCATIVOS MEDIANTE BOSQUES ALEATORIOS", elem_classes="title-text")
+                
+        with gr.Tab("Marco - Probabilidad Bayesiana"):
             with gr.Row(elem_classes="title-tab"):
                 gr.HTML("ANÁLISIS DE SERIES TEMPORALES MEDIANTE PROBABILIDAD BAYESIANA", elem_classes="title-text")
         
         with gr.Tab("Yael - Redes Neuronales"):
             with gr.Row(elem_classes="title-tab"):
-                gr.HTML("ANÁLISIS DE SERIES TEMPORALES MEDIANTE PROBABILIDAD BAYESIANA", elem_classes="title-text")
+                gr.HTML("ANÁLISIS DE INDICADORES EDUCATIVOS MEDIANTE REDES NEURONALES", elem_classes="title-text")
         
         with gr.Tab("Marco - KNN & SVM"):
             with gr.Row(elem_classes="title-tab"):
-                gr.HTML("ANÁLISIS DE SERIES TEMPORALES MEDIANTE PROBABILIDAD BAYESIANA", elem_classes="title-text")
+                gr.HTML("ANÁLISIS DE INDICADORES EDUCATIVOS CON K-NN Y SVM", elem_classes="title-text")
             
         with gr.Tab("Conclusiones"):
             with gr.Row(elem_classes="title-tab"):
