@@ -1,44 +1,33 @@
-/* ============================================
-   PASTEL GRAYSCALE COLOR PALETTE
-   ============================================ */
 :root {
-    /* Background Colors */
     --input-bg-color: #F5F5F5;
-    /* Very light gray for inputs */
+    /* Color para campos de entrada */
     --container-bg-color: #EBEBEB;
-    /* Light gray for containers */
+    /* Color para contenedores */
     --button-bg-color: #E0E0E0;
-    /* Medium-light gray for buttons */
+    /* Color para botón */
     --button-hover-bg-color: #BDBDBD;
-    /* Darker gray on hover */
+    /* Color para botón seleccionado */
     --title-bg-color: #EBEBEB;
-    /* Medium gray for titles */
+    /* Color para fondo de títulos */
 
-    /* Border and Text Colors */
     --input-border-color: #D3D3D3;
-    /* Medium gray for borders */
-    --text-color: #4A4A4A;
-    /* Dark gray for text */
+    /* Color para borde de campos de entrada */
+    --text-color: #000000;
+    /* Color para texto */
 
-    /* Font Size Variables */
-    --font-size-small: 12px;
-    /* For data display */
+    --font-size-small: 10px;
     --font-size-medium: 12px;
-    /* For buttons and options */
     --font-size-large: 20px;
-    /* For titles */
     --font-size-data: 12px;
-    /* For dropdown values and dataframe cells */
 
-    /* Shadow Variables */
+    /* Color para sombras */
     --shadow-light: rgba(0, 0, 0, 0.06);
     --shadow-medium: rgba(0, 0, 0, 0.10);
     --shadow-strong: rgba(0, 0, 0, 0.15);
 }
 
-/* ============================================
-   GENERAL TEXT STYLING
-   ============================================ */
+
+/* ### ESTILO GENERAL DEL TEXTO */
 .custom-input span,
 .custom-input label,
 .custom-radio span,
@@ -48,26 +37,25 @@
     font-weight: bold !important;
 }
 
-/* ============================================
-   INPUT FIELDS & DROPDOWNS
-   ============================================ */
+
+/* ### CAMPOS DE ENTRADA */
 .custom-input {
     background-color: var(--input-bg-color) !important;
     color: var(--text-color) !important;
     border: 1px solid var(--input-border-color) !important;
     box-shadow: 5px 5px 8px rgba(0, 0, 0, 0.3) !important;
-    border-radius: 8px !important;
+    border-radius: 10px !important;
+    margin-bottom: 8px !important;
 }
 
-/* ============================================
-   BUTTONS
-   ============================================ */
+
+/* ### BOTONES */
 .custom-button {
     background-color: var(--button-bg-color) !important;
     color: var(--text-color) !important;
     border: none !important;
     box-shadow: 4px 4px 8px var(--shadow-strong) !important;
-    border-radius: 8px !important;
+    border-radius: 10px !important;
     font-weight: bold !important;
     transition: all 0.2s ease;
 }
@@ -82,28 +70,31 @@
     box-shadow: 2px 2px 4px var(--shadow-strong) !important;
 }
 
-/* ============================================
-   RADIO BUTTONS
-   ============================================ */
+
+/* ### LISTA DE OPCIONES */
 .custom-radio {
     background-color: var(--input-bg-color) !important;
     padding: 10px !important;
-    border-radius: 8px !important;
+    border-radius: 10px !important;
     box-shadow: 3px 3px 5px var(--shadow-light) !important;
+    margin-bottom: 8px !important;
 }
 
-/* Force vertical layout for radio buttons */
+
+/* ### LISTA DE OPCIONES: DESPLIEGUE VERTICAL FORZADO */
 .vertical-radio fieldset {
     display: flex !important;
     flex-direction: column !important;
     gap: 8px !important;
+    border-radius: 10px !important;
 }
 
 .vertical-radio label {
     margin-bottom: 0 !important;
 }
 
-/* Ensure radio button options have same background as container */
+
+/* ### COLOR DE FONDO PARA LISTA DE OPCIONES */
 .custom-radio fieldset,
 .custom-radio .wrap,
 .custom-radio label,
@@ -111,19 +102,20 @@
     background-color: var(--input-bg-color) !important;
 }
 
-/* ============================================
-   CONTAINERS & BACKGROUNDS
-   ============================================ */
+
+/* ### CONTENEDORES */
 .custom-tab-bg {
     background-color: var(--container-bg-color);
     border-radius: 10px;
     padding: 15px;
     box-shadow: 4px 4px 10px var(--shadow-medium);
     font-weight: bold !important;
-    font-size: var(--font-size-medium) !important;
+    font-size: var(--font-size-small) !important;
     color: var(--text-color) !important;
 }
 
+
+/* ### DATAFRAMES */
 .custom-df {
     background-color: var(--container-bg-color);
     border-radius: 10px;
@@ -134,6 +126,8 @@
     color: var(--text-color) !important;
 }
 
+
+/* ### CAMPOS DE SALIDA */
 .custom-output {
     background-color: var(--button-bg-color) !important;
     color: var(--text-color) !important;
@@ -141,16 +135,15 @@
     box-shadow: 4px 4px 8px var(--shadow-strong) !important;
     border-radius: 8px !important;
     font-weight: bold !important;
-    font-size: var(--font-size-small) !important;
+    font-size: var(--font-size-medium) !important;
     height: 40px !important;
     width: 100% !important;
     text-align: left !important;
     padding: 10px !important;
 }
 
-/* ============================================
-   TITLES & HEADERS
-   ============================================ */
+
+/* ### OBLEA PARA TÍTULOS */
 .title-tab {
     background-color: var(--title-bg-color) !important;
     border: none !important;
@@ -160,6 +153,8 @@
     width: 100% !important;
 }
 
+
+/* ### TEXTO PARA TÍTULOS */
 .title-text {
     font-weight: bold !important;
     font-size: var(--font-size-large) !important;
@@ -169,14 +164,22 @@
     padding-left: 5px !important;
 }
 
-.info-display {
+
+/* ### TEXTO PARA CAMPOS INFORMATIVOS 1*/
+.info-display_1 {
+    font-weight: bold !important;
+    font-size: var(--font-size-large) !important;
+}
+
+
+/* ### TEXTO PARA CAMPOS INFORMATIVOS 2*/
+.info-display_2 {
     font-weight: bold !important;
     font-size: var(--font-size-medium) !important;
 }
 
-/* ============================================
-   NARROW COLUMN (LEFT SIDEBAR)
-   ============================================ */
+
+/* ### COLUMNA ANGOSTA: BARRA LATERAL IZQUIERDA */
 .narrow-column {
     font-size: var(--font-size-medium) !important;
 }
@@ -201,10 +204,8 @@
     font-size: var(--font-size-medium) !important;
 }
 
-/* ============================================
-   DROPDOWN VALUES & DATAFRAME CELLS
-   ============================================ */
-/* Dropdown selected value and options */
+
+/* ### VALORES SELECCIONADOS DE LISTAS DESPLEGABLES Y OPCIONES */
 .custom-input input,
 .custom-input select,
 .custom-input .wrap,
@@ -212,7 +213,8 @@
     font-size: var(--font-size-data) !important;
 }
 
-/* Dataframe table cells and content */
+
+/* ### CELDAS DE DATAFRAMES */
 table td,
 table th,
 .dataframe,

@@ -185,7 +185,7 @@ def filter_data(df, provincia, departamento, sector, ambito):
 
 # --- UI Construction ---
 # Read CSS file
-with open("style.css", "r") as f:
+with open("style.css", "r", encoding="utf-8") as f:
     css_content = f.read()
 
 # Encode background image
@@ -245,10 +245,10 @@ with gr.Blocks(title="Análisis Educativo") as app:
         
                 with gr.Column(scale=20, elem_classes="custom-tab-bg"):
                     # info_label ahora es un HTML con estilo propio
-                    info_label = gr.HTML(value=" ", elem_classes="info-display")
-                    gr.HTML(value="Estadísticas del Dataset", elem_classes="info-display")
+                    info_label = gr.HTML(value=" ", elem_classes="info-display-2")
+                    gr.HTML(value="Estadísticas del Dataset", elem_classes="info-display-1")
                     stats_table = gr.Dataframe(interactive=False)
-                    gr.HTML(value="Muestra del Dataset", elem_classes="info-display")
+                    gr.HTML(value="Muestra del Dataset", elem_classes="info-display-1")
                     output_table = gr.Dataframe(interactive=False)
 
             
