@@ -2,6 +2,9 @@ import gradio as gr
 import pandas as pd
 import os
 import base64
+import matplotlib
+matplotlib.use('Agg') # Non-interactive backend
+import matplotlib.pyplot as plt
 
 # --- Constants ---
 DATA_PATH = "./Datasets"
@@ -79,7 +82,42 @@ def on_provincia_change(df, provincia):
     dptos = sorted([str(d) for d in dptos])
     return gr.update(choices=dptos, value=None)
 
-def get_filtered_subset(df, provincia, departamento, sector, ambito):
+def create_boxplot(df):
+    if df is None or df.empty:
+        return None
+    
+    # Identify numeric columns for plotting
+    # Exclude 'periodo' as it is a time reference
+    numeric_cols = df.select_dtypes(include=['number']).columns.tolist()
+    cols_to_plot = [c for c in numeric_cols if c != 'periodo']
+    
+    if not cols_to_plot:
+        return None
+
+    fig, ax = plt.subplots(figsize=(10, 6))
+    
+    # Extract data values handling potential NaNs
+    data_values = []
+    headers = []
+    for col in cols_to_plot:
+        data_values.append(df[col].dropna())
+        headers.append(col)
+        
+    # Create boxplot
+    box = ax.boxplot(data_values, patch_artist=True, labels=headers, medianprops=dict(color="white", linewidth=1.5))
+    
+    # Style: Celeste (lightblue)
+    for patch in box['boxes']:
+        patch.set_facecolor('blue')
+        
+    ax.set_title("Cantidad de Estudiantes por Categoría")
+    ax.yaxis.grid(True, linestyle='--', alpha=0.7)
+    plt.xticks(rotation=90, fontsize=5)
+    plt.tight_layout()
+    
+    return fig
+
+def get_filtered_subset(df, consulta_type, provincia, departamento, sector, ambito):
     if df is None or df.empty:
         return pd.DataFrame()
     
@@ -158,43 +196,55 @@ def get_filtered_subset(df, provincia, departamento, sector, ambito):
     
     return aggregated
 
-def calculate_info(df, provincia, departamento, sector, ambito):
+def format_dataset_name(name):
+    if not name: return ""
+    return name.upper().replace("MATR.", "MATRÍCULA")
+
+def calculate_info(df, consulta_type, provincia, departamento, sector, ambito):
     if df is None or df.empty or not provincia or not departamento:
         return ""
         
-    filtered = get_filtered_subset(df, provincia, departamento, sector, ambito)
+    filtered = get_filtered_subset(df, consulta_type, provincia, departamento, sector, ambito)
     
     # Calculate visible data columns count (excluding key columns)
     # Typically 5 key columns: periodo, provincia, departamento, sector, ambito
     data_cols_count = max(0, len(filtered.columns) - 5)
     
-    return f"{provincia} - {departamento}: {len(filtered)} registros - {data_cols_count} campos"
+    ds_name = format_dataset_name(consulta_type)
+    return f"{ds_name} - {provincia} - {departamento}: {len(filtered)} registros - {data_cols_count} campos"
 
-def filter_data(df, provincia, departamento, sector, ambito):
-    filtered = get_filtered_subset(df, provincia, departamento, sector, ambito)
+def filter_data(df, consulta_type, provincia, departamento, sector, ambito):
+    filtered = get_filtered_subset(df, consulta_type, provincia, departamento, sector, ambito)
     
     if filtered.empty:
-        return pd.DataFrame(), pd.DataFrame(), ""
+        return pd.DataFrame(), pd.DataFrame(), "", None
         
     # Calcular estadísticas del dataset FILTRADO
     stats = filtered.drop(columns=['periodo'], errors='ignore').describe().round(2).reset_index().rename(columns={'index': 'Medida'})
 
     all_cols = list(filtered.columns)
-    # data_cols = all_cols[5:] # All columns after the keys
-    data_cols = all_cols[0:1] + all_cols[5:] # Primera columna del año y luego todas las columnas luego de las de filtrado
     
-    # Show columns 1, 6, 7, ... (not keys columns)
-    # Mostrar las primeras 14 filas de las columnas seleccionadas
-    # final_df = filtered[data_cols].head(14)
-    # Mostrar todas las filas de las columnas seleccionadas
-    final_df = filtered[data_cols] 
-    # Mostrar todas las filas de todas las columnas
-    # final_df = filtered # Mostrar todas las filas y todas las columnas
+    # Columns to show: exclude filtering keys to avoid redundancy if desired, 
+    # but user request history implied showing everything or specific logic.
+    # Previous logic was: data_cols = all_cols[0:1] + all_cols[5:]
+    # Now we want better dynamic handling.
+    # We will exclude the standard navigation keys from the main view if that's the goal, 
+    # OR follow the previous "everything after keys" logic.
+    # The keys are: provincia, departamento, sector, ambito.
+    # 'periodo' is usually kept. 'grado' should be kept.
+    
+    cols_to_show = [c for c in all_cols if c not in ['provincia', 'departamento', 'sector', 'ambito']]
+    
+    final_df = filtered[cols_to_show] 
 
     # Information string
-    info_text = f"{provincia} - {departamento}: {len(filtered)} registros {len(data_cols)} campos"
+    ds_name = format_dataset_name(consulta_type)
+    info_text = f"{ds_name} - {provincia} - {departamento}: {len(filtered)} registros - {len(cols_to_show)} campos"
     
-    return stats, final_df, info_text
+    # Generate Plot
+    fig = create_boxplot(final_df)
+    
+    return stats, final_df, info_text, fig
 
 # 1. Leer el contenido del CSS manualmente para asegurar compatibilidad
 # 1. Funcion para convertir imagen a Base64
@@ -282,10 +332,13 @@ with gr.Blocks(title="Análisis Educativo") as app:
                 with gr.Column(scale=20, elem_classes="custom-tab-bg"):
                     # info_label ahora es un HTML con estilo propio
                     info_label = gr.HTML(value=" ", elem_classes="info-display-2")
-                    gr.HTML(value="Estadísticas del Dataset", elem_classes="info-display-1")
+                    gr.HTML(value="ESTADÍSTICAS DEL DATASET", elem_classes="info-display-1")
                     stats_table = gr.Dataframe(interactive=False)
-                    gr.HTML(value="Muestra del Dataset", elem_classes="info-display-1")
+                    gr.HTML(value="CONTENIDO DEL DATASET", elem_classes="info-display-1")
                     output_table = gr.Dataframe(interactive=False)
+                    
+                    gr.HTML(value="GRÁFICO DE ESTUDIANTES POR CATEGORÍA", elem_classes="info-display-1")
+                    output_plot = gr.Plot(label="Distribución")
 
             
             # --- Interactions ---
@@ -306,15 +359,15 @@ with gr.Blocks(title="Análisis Educativo") as app:
             # 3. Filter and Show
             btn_mostrar.click(
                 fn=filter_data,
-                inputs=[dataset_state, jurisdiccion, departamento, sector, ambito],
-                outputs=[stats_table, output_table, info_label]
+                inputs=[dataset_state, tipo_consulta, jurisdiccion, departamento, sector, ambito],
+                outputs=[stats_table, output_table, info_label, output_plot]
             )
 
             # 4. Clear Outputs on Input Change AND Update Info Label
-            def clear_outputs_and_update_info(df, prov, depto, sec, amb):
+            def clear_outputs_and_update_info(df, consulta_type, prov, depto, sec, amb):
                 # Update info immediately
-                new_info = calculate_info(df, prov, depto, sec, amb)
-                return pd.DataFrame(), pd.DataFrame(), new_info
+                new_info = calculate_info(df, consulta_type, prov, depto, sec, amb)
+                return pd.DataFrame(), pd.DataFrame(), new_info, None
 
             input_components = [jurisdiccion, departamento, sector, ambito]
             
@@ -322,15 +375,15 @@ with gr.Blocks(title="Análisis Educativo") as app:
             for comp in input_components:
                 comp.change(
                     fn=clear_outputs_and_update_info, 
-                    inputs=[dataset_state, jurisdiccion, departamento, sector, ambito],
-                    outputs=[stats_table, output_table, info_label]
+                    inputs=[dataset_state, tipo_consulta, jurisdiccion, departamento, sector, ambito],
+                    outputs=[stats_table, output_table, info_label, output_plot]
                 )
 
             # Also for dataset change (clears everything)
             def clear_all():
-                return pd.DataFrame(), pd.DataFrame(), ""
+                return pd.DataFrame(), pd.DataFrame(), "", None
                 
-            tipo_consulta.change(fn=clear_all, inputs=None, outputs=[stats_table, output_table, info_label])
+            tipo_consulta.change(fn=clear_all, inputs=None, outputs=[stats_table, output_table, info_label, output_plot])
             
             # Initial Load Trigger (Optional, to load the default selection)
             app.load(fn=on_dataset_change, inputs=[tipo_consulta], outputs=[dataset_state, jurisdiccion, departamento])
