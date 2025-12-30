@@ -24,6 +24,40 @@
     --shadow-light: rgba(240, 240, 240, 1);
     --shadow-medium: rgba(220, 220, 220, 1);
     --shadow-strong: rgba(200, 200, 200, 1);
+
+    /* Nueva sombra suave y delicada unificada */
+    --shadow-soft: 8px 8px 15px -3px rgba(0, 0, 0, 0.12), 4px 4px 6px -2px rgba(0, 0, 0, 0.08);
+}
+
+/* ### FONDO DE LA PÁGINA (CONTENEDOR PRINCIPAL) */
+.gradio-container {
+    /* background-image is set via Base64 in app.py */
+    background-size: cover !important;
+    background-attachment: fixed !important;
+    background-repeat: no-repeat !important;
+    background-position: center !important;
+}
+
+
+/* ### CONTENEDOR DE TÍTULOS DE PESTAÑA */
+.title-tab {
+    border: none !important;
+    box-shadow: var(--shadow-soft) !important;
+    border-radius: 8px !important;
+    height: 40px !important;
+    width: 100% !important;
+    vertical-align: middle !important;
+}
+
+
+/* ### TEXTO PARA TÍTULOS */
+.title-text {
+    font-weight: bold !important;
+    font-size: var(--font-size-large) !important;
+    color: var(--text-color) !important;
+    text-align: left !important;
+    padding-top: 3px !important;
+    padding-left: 5px !important;
 }
 
 
@@ -43,7 +77,7 @@
     background-color: var(--input-bg-color) !important;
     color: var(--text-color) !important;
     border: 1px solid var(--input-border-color) !important;
-    box-shadow: 5px 5px 8px rgba(0, 0, 0, 0.3) !important;
+    box-shadow: var(--shadow-soft) !important;
     border-radius: 10px !important;
     margin-bottom: 8px !important;
 }
@@ -54,7 +88,7 @@
     background-color: var(--button-bg-color) !important;
     color: var(--text-color) !important;
     border: none !important;
-    box-shadow: 4px 4px 8px var(--shadow-strong) !important;
+    box-shadow: var(--shadow-soft) !important;
     border-radius: 10px !important;
     font-weight: bold !important;
     transition: all 0.2s ease;
@@ -67,7 +101,7 @@
 
 .custom-button:active {
     transform: translateY(2px);
-    box-shadow: 2px 2px 4px var(--shadow-strong) !important;
+    box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.1) !important;
 }
 
 
@@ -76,7 +110,7 @@
     background-color: var(--input-bg-color) !important;
     padding: 10px !important;
     border-radius: 10px !important;
-    box-shadow: 3px 3px 5px var(--shadow-light) !important;
+    box-shadow: var(--shadow-soft) !important;
     margin-bottom: 8px !important;
 }
 
@@ -110,7 +144,7 @@
     background-color: var(--container-bg-color);
     border-radius: 10px;
     padding: 15px;
-    box-shadow: 4px 4px 10px var(--shadow-medium);
+    box-shadow: var(--shadow-soft) !important;
     font-weight: bold !important;
     font-size: var(--font-size-small) !important;
     color: var(--text-color) !important;
@@ -122,7 +156,7 @@
     background-color: var(--container-bg-color);
     border-radius: 10px;
     padding: 15px;
-    box-shadow: 4px 4px 10px var(--shadow-medium);
+    box-shadow: var(--shadow-soft) !important;
     font-weight: bold !important;
     font-size: var(--font-size-small) !important;
     color: var(--text-color) !important;
@@ -134,7 +168,7 @@
     background-color: var(--button-bg-color) !important;
     color: var(--text-color) !important;
     border: none !important;
-    box-shadow: 4px 4px 8px var(--shadow-strong) !important;
+    box-shadow: var(--shadow-soft) !important;
     border-radius: 8px !important;
     font-weight: bold !important;
     font-size: var(--font-size-medium) !important;
@@ -142,28 +176,6 @@
     width: 100% !important;
     text-align: left !important;
     padding: 10px !important;
-}
-
-
-/* ### OBLEA PARA TÍTULOS */
-.title-tab {
-    /* background-color: var(--title-bg-color) !important; */
-    border: none !important;
-    box-shadow: 4px 4px 8px var(--shadow-strong) !important;
-    border-radius: 8px !important;
-    height: 40px !important;
-    width: 100% !important;
-}
-
-
-/* ### TEXTO PARA TÍTULOS */
-.title-text {
-    font-weight: bold !important;
-    font-size: var(--font-size-large) !important;
-    color: var(--text-color) !important;
-    text-align: left !important;
-    padding-top: 3px !important;
-    padding-left: 5px !important;
 }
 
 

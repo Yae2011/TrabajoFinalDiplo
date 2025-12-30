@@ -1,6 +1,7 @@
 import gradio as gr
 import pandas as pd
 import os
+import base64
 
 # --- Constants ---
 DATA_PATH = "./Datasets"
@@ -182,45 +183,53 @@ def filter_data(df, provincia, departamento, sector, ambito):
     
     return stats, final_df, info_text
 
+# 1. Leer el contenido del CSS manualmente para asegurar compatibilidad
+# 1. Funcion para convertir imagen a Base64
+def image_to_base64(image_path):
+    if not os.path.exists(image_path):
+        return ""
+    with open(image_path, "rb") as img_file:
+        return base64.b64encode(img_file.read()).decode('utf-8')
 
-# --- UI Construction ---
-# Read CSS file
-with open("style.css", "r", encoding="utf-8") as f:
-    css_content = f.read()
+# 2. Leer el contenido del CSS manualmente
+css_path = "style.css"
+if os.path.exists(css_path):
+    with open(css_path, "r", encoding="utf-8") as f:
+        base_css = f.read()
+else:
+    base_css = ""
+    print("Advertencia: style.css no encontrado.")
 
-# Encode background image
-import base64
-image_path_bg = "Images/Fondo_1.png"
-with open(image_path_bg, "rb") as image_file:
-    encoded_bg = base64.b64encode(image_file.read()).decode()
+# 3. Codificar imágenes y agregar al CSS
+current_dir = os.path.dirname(os.path.abspath(__file__))
+img_path_1 = os.path.join(current_dir, "Images", "App_bg.png")
+img_path_2 = os.path.join(current_dir, "Images", "Title_bg.png")
+img_path_3 = os.path.join(current_dir, "Images", "Container_bg.png")
 
-image_path_cont = "Images/Fondo_Contenedor.png"
-with open(image_path_cont, "rb") as image_file:
-    encoded_cont = base64.b64encode(image_file.read()).decode()
+fondo_app = image_to_base64(img_path_1)
+fondo_titulo = image_to_base64(img_path_2)
+fondo_contenedor = image_to_base64(img_path_3)
 
-css_content += f"""
-    .gradio-container {{
-        /*background-image: url('data:image/png;base64,{encoded_bg}') !important;*/
-        background-size: cover !important;
-        background-attachment: fixed !important;
-        background-repeat: no-repeat !important;
-        background-position: center !important;
-    }}
+extra_css = f"""
+.gradio-container {{
+    background-image: url('data:image/png;base64,{fondo_app}') !important;
+}}
 
-    .title-tab {{
-        background-image: url('data:image/png;base64,{encoded_cont}') !important;
-        border: none !important;
-        box-shadow: 4px 4px 8px var(--shadow-strong) !important;
-        border-radius: 8px !important;
-        height: 40px !important;
-        width: 100% !important;
-    }}
+.title-tab {{
+    background-image: url('data:image/png;base64,{fondo_titulo}') !important;
+}}
 
+.custom-tab-bg {{
+    background-image: url('data:image/png;base64,{fondo_contenedor}') !important;
+}}
 """
+
+custom_css = base_css + extra_css
+
 
 # --- UI Construction ---
 with gr.Blocks(title="Análisis Educativo") as app:
-    gr.HTML(f"<style>{css_content}</style>")
+    gr.HTML(f"<style>{custom_css}</style>")
     
     # State storage for the loaded dataframe
     dataset_state = gr.State(pd.DataFrame())
@@ -342,4 +351,18 @@ with gr.Blocks(title="Análisis Educativo") as app:
                 gr.HTML("&nbsp;&nbsp;CONCLUSIONES", elem_classes="title-text")
 
 if __name__ == "__main__":
-    app.launch()
+    # Obtenemos la ruta absoluta del directorio actual
+    current_dir = os.path.dirname(os.path.abspath(__file__))
+    
+    # Definimos la carpeta de imágenes
+    images_folder = os.path.join(current_dir, "Images")
+    
+    # Verificación de existencia (Debug)
+    if not os.path.exists(images_folder):
+        print(f"Advertencia: La carpeta {images_folder} no existe.")
+
+    # Lanzamos la aplicación
+    # allowed_paths DEBE incluir las rutas absolutas de las carpetas que contienen recursos
+    app.launch(
+        allowed_paths=[current_dir, images_folder]
+    )
