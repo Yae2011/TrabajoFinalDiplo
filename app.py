@@ -73,16 +73,20 @@ def on_dataset_change(consulta_type):
     
     # Sort for better UX
     provincias = sorted([str(p) for p in provincias])
-    # Use gr.Dropdown to force full component refresh with new choices and no value
-    return df, gr.Dropdown(choices=provincias, value=None), gr.Dropdown(choices=[], value=None)
-
+    # Use gr.Dropdown to force full component refresh with new choices and cleared value
+    # Clear both provincia and departamento when tipo de matrícula changes
+    return df, gr.update(choices=provincias, value=None), gr.update(choices=[], value=None), gr.update(value="Ambos"), gr.update(value="Ambos"), "", None, None, None, None
+                    
+                    
 def on_provincia_change(df, provincia):
     if df is None or df.empty or not provincia:
-        return gr.update(choices=[], value=None)
+        # Explicitly clear departamento when no provincia is selected
+        return gr.Dropdown(choices=[], value=None)
     
     dptos = df[df['provincia'] == provincia]['departamento'].unique()
     dptos = sorted([str(d) for d in dptos])
-    return gr.update(choices=dptos, value=None)
+    # Clear departamento value and update choices when provincia changes
+    return gr.Dropdown(choices=dptos, value=None)
 
 def create_boxplot(df):
     if df is None or df.empty:
@@ -96,7 +100,7 @@ def create_boxplot(df):
     if not cols_to_plot:
         return None
 
-    fig, ax = plt.subplots(figsize=(10, 6))
+    fig, ax = plt.subplots(figsize=(10, 4))
     
     # Extract data values handling potential NaNs
     data_values = []
@@ -135,7 +139,7 @@ def create_evolution_chart(df):
         return None
         
     # Create figure - Adjusted for better screen fill and height
-    fig, ax = plt.subplots(figsize=(10, 6))
+    fig, ax = plt.subplots(figsize=(10, 4))
     
     # Sort by period just in case
     df_sorted = df.sort_values('periodo')
@@ -267,7 +271,7 @@ def calculate_info(df, consulta_type, provincia, departamento, sector, ambito):
     
     ds_name = format_dataset_name(consulta_type)
     # return f"{ds_name} - {provincia} - {departamento}: {len(filtered)} registros - {data_cols_count} campos"
-    return f" MATRÍCULA {consulta_type.upper()} - {provincia} - {departamento}: {len(filtered)} registros - {data_cols_count} campos"
+    return f" MATRÍCULA {consulta_type.upper()} PARA {provincia} - {departamento}:  {len(filtered)} REGISTROS  -  {data_cols_count} CAMPOS"
 
 def filter_data(df, consulta_type, provincia, departamento, sector, ambito):
     filtered = get_filtered_subset(df, consulta_type, provincia, departamento, sector, ambito)
@@ -288,7 +292,7 @@ def filter_data(df, consulta_type, provincia, departamento, sector, ambito):
     # Information string
     ds_name = format_dataset_name(consulta_type)
     # info_text = f"{ds_name} - {provincia} - {departamento}: {len(filtered)} registros - {len(cols_to_show)} campos"
-    info_text = f" MATRÍCULA {consulta_type.upper()} - {provincia} - {departamento}: {len(filtered)} registros - {len(cols_to_show)} campos"
+    info_text = f" MATRÍCULA {consulta_type.upper()} PARA {provincia} - {departamento}: {len(filtered)} REGISTROS  -  {len(cols_to_show)} CAMPOS"
     
     # Generate Boxplot
     fig_boxplot = create_boxplot(final_df)
@@ -320,10 +324,12 @@ current_dir = os.path.dirname(os.path.abspath(__file__))
 img_path_1 = os.path.join(current_dir, "Images", "App_bg.png")
 img_path_2 = os.path.join(current_dir, "Images", "Title_bg.png")
 img_path_3 = os.path.join(current_dir, "Images", "Container_bg.png")
+img_path_4 = os.path.join(current_dir, "Images", "header_bg.png")
 
 fondo_app = image_to_base64(img_path_1)
 fondo_titulo = image_to_base64(img_path_2)
 fondo_contenedor = image_to_base64(img_path_3)
+fondo_encabezado = image_to_base64(img_path_4)
 
 extra_css = f"""
 .gradio-container {{
@@ -337,6 +343,14 @@ extra_css = f"""
 .custom-tab {{
     background-image: url('data:image/png;base64,{fondo_contenedor}') !important;
 }}
+
+.header-tab {{
+    background-image: url('data:image/png;base64,{fondo_encabezado}') !important;
+    background-size: cover !important;
+    background-position: center !important;
+    background-repeat: no-repeat !important;
+    min-height: 50px;
+}}
 """
 
 custom_css = base_css + extra_css
@@ -348,23 +362,25 @@ with gr.Blocks(title="Análisis Educativo") as app:
     
     # State storage for the loaded dataframe
     dataset_state = gr.State(pd.DataFrame())
-
+    
+    gr.Row(elem_classes="header-tab")
+    
     with gr.Tabs():
         with gr.Tab("Inicio"):
             with gr.Row(elem_classes="title-tab"):
-                gr.HTML("&nbsp;&nbsp;ANÁLISIS COMPARATIVO DE JURISDICCIONES EDUCATIVAS", elem_classes="title-text")
-            
+                gr.HTML("&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;ANÁLISIS COMPARATIVO DE JURISDICCIONES EDUCATIVAS", elem_classes="title-text")
+                
         with gr.Tab("Proceso"):
             with gr.Row(elem_classes="title-tab"):
-                gr.HTML("&nbsp;&nbsp;FLUJOGRAMA DEL PROCESO", elem_classes="title-text")
+                gr.HTML("&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;FLUJOGRAMA DEL PROCESO", elem_classes="title-text")
             
         with gr.Tab("Visualización de Datos"):
             with gr.Row(elem_classes="title-tab"):
-                gr.HTML("&nbsp;&nbsp;CONSULTA DE DATOS SOBRE JURISDICCIONES EDUCATIVAS", elem_classes="title-text")
+                gr.HTML("&nbsp;&nbsp;CONSULTA DE DATOS SOBRE provinciaES EDUCATIVAS", elem_classes="title-text")
             
             with gr.Row():
                 with gr.Column(min_width=180, scale=1, elem_classes="custom-tab"):
-                    tipo_consulta = gr.Radio(
+                    tipo_matricula = gr.Radio(
                         label="Tipo de Matrícula", 
                         choices=["Por Curso", "Por Edad", "Por Población", "Por Trayectoria"],
                         value="Por Curso",
@@ -372,7 +388,7 @@ with gr.Blocks(title="Análisis Educativo") as app:
                     )
         
                     # Dropdowns
-                    jurisdiccion = gr.Dropdown(label="Provincia", choices=[], elem_classes="custom-dropdown")
+                    provincia = gr.Dropdown(label="Provincia", choices=[], elem_classes="custom-dropdown")
                     departamento = gr.Dropdown(label="Departamento", choices=[], elem_classes="custom-dropdown")
             
                     sector = gr.Radio(label="Sector", choices=["Estatal", "Privado", "Ambos"], value="Ambos", elem_classes="custom-radio")
@@ -393,7 +409,7 @@ with gr.Blocks(title="Análisis Educativo") as app:
                             output_table = gr.Dataframe(interactive=False)
                     
                     with gr.Row(elem_classes="custom-tab"):
-                        output_plot = gr.Plot()
+                        output_plot_box = gr.Plot()
                     
                     with gr.Row(elem_classes="custom-tab"):
                         output_plot_evolution = gr.Plot()
@@ -401,24 +417,28 @@ with gr.Blocks(title="Análisis Educativo") as app:
             
             # --- Interactions ---
             # 1. Load Data on Type Change
-            tipo_consulta.change(
+            tipo_matricula.change(
                 fn=on_dataset_change,
-                inputs=[tipo_consulta],
-                outputs=[dataset_state, jurisdiccion, departamento]
+                inputs=[tipo_matricula],
+                outputs=[dataset_state, provincia, departamento, sector, ambito, info_label, stats_table, output_table, output_plot_box, output_plot_evolution]
             )
             
             # 2. Update Departamentos on Provincia Change
-            jurisdiccion.change(
+            # 2.a JS-side explicit clear to Ensure visual reset (Hybrid approach)
+            # provincia.change(fn=None, inputs=None, outputs=departamento, js="(val) => null")
+            
+            # 2.b Python-side update for choices
+            provincia.change(
                 fn=on_provincia_change,
-                inputs=[dataset_state, jurisdiccion],
+                inputs=[dataset_state, provincia],
                 outputs=[departamento]
             )
             
             # 3. Filter and Show
             btn_mostrar.click(
                 fn=filter_data,
-                inputs=[dataset_state, tipo_consulta, jurisdiccion, departamento, sector, ambito],
-                outputs=[stats_table, output_table, info_label, output_plot, output_plot_evolution]
+                inputs=[dataset_state, tipo_matricula, provincia, departamento, sector, ambito],
+                outputs=[stats_table, output_table, info_label, output_plot_box, output_plot_evolution]
             )
 
             # 4. Auto-Update or Clear Logic
@@ -432,24 +452,25 @@ with gr.Blocks(title="Análisis Educativo") as app:
                     new_info = calculate_info(df, consulta_type, prov, depto, sec, amb)
                     return pd.DataFrame(), pd.DataFrame(), new_info, None, None
 
-            input_components = [jurisdiccion, departamento, sector, ambito]
+            # Exclude provincia from triggers to avoid race condition with clearing logic
+            input_components = [departamento, sector, ambito]
             
             # Bind to inputs
             for comp in input_components:
                 comp.change(
                     fn=auto_update_or_clear, 
-                    inputs=[dataset_state, tipo_consulta, jurisdiccion, departamento, sector, ambito],
-                    outputs=[stats_table, output_table, info_label, output_plot, output_plot_evolution]
+                    inputs=[dataset_state, tipo_matricula, provincia, departamento, sector, ambito],
+                    outputs=[stats_table, output_table, info_label, output_plot_box, output_plot_evolution]
                 )
 
             # Also for dataset change (clears everything)
-            def clear_all():
-                return pd.DataFrame(), pd.DataFrame(), "", None, None
+            # def clear_all():
+            #     return None, None, pd.DataFrame(), pd.DataFrame(), "", None, None
                 
-            tipo_consulta.change(fn=clear_all, inputs=None, outputs=[stats_table, output_table, info_label, output_plot, output_plot_evolution])
+            # tipo_matricula.change(fn=clear_all, inputs=None, outputs=[provincia, departamento, stats_table, output_table, info_label, output_plot_box, output_plot_evolution])
             
             # Initial Load Trigger (Optional, to load the default selection)
-            app.load(fn=on_dataset_change, inputs=[tipo_consulta], outputs=[dataset_state, jurisdiccion, departamento])
+            app.load(fn=on_dataset_change, inputs=[tipo_matricula], outputs=[dataset_state, provincia, departamento])
 
         with gr.Tab("Series Temporales"):
             with gr.Row(elem_classes="title-tab"):
