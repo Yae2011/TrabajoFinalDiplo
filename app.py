@@ -241,39 +241,29 @@ img_path_1 = os.path.join(current_dir, "Images", "App_bg.png")
 img_path_2 = os.path.join(current_dir, "Images", "Title_bg.png")
 img_path_3 = os.path.join(current_dir, "Images", "Container_bg.png")
 img_path_4 = os.path.join(current_dir, "Images", "header_bg.png")
+img_path_5 = os.path.join(current_dir, "Images", "portrait_bg.png")
 
 fondo_app = image_to_base64(img_path_1)
 fondo_titulo = image_to_base64(img_path_2)
 fondo_contenedor = image_to_base64(img_path_3)
 fondo_encabezado = image_to_base64(img_path_4)
+fondo_portada = image_to_base64(img_path_5)
 
-# Se agrega al CSS leído, las líneas de aplicación
-# de las imágenes de fondo en BASE64
+# Se agregan al CSS leído, las líneas que aplican las imágenes de fondo en BASE64,
+# que no pueden insertarse direcatmente en "style.css"
 extra_css = f"""
-.gradio-container {{
-    background-image: url('data:image/png;base64,{fondo_app}') !important;
-}}
-
-.title-tab {{
-    background-image: url('data:image/png;base64,{fondo_titulo}') !important;
-}}
-
-.custom-tab {{
-    background-image: url('data:image/png;base64,{fondo_contenedor}') !important;
-}}
-
-.header-tab {{
-    background-image: url('data:image/png;base64,{fondo_encabezado}') !important;
-    background-size: cover !important;
-    background-position: center !important;
-    background-repeat: no-repeat !important;
-    min-height: 50px;
-}}
+.gradio-container {{ background-image: url('data:image/png;base64,{fondo_app}') !important; }}
+.title-tab {{ background-image: url('data:image/png;base64,{fondo_titulo}') !important; }}
+.custom-tab {{ background-image: url('data:image/png;base64,{fondo_contenedor}') !important; }}
+.header-tab {{ background-image: url('data:image/png;base64,{fondo_encabezado}') !important; }}
+.portrait {{ background-image: url('data:image/png;base64,{fondo_portada}') !important; }}
 """
-
 custom_css = base_css + extra_css
 
-# INTERFACE GRADIO
+
+
+### INTERFACE GRADIO
+
 with gr.Blocks(title="Análisis Educativo") as app:
     gr.HTML(f"<style>{custom_css}</style>")
     
@@ -284,9 +274,22 @@ with gr.Blocks(title="Análisis Educativo") as app:
     
     with gr.Tabs():
         with gr.Tab("Inicio"):
-            with gr.Row(elem_classes="title-tab"):
-                gr.HTML("&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;ANÁLISIS COMPARATIVO DE JURISDICCIONES EDUCATIVAS", elem_classes="title-text")
-                
+            with gr.Row(elem_classes="portrait-bg"):
+                with gr.Column(scale=8, elem_classes="portrait"):
+                    gr.HTML("ANÁLISIS DE LA MATRÍCULA ESCOLAR<br>"
+                            "DE LA REPÚBLICA ARGENTINA,<br>"
+                            "EN EL PERÍODO 2011-2024,<br>"
+                            "PARA TODAS LAS JURISDICCIONES<br>"
+                            "EDUCATIVAS DEL PAÍS", elem_classes="portrait-title")
+                with gr.Column(scale=2, elem_classes="portrait-bg2"):
+                    gr.HTML("Aplicación de algoritmos de Machine Learning "
+                            "a las Bases de Datos Abiertas de la Secretaría de Educación "
+                            "del Ministerio de Capital Humano de la República Argentina "
+                            "para el análisis de los indicadores de matrícula escolar "
+                            "para todas las provincias y CABA y sus respectivos "
+                            "departamentos, partidos o comunas.",
+                            elem_classes="portrait-subtitle")
+
         with gr.Tab("Proceso"):
             with gr.Row(elem_classes="title-tab"):
                 gr.HTML("&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;FLUJOGRAMA DEL PROCESO", elem_classes="title-text")

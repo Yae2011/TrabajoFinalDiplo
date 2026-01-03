@@ -2,20 +2,15 @@
 ------------------------------------------------ */
 :root {
     --input-bg-color: #F5F5F5;
-    /* Color para campos de entrada */
     --container-bg-color: #EBEBEB;
-    /* Color para contenedores */
+    --container-bg-color2: #e4e4e4;
     --button-bg-color: #E0E0E0;
-    /* Color para botón */
     --button-hover-bg-color: #BDBDBD;
-    /* Color para botón seleccionado */
     --title-bg-color: #EBEBEB;
-    /* Color para fondo de títulos */
     --input-border-color: #D3D3D3;
-    /* Color para borde de campos de entrada */
     --text-color: #000000;
-    /* Color para texto */
 
+    --font-title0: 46px;
     --font-title1: 20px;
     --font-title2: 18px;
     --font-title3: 14px;
@@ -23,13 +18,9 @@
     --font-items: 12px;
     --font-data: 12px;
 
-    /* Color para sombras */
-    --shadow-light: rgba(240, 240, 240, 1);
-    --shadow-medium: rgba(220, 220, 220, 1);
-    --shadow-strong: rgba(200, 200, 200, 1);
-
     /* Sombra suave y delicada unificada */
     --shadow-soft: 8px 8px 15px -3px rgba(0, 0, 0, 0.12), 4px 4px 6px -2px rgba(0, 0, 0, 0.08);
+    --shadow-strong-text: 3px 3px 6px rgba(0, 0, 0, 0.6);
 }
 
 
@@ -42,6 +33,63 @@
     background-attachment: fixed !important;
     background-repeat: no-repeat !important;
     background-position: center !important;
+}
+
+
+
+/* ### ESTILOS PARA LA PORTADA PRINCIPAL 
+------------------------------------------------ */
+.portrait {
+    background-size: cover !important;
+    background-position: center !important;
+    background-repeat: no-repeat !important;
+    min-height: 450px !important;
+    width: 60% !important;
+    border: none !important;
+    box-shadow: var(--shadow-soft) !important;
+    border-radius: 25px !important;
+    padding: 30px;
+    margin-bottom: 20px important!;
+}
+.portrait-bg {
+    background-color: var(--container-bg-color2) !important;
+    border-radius: 25px !important;
+    padding: 10px !important;
+    border: none !important;
+    box-shadow: var(--shadow-soft) !important;
+}
+.portrait-bg2 {
+    background-color: var(--container-bg-color) !important;
+    border-radius: 25px !important;
+    padding: 10px !important;
+    border: none !important;
+    box-shadow: var(--shadow-soft) !important;
+    min-height: 450px !important;
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: flex-end !important;
+}
+.portrait-title, .portrait-title * {
+    text-shadow: var(--shadow-strong-text) !important;
+    line-height: 1.1 !important;
+    color: white !important;
+    font-weight: bold !important;
+    font-size: var(--font-title0) !important;
+    text-align: left !important;
+}
+.portrait-subtitle, .portrait-subtitle * {
+    font-size: var(--font-title2) !important;
+    font-weight: bold !important;
+    margin-top: 10px !important;
+    line-height: 1.3 !important;
+    text-shadow: var(--shadow-soft) !important;
+    color: var(--text-color) !important;
+    text-align: right !important;
+    max-width: 90% !important;
+    margin-left: auto !important;
+    margin-right: 5px !important;
+    margin-bottom: 5px !important;
+    display: block !important; /* Para que los márgenes funcionen */
 }
 
 
@@ -63,11 +111,15 @@
 ------------------------------------------------ */
 .header-tab {
     /* background-image: asignada en formato Base64 en app.py */
+    background-size: cover !important;
+    background-position: center !important;
+    background-repeat: no-repeat !important;
     border-radius: 10px;
     border: none !important;
     padding: 15px;
     box-shadow: var(--shadow-soft) !important;
     width: 100% !important;
+    min-height: 50px;
 }
 
 
@@ -105,7 +157,6 @@
     border-radius: 10px !important;
     margin-bottom: 8px !important;
 }
-
 .custom-dropdown span[data-testid="block-info"] {
     /* Para el título */
     color: var(--text-color) !important;
@@ -114,12 +165,10 @@
     margin-bottom: 0px !important;
     display: block !important;
 }
-
 .custom-dropdown ul.options li.item {
     /* Para las opciones de la lista */
     font-size: var(--font-title4) !important;
 }
-
 .custom-dropdown .token-view,
 .custom-dropdown input,
 .custom-dropdown .single-select {
@@ -145,7 +194,6 @@
     flex-direction: column !important;
     gap: 8px !important;
 }
-
 .custom-radio span[data-testid="block-info"] {
     /* Para el título */
     color: var(--text-color) !important;
@@ -154,7 +202,6 @@
     margin-bottom: 0px !important;
     display: block !important;
 }
-
 .custom-radio label {
     /* Para las opciones */
     background-color: var(--input-bg-color) !important;
@@ -185,13 +232,11 @@
     text-align: center !important;
     transition: all 0.2s ease;
 }
-
 .custom-button:hover {
     /* Para el estado encima */
     background-color: var(--button-hover-bg-color) !important;
     transform: translateY(-1px);
 }
-
 .custom-button:active {
     /* Para el estado activo (click) */
     transform: translateY(2px);
