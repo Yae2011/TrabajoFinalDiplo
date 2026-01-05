@@ -1,5 +1,6 @@
 import gradio as gr
 import pandas as pd
+import numpy as np
 import os
 import base64
 import matplotlib.pyplot as plt
@@ -17,10 +18,12 @@ KEY_COLUMNS = ['periodo', 'provincia', 'departamento', 'sector', 'ambito']
 
 # Se cargan las descripciones de las variables de los datasets en un diccionario
 # para títulos de gráficos de evolución de matrícula
-variables = os.path.join(DATA_PATH, "Variables.csv")
+variables = os.path.join(DATA_PATH, "Nombres_Largos.csv")
 df_vars = pd.read_csv(variables, header=None, encoding='latin-1', sep=',')
-dict_vars = df_vars.set_index(df_vars.columns[0])[df_vars.columns[1]].to_dict()
-
+dict_nlargos = df_vars.set_index(df_vars.columns[0])[df_vars.columns[1]].to_dict()
+variables = os.path.join(DATA_PATH, "Nombres_Cortos.csv")
+df_vars = pd.read_csv(variables, header=None, encoding='latin-1', sep=',')
+dict_ncortos = df_vars.set_index(df_vars.columns[0])[df_vars.columns[1]].to_dict()
 
 # --- Dataframe Global ---
 # Se almacena el DataFrame actual para evitar recargarlo en cada interacción.
@@ -112,7 +115,7 @@ def on_opcion_change():
             gr.Button(interactive=False), gr.Button(interactive=False)
 
 
-def create_boxplot(df):
+def create_boxplot_graph(df):
     if df is None or df.empty:
         return None
     
@@ -131,16 +134,20 @@ def create_boxplot(df):
     for col in cols_to_plot:
         data_values.append(df[col].dropna())
         headers.append(col)
-        
+    
+
+    new_labels = [dict_ncortos.get(h, h) for h in headers]
     # Se crea el gráfico
-    box = ax.boxplot(data_values, patch_artist=True, tick_labels=headers, 
+    box = ax.boxplot(data_values, patch_artist=True,
+                     tick_labels=new_labels,
+                     #tick_labels=headers, 
                      medianprops=dict(color="white", linewidth=1.5))
     
     # Cajas color celeste
     for patch in box['boxes']:
         patch.set_facecolor('blue')
         
-    ax.set_title("Distribución de Estudiantes por Categoría")
+    ax.set_title("DISTRIBUCIÓN DE ESTUDIANTES POR CATEGORÍA")
     ax.yaxis.grid(True, linestyle='--', alpha=0.7)
     plt.xticks(rotation=90, fontsize=6)
     plt.tight_layout()
@@ -148,60 +155,7 @@ def create_boxplot(df):
     return fig
 
 
-def create_evolution_graph(df, provincia, departamento, sector, ambito, indicador):
-    if df is None or df.empty or indicador is None:
-        return None
-    
-    # Se filtra el dataset de matrícula con los campos clave
-    df_filtered = get_filtered_subset(df, provincia, departamento, sector, ambito, KEY_COLUMNS, True)
-
-    if df_filtered.empty:
-        return None
-    
-    # Si no hay columna "período"
-    if 'periodo' not in df_filtered.columns:
-        return None
-
-    # Columnas numéricas para graficar, se excluye la columna "período"
-    numeric_cols = df_filtered.select_dtypes(include=['number']).columns.tolist()
-    # Si el indicador no está en las columnas numéricas del df
-    if indicador not in numeric_cols:
-        return None
-    
-    # Se crea la figura explícitamente
-    fig, ax = plt.subplots(figsize=(10, 4))
-    
-    try:
-        df_sorted = df_filtered.sort_values('periodo')
-        x_data = df_sorted['periodo']
-        
-        ax.plot(x_data, df_sorted[indicador], label=indicador, 
-                marker='o',                 # Tipo marcador
-                linewidth=3.0,              # Espesor línea
-                color='green',              # Color línea
-                markerfacecolor='red',      # Color marcador
-                markeredgecolor='red',      # Color borde marcador
-                markeredgewidth=3.0)        # Espesor borde marcador)
-        
-        titulo = f"EVOLUCIÓN DE MATRÍCULA: {dict_vars[indicador].upper()}"
-        ax.set_title(titulo)
-        ax.grid(True, linestyle='--', alpha=0.5)
-        
-        years = range(2011, 2025)
-        ax.set_xticks(years)
-        ax.set_xlim(2010.5, 2024.5)
-        plt.tight_layout() 
-        
-        return fig
-    
-    finally:
-        # Se cierra la figura para liberar memoria del backend de Matplotlib.
-        # Gradio ya ha convertido la 'fig' en una imagen o formato transferible 
-        # antes de que este cierre afecte la visualización en la UI.
-        plt.close(fig)
-
-
-def create_evolution_graph_filtered(df, indicador):
+def create_evolution_graph(df, indicador):
     if df is None or df.empty or indicador is None:
         return None
     
@@ -211,6 +165,8 @@ def create_evolution_graph_filtered(df, indicador):
 
     # Columnas numéricas para graficar, se excluye la columna "período"
     numeric_cols = df.select_dtypes(include=['number']).columns.tolist()
+    # Se busca la clave original (columna) en el diccionario a partir del valor descriptivo
+    indicador = next((k for k, v in dict_ncortos.items() if v == indicador), indicador)
     # Si el indicador no está en las columnas numéricas del df
     if indicador not in numeric_cols:
         return None
@@ -221,8 +177,9 @@ def create_evolution_graph_filtered(df, indicador):
     try:
         df_sorted = df.sort_values('periodo')
         x_data = df_sorted['periodo']
+        y_data = df_sorted[indicador]
         
-        ax.plot(x_data, df_sorted[indicador], label=indicador,
+        ax.plot(x_data, y_data, label=indicador,
                 marker='o',                 # Tipo marcador
                 linewidth=3.0,              # Espesor línea
                 color='green',              # Color línea
@@ -230,10 +187,22 @@ def create_evolution_graph_filtered(df, indicador):
                 markeredgecolor='red',      # Color borde marcador
                 markeredgewidth=3.0)        # Espesor borde marcador)
         
-        titulo = f"EVOLUCIÓN DE MATRÍCULA: {dict_vars[indicador].upper()}"
+        # Se calcula la línea de tendencia (Regresión lineal: y = mx + b)
+        # Se obtienen la pendiente (z[0]) y la intersección (z[1])
+        z = np.polyfit(x_data, y_data, 1)
+        p = np.poly1d(z)
+        
+        # Se grafica la línea de tendencia
+        ax.plot(x_data, p(x_data), color='orange', linestyle='--', 
+                linewidth=2, label='Tendencia')
+        
+        titulo = f"EVOLUCIÓN DE LA MATRÍCULA: {dict_nlargos[indicador].upper()}"
         ax.set_title(titulo)
         ax.grid(True, linestyle='--', alpha=0.5)
         
+        # se agrega la leyenda para diferenciar la serie de la tendencia
+        # ax.legend()
+
         years = range(2011, 2025)
         ax.set_xticks(years)
         ax.set_xlim(2010.5, 2024.5)
@@ -248,12 +217,14 @@ def create_evolution_graph_filtered(df, indicador):
         plt.close(fig)
 
 
-def create_next_evolution_graph_filtered(df, indicador):
+def create_next_evolution_graph(df, indicador):
     
     # Se obtiene la lista de variables (nombre de columnas numéricas) del df
     numeric_cols = df.select_dtypes(include=['number']).columns.tolist()
     # Se elimina la columna numérica del 'periodo'
     indicadores_cols = [c for c in numeric_cols if c != 'periodo']
+    # Se busca la clave original (columna) en el diccionario a partir del valor descriptivo
+    indicador = next((k for k, v in dict_ncortos.items() if v == indicador), indicador)
     # Se obtiene el índice del indicador actual
     indice_actual = indicadores_cols.index(indicador)
     # Se obtiene el nombre del indicador siguiente
@@ -261,17 +232,23 @@ def create_next_evolution_graph_filtered(df, indicador):
     nuevo_indicador = indicadores_cols[indice_sig]
     
     # Se genera el gráfico de evolución para el indicador siguiente
-    fig = create_evolution_graph_filtered(df, nuevo_indicador)
+    fig = create_evolution_graph(df, nuevo_indicador)
 
-    return gr.update(value=nuevo_indicador), fig
+    # Se renombra el nuevo indicador con el nombre corto del diccionario para
+    # colocarlo en la lista desplegable
+    indicador_ncorto = dict_ncortos.get(nuevo_indicador)
+
+    return gr.update(value=indicador_ncorto), fig
 
 
-def create_prev_evolution_graph_filtered(df, indicador):
+def create_prev_evolution_graph(df, indicador):
     
     # Se obtiene la lista de variables (nombre de columnas numéricas) del df
     numeric_cols = df.select_dtypes(include=['number']).columns.tolist()
     # Se elimina la columna numérica del 'periodo'
     indicadores_cols = [c for c in numeric_cols if c != 'periodo']
+    # Se busca la clave original (columna) en el diccionario a partir del valor descriptivo
+    indicador = next((k for k, v in dict_ncortos.items() if v == indicador), indicador)
     # Se obtiene el índice del indicador actual
     indice_actual = indicadores_cols.index(indicador)
     # Se obtiene el nombre del indicador anterior
@@ -279,9 +256,13 @@ def create_prev_evolution_graph_filtered(df, indicador):
     nuevo_indicador = indicadores_cols[indice_ant]
     
     # Se genera el gráfico de evolución para el indicador siguiente
-    fig = create_evolution_graph_filtered(df, nuevo_indicador)
+    fig = create_evolution_graph(df, nuevo_indicador)
 
-    return gr.update(value=nuevo_indicador), fig
+    # Se renombra el nuevo indicador con el nombre corto del diccionario para
+    # colocarlo en la lista desplegable
+    indicador_ncorto = dict_ncortos.get(nuevo_indicador)
+
+    return gr.update(value=indicador_ncorto), fig
 
 
 def get_filtered_subset(df, provincia, departamento, sector, ambito, key_columns, agrupar_detalles=True):
@@ -351,25 +332,38 @@ def show_data(df, dataset_type, provincia, departamento, sector, ambito):
     # y se guarda la primera variable de la lista
     numeric_cols = df.select_dtypes(include=['number']).columns.tolist()
     cols_to_plot = [c for c in numeric_cols if c != 'periodo']
-    indicadores = cols_to_plot
+    indicadores_originales = cols_to_plot
+    # Se renombran los indicadores (nombres de columnas numéricas) con los nombres cortos del diccionario
+    indicadores = [dict_ncortos.get(col, col) for col in indicadores_originales]
     indicador_first = indicadores[0]
 
     # Data 1: Mensaje informativo sobre registros y campos
     info_text = f" MATRÍCULA {dataset_type.upper()} PARA {provincia} - {departamento} (SECTOR {sector.upper()} - ÁMBITO {ambito.upper()}): {len(filtered)} REGISTROS  -  {len(cols_to_show)} CAMPOS"
    
     # Data 2: Calcular estadísticas del dataset filtrado
-    stats = filtered.drop(columns=['periodo'], errors='ignore').describe().round(2).reset_index().rename(columns={'index': 'Medida'})
-    
-    # Data 3: Obtener el dataset final con las columnas para mostrar
-    final_df = filtered[cols_to_show]
+    stats = (
+            filtered.drop(columns=['periodo'], errors='ignore')
+            .describe()
+            .round(2)
+            .reset_index()
+            .rename(columns={'index': 'Medida'})
+            )
+
+    # Se renombran las columnas con los nombres cortos
+    # El parámetro 'errors="ignore"' evita conflictos si una clave del diccionario no está en el DF
+    stats = stats.rename(columns=dict_ncortos)
+
+    # Data 3: Obtener el dataset final con las columnas para mostrar, 
+    # renombrando las columnas con los nombres cortos
+    final_df = filtered[cols_to_show].rename(columns=dict_ncortos)
   
     # Data 4: Generar gráfico de cajas
-    fig_boxplot = create_boxplot(final_df)
+    fig_boxplot = create_boxplot_graph(final_df)
     
     # Data 5: Generar gráfico de serie temporal con la variable numérica indicada
     # OBSERVACIÓN: EL MISMO GRÁFICO VUELVE A GENERARSE CUANDO SE ACTUALIZA EL COMPONENTE
     # 'indicador', LO QUE OCURRE SIMULTÁNEAMENTE. POR ESO NO ES NECESARIO GENERAR EL GRÁFICO AQUÍ. 
-    # fig_evolution = create_evolution_graph_filtered(final_df, indicador_first)
+    # fig_evolution = create_evolution_graph(final_df, indicador_first)
     fig_evolution = None
     
     return filtered, info_text, stats, final_df, fig_boxplot, fig_evolution, \
@@ -452,10 +446,17 @@ with gr.Blocks(title="Análisis Educativo") as app:
                             "departamentos, partidos o comunas.",
                             elem_classes="portrait-subtitle")
 
+        
         with gr.Tab("Proceso"):
             with gr.Row(elem_classes="title-tab"):
                 gr.HTML("&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;FLUJOGRAMA DEL PROCESO", elem_classes="title-text")
             
+        
+        with gr.Tab("Dashboard"):
+            with gr.Row(elem_classes="title-tab"):
+                gr.HTML("&nbsp;&nbsp;INDICADORES DE MATRÍCULA", elem_classes="title-text")
+        
+        
         with gr.Tab("Visualización de Datos"):
             with gr.Row(elem_classes="title-tab"):
                 gr.HTML("&nbsp;&nbsp;CONSULTA DE DATOS SOBRE JURISDICCIONES EDUCATIVAS", elem_classes="title-text")
@@ -567,19 +568,19 @@ with gr.Blocks(title="Análisis Educativo") as app:
             )
 
             indicador.change(
-                fn=create_evolution_graph_filtered,
+                fn=create_evolution_graph,
                 inputs=[dataset_filter_state, indicador],
                 outputs=[output_plot_evolution]
             )
 
             btn_anterior.click(
-                fn=create_prev_evolution_graph_filtered,
+                fn=create_prev_evolution_graph,
                 inputs=[dataset_filter_state, indicador],
                 outputs=[indicador, output_plot_evolution]
             )
             
             btn_siguiente.click(
-                fn=create_next_evolution_graph_filtered,
+                fn=create_next_evolution_graph,
                 inputs=[dataset_filter_state, indicador],
                 outputs=[indicador, output_plot_evolution]
             )
@@ -592,33 +593,41 @@ with gr.Blocks(title="Análisis Educativo") as app:
                          output_plot_evolution, indicador, btn_anterior, btn_siguiente]
             )
 
-        with gr.Tab("Series Temporales"):
+        
+        with gr.Tab("Series Temporales - Jorge"):
             with gr.Row(elem_classes="title-tab"):
                 gr.HTML("&nbsp;&nbsp;DEFINICIÓN DE LAS SERIES TEMPORALES A SER COMPARADAS", elem_classes="title-text")
             
-        with gr.Tab("Series de Fourier"):
+        
+        with gr.Tab("Series de Fourier - Jorge"):
             with gr.Row(elem_classes="titleapp-tab"):
                 gr.HTML("&nbsp;&nbsp;ANÁLISIS DE SERIES TEMPORALES MEDIANTE SERIES DE FOURIER", elem_classes="title-text")
 
-        with gr.Tab("Yael - Bosques Aleatorios"):
+        
+        with gr.Tab("Bosques Aleatorios"):
             with gr.Row(elem_classes="title-tab"):
                 gr.HTML("&nbsp;&nbsp;ANÁLISIS DE INDICADORES EDUCATIVOS MEDIANTE BOSQUES ALEATORIOS", elem_classes="title-text")
                 
-        with gr.Tab("Marco - Probabilidad Bayesiana"):
+        
+        with gr.Tab("Probabilidad Bayesiana"):
             with gr.Row(elem_classes="title-tab"):
                 gr.HTML("&nbsp;&nbsp;ANÁLISIS DE SERIES TEMPORALES MEDIANTE PROBABILIDAD BAYESIANA", elem_classes="title-text")
         
-        with gr.Tab("Yael - Redes Neuronales"):
+        
+        with gr.Tab("Redes Neuronales"):
             with gr.Row(elem_classes="title-tab"):
                 gr.HTML("&nbsp;&nbsp;ANÁLISIS DE INDICADORES EDUCATIVOS MEDIANTE REDES NEURONALES", elem_classes="title-text")
         
-        with gr.Tab("Marco - KNN & SVM"):
+        
+        with gr.Tab("KNN & SVM"):
             with gr.Row(elem_classes="title-tab"):
                 gr.HTML("&nbsp;&nbsp;ANÁLISIS DE INDICADORES EDUCATIVOS CON K-NN Y SVM", elem_classes="title-text")
             
+        
         with gr.Tab("Conclusiones"):
             with gr.Row(elem_classes="title-tab"):
                 gr.HTML("&nbsp;&nbsp;CONCLUSIONES", elem_classes="title-text")
+
 
 if __name__ == "__main__":
     # Ruta absoluta del directorio actual
