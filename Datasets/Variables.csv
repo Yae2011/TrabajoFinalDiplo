@@ -1,0 +1,153 @@
+t_sala_2,Total Sala 2 Años
+t_sala_3,Total Sala 3 Años
+t_sala_4,Total Sala 4 Años
+t_sala_5,Total Sala 5 Años
+t_pri_1,Total 1° Grado Primaria
+t_pri_2,Total 2° Grado Primaria
+t_pri_3,Total 3° Grado Primaria
+t_pri_4,Total 4° Grado Primaria
+t_pri_5,Total 5° Grado Primaria
+t_pri_6,Total 6° Grado Primaria
+t_sec_1,Total 1° Año Secundaria
+t_sec_2,Total 2° Año Secundaria
+t_sec_3,Total 3° Año Secundaria
+t_sec_4,Total 4° Año Secundaria
+t_sec_5,Total 5° Año Secundaria
+t_sec_6,Total 6° Año Secundaria
+m_sala_2,Mujeres Sala 2 Años
+m_sala_3,Mujeres Sala 3 Años
+m_sala_4,Mujeres Sala 4 Años
+m_sala_5,Mujeres Sala 5 Años
+m_pri_1,Mujeres 1° Grado Primaria
+m_pri_2,Mujeres 2° Grado Primaria
+m_pri_3,Mujeres 3° Grado Primaria
+m_pri_4,Mujeres 4° Grado Primaria
+m_pri_5,Mujeres 5° Grado Primaria
+m_pri_6,Mujeres 6° Grado Primaria
+m_sec_1,Mujeres 1° Año Secundaria
+m_sec_2,Mujeres 2° Año Secundaria
+m_sec_3,Mujeres 3° Año Secundaria
+m_sec_4,Mujeres 4° Año Secundaria
+m_sec_5,Mujeres 5° Año Secundaria
+m_sec_6,Mujeres 6° Año Secundaria
+v_sala_2,Varones Sala 2 Años
+v_sala_3,Varones Sala 3 Años
+v_sala_4,Varones Sala 4 Años
+v_sala_5,Varones Sala 5 Años
+v_pri_1,Varones 1° Grado Primaria
+v_pri_2,Varones 2° Grado Primaria
+v_pri_3,Varones 3° Grado Primaria
+v_pri_4,Varones 4° Grado Primaria
+v_pri_5,Varones 5° Grado Primaria
+v_pri_6,Varones 6° Grado Primaria
+v_sec_1,Varones 1° Año Secundaria
+v_sec_2,Varones 2° Año Secundaria
+v_sec_3,Varones 3° Año Secundaria
+v_sec_4,Varones 4° Año Secundaria
+v_sec_5,Varones 5° Año Secundaria
+v_sec_6,Varones 6° Año Secundaria
+indig_inic,Indígenas Nivel Inicial
+indig_prim,Indígenas Nivel Primario
+indig_sec,Indígenas Nivel Secundario
+bol_inic,Bolivianos Nivel Inicial
+bra_inic,Brasileros Nivel Inicial
+chi_inic,Chilenos Nivel Inicial
+par_inic,Paraguayos Nivel Inicial
+per_inic,Peruanos Nivel Inicial
+uru_inic,Uruguayos Nivel Inicial
+ame_inic,Otros Americanos Nivel Inicial
+eur_inic,Europeos Nivel Inicial
+asi_inic,Asiáticos Nivel Inicial
+otr_inic,Otros Países Nivel Inicial
+bol_prim,Bolivianos Nivel Primario
+bra_prim,Brasileros Nivel Primario
+chi_prim,Chilenos Nivel Primario
+par_prim,Paraguayos Nivel Primario
+per_prim,Peruanos Nivel Primario
+uru_prim,Uruguayos Nivel Primario
+ame_prim,Otros Americanos Nivel Primario
+eur_prim,Europeos Nivel Primario
+asi_prim,Asiáticos Nivel Primario
+otr_prim,Otros Países Nivel Primario
+bol_sec,Bolivianos Nivel Secundario
+bra_sec,Brasileros Nivel Secundario
+chi_sec,Chilenos Nivel Secundario
+par_sec,Paraguayos Nivel Secundario
+per_sec,Peruanos Nivel Secundario
+uru_sec,Uruguayos Nivel Secundario
+ame_sec,Otros Americanos Nivel Secundario
+eur_sec,Europeos Nivel Secundario
+asi_sec,Asiáticos Nivel Secundario
+otr_sec,Otros Países Nivel Secundario
+t_inicial_1,Total Inicio 1° Grado Primaria
+t_inicial_2,Total Inicio 2° Grado Primaria
+t_inicial_3,Total Inicio 3° Grado Primaria
+t_inicial_4,Total Inicio 4° Grado Primaria
+t_inicial_5,Total Inicio 5° Grado Primaria
+t_inicial_6,Total Inicio 6° Grado Primaria
+t_inicial_7,Total Inicio 1° Año Secundaria
+t_inicial_8,Total Inicio 2° Año Secundaria
+t_inicial_9,Total Inicio 3° Año Secundaria
+t_inicial_10,Total Inicio 4° Año Secundaria
+t_inicial_11,Total Inicio 5° Año Secundaria
+t_inicial_12,Total Inicio 6° Año Secundaria
+m_inicial_1,Mujeres Inicio 1° Grado Primaria
+m_inicial_2,Mujeres Inicio 2° Grado Primaria
+m_inicial_3,Mujeres Inicio 3° Grado Primaria
+m_inicial_4,Mujeres Inicio 4° Grado Primaria
+m_inicial_5,Mujeres Inicio 5° Grado Primaria
+m_inicial_6,Mujeres Inicio 6° Grado Primaria
+m_inicial_7,Mujeres Inicio 1° Año Secundaria
+m_inicial_8,Mujeres Inicio 2° Año Secundaria
+m_inicial_9,Mujeres Inicio 3° Año Secundaria
+m_inicial_10,Mujeres Inicio 4° Año Secundaria
+m_inicial_11,Mujeres Inicio 5° Año Secundaria
+m_inicial_12,Mujeres Inicio 6° Año Secundaria
+v_inicial_1,Varones Inicio 1° Grado Primaria
+v_inicial_2,Varones Inicio 2° Grado Primaria
+v_inicial_3,Varones Inicio 3° Grado Primaria
+v_inicial_4,Varones Inicio 4° Grado Primaria
+v_inicial_5,Varones Inicio 5° Grado Primaria
+v_inicial_6,Varones Inicio 6° Grado Primaria
+v_inicial_7,Varones Inicio 1° Año Secundaria
+v_inicial_8,Varones Inicio 2° Año Secundaria
+v_inicial_9,Varones Inicio 3° Año Secundaria
+v_inicial_10,Varones Inicio 4° Año Secundaria
+v_inicial_11,Varones Inicio 5° Año Secundaria
+v_inicial_12,Varones Inicio 6° Año Secundaria
+t_prom_1,Total Promovidos 1° Grado Primaria
+t_prom_2,Total Promovidos 2° Grado Primaria
+t_prom_3,Total Promovidos 3° Grado Primaria
+t_prom_4,Total Promovidos 4° Grado Primaria
+t_prom_5,Total Promovidos 5° Grado Primaria
+t_prom_6,Total Promovidos 6° Grado Primaria
+t_prom_7,Total Promovidos 1° Año Secundaria
+t_prom_8,Total Promovidos 2° Año Secundaria
+t_prom_9,Total Promovidos 3° Año Secundaria
+t_prom_10,Total Promovidos 4° Año Secundaria
+t_prom_11,Total Promovidos 5° Año Secundaria
+t_prom_12,Total Promovidos 6° Año Secundaria
+m_prom_1,Mujeres Promovidas 1° Grado Primaria
+m_prom_2,Mujeres Promovidas 2° Grado Primaria
+m_prom_3,Mujeres Promovidas 3° Grado Primaria
+m_prom_4,Mujeres Promovidas 4° Grado Primaria
+m_prom_5,Mujeres Promovidas 5° Grado Primaria
+m_prom_6,Mujeres Promovidas 6° Grado Primaria
+m_prom_7,Mujeres Promovidas 1° Año Secundaria
+m_prom_8,Mujeres Promovidas 2° Año Secundaria
+m_prom_9,Mujeres Promovidas 3° Año Secundaria
+m_prom_10,Mujeres Promovidas 4° Año Secundaria
+m_prom_11,Mujeres Promovidas 5° Año Secundaria
+m_prom_12,Mujeres Promovidas 6° Año Secundaria
+v_prom_1,Varones Promovidos 1° Grado Primaria
+v_prom_2,Varones Promovidos 2° Grado Primaria
+v_prom_3,Varones Promovidos 3° Grado Primaria
+v_prom_4,Varones Promovidos 4° Grado Primaria
+v_prom_5,Varones Promovidos 5° Grado Primaria
+v_prom_6,Varones Promovidos 6° Grado Primaria
+v_prom_7,Varones Promovidos 1° Año Secundaria
+v_prom_8,Varones Promovidos 2° Año Secundaria
+v_prom_9,Varones Promovidos 3° Año Secundaria
+v_prom_10,Varones Promovidos 4° Año Secundaria
+v_prom_11,Varones Promovidos 5° Año Secundaria
+v_prom_12,Varones Promovidos 6° Año Secundaria

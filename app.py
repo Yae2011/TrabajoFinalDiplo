@@ -8,12 +8,19 @@ import matplotlib.pyplot as plt
 DATA_PATH = "./Datasets"
 FILE_MAP = {
     "Por Curso": "Matricula 2011-2024.csv",
-    "Por Edad": "Matricula por Edad 2011-2024.csv",
+    # "Por Edad": "Matricula por Edad 2011-2024.csv",
     "Por Población": "Poblacion 2011-2024.csv",
     "Por Trayectoria": "Trayectoria 2011-2024.csv"
 }
 
 KEY_COLUMNS = ['periodo', 'provincia', 'departamento', 'sector', 'ambito']
+
+# Se cargan las descripciones de las variables de los datasets en un diccionario
+# para títulos de gráficos de evolución de matrícula
+variables = os.path.join(DATA_PATH, "Variables.csv")
+df_vars = pd.read_csv(variables, header=None, encoding='latin-1', sep=',')
+dict_vars = df_vars.set_index(df_vars.columns[0])[df_vars.columns[1]].to_dict()
+
 
 # --- Dataframe Global ---
 # Se almacena el DataFrame actual para evitar recargarlo en cada interacción.
@@ -147,7 +154,7 @@ def create_evolution_graph(df, provincia, departamento, sector, ambito, indicado
     
     # Se filtra el dataset de matrícula con los campos clave
     df_filtered = get_filtered_subset(df, provincia, departamento, sector, ambito, KEY_COLUMNS, True)
-    
+
     if df_filtered.empty:
         return None
     
@@ -176,7 +183,7 @@ def create_evolution_graph(df, provincia, departamento, sector, ambito, indicado
                 markeredgecolor='red',      # Color borde marcador
                 markeredgewidth=3.0)        # Espesor borde marcador)
         
-        titulo = f"NÚMERO DE ESTUDIANTES PARA EL INDICADOR: {indicador.upper()}"
+        titulo = f"EVOLUCIÓN DE MATRÍCULA: {dict_vars[indicador].upper()}"
         ax.set_title(titulo)
         ax.grid(True, linestyle='--', alpha=0.5)
         
@@ -194,7 +201,7 @@ def create_evolution_graph(df, provincia, departamento, sector, ambito, indicado
         plt.close(fig)
 
 
-def create_evolution_graph2(df, indicador):
+def create_evolution_graph_filtered(df, indicador):
     if df is None or df.empty or indicador is None:
         return None
     
@@ -223,7 +230,7 @@ def create_evolution_graph2(df, indicador):
                 markeredgecolor='red',      # Color borde marcador
                 markeredgewidth=3.0)        # Espesor borde marcador)
         
-        titulo = f"NÚMERO DE ESTUDIANTES PARA EL INDICADOR: {indicador.upper()}"
+        titulo = f"EVOLUCIÓN DE MATRÍCULA: {dict_vars[indicador].upper()}"
         ax.set_title(titulo)
         ax.grid(True, linestyle='--', alpha=0.5)
         
@@ -241,7 +248,7 @@ def create_evolution_graph2(df, indicador):
         plt.close(fig)
 
 
-def create_next_evolution_graph(df, provincia, departamento, sector, ambito, indicador):
+def create_next_evolution_graph_filtered(df, indicador):
     
     # Se obtiene la lista de variables (nombre de columnas numéricas) del df
     numeric_cols = df.select_dtypes(include=['number']).columns.tolist()
@@ -250,15 +257,33 @@ def create_next_evolution_graph(df, provincia, departamento, sector, ambito, ind
     # Se obtiene el índice del indicador actual
     indice_actual = indicadores_cols.index(indicador)
     # Se obtiene el nombre del indicador siguiente
-    siguiente_indice = (indice_actual + 1) % len(indicadores_cols)
-    nuevo_indicador = indicadores_cols[siguiente_indice]
+    indice_sig = (indice_actual + 1) % len(indicadores_cols)
+    nuevo_indicador = indicadores_cols[indice_sig]
     
     # Se genera el gráfico de evolución para el indicador siguiente
-    fig = create_evolution_graph(df, provincia, departamento, sector, ambito, nuevo_indicador)
+    fig = create_evolution_graph_filtered(df, nuevo_indicador)
 
     return gr.update(value=nuevo_indicador), fig
 
+
+def create_prev_evolution_graph_filtered(df, indicador):
     
+    # Se obtiene la lista de variables (nombre de columnas numéricas) del df
+    numeric_cols = df.select_dtypes(include=['number']).columns.tolist()
+    # Se elimina la columna numérica del 'periodo'
+    indicadores_cols = [c for c in numeric_cols if c != 'periodo']
+    # Se obtiene el índice del indicador actual
+    indice_actual = indicadores_cols.index(indicador)
+    # Se obtiene el nombre del indicador anterior
+    indice_ant = (indice_actual - 1) % len(indicadores_cols)
+    nuevo_indicador = indicadores_cols[indice_ant]
+    
+    # Se genera el gráfico de evolución para el indicador siguiente
+    fig = create_evolution_graph_filtered(df, nuevo_indicador)
+
+    return gr.update(value=nuevo_indicador), fig
+
+
 def get_filtered_subset(df, provincia, departamento, sector, ambito, key_columns, agrupar_detalles=True):
 
     if df is None or df.empty:
@@ -344,10 +369,10 @@ def show_data(df, dataset_type, provincia, departamento, sector, ambito):
     # Data 5: Generar gráfico de serie temporal con la variable numérica indicada
     # OBSERVACIÓN: EL MISMO GRÁFICO VUELVE A GENERARSE CUANDO SE ACTUALIZA EL COMPONENTE
     # 'indicador', LO QUE OCURRE SIMULTÁNEAMENTE. POR ESO NO ES NECESARIO GENERAR EL GRÁFICO AQUÍ. 
-    # fig_evolution = create_evolution_graph2(final_df, indicador_first)
+    # fig_evolution = create_evolution_graph_filtered(final_df, indicador_first)
     fig_evolution = None
     
-    return info_text, stats, final_df, fig_boxplot, fig_evolution, \
+    return filtered, info_text, stats, final_df, fig_boxplot, fig_evolution, \
             gr.Dropdown(choices=indicadores, value=indicador_first, interactive=True), \
             gr.Button(interactive=True), gr.Button(interactive=True)
 
@@ -401,9 +426,12 @@ custom_css = base_css + extra_css
 with gr.Blocks(title="Análisis Educativo") as app:
     gr.HTML(f"<style>{custom_css}</style>")
     
-    # State storage for the loaded dataframe
+    # Almacenamiento para el dataset elegido
     dataset_state = gr.State(pd.DataFrame())
+    # Almacenamiento para el dataset elegido y filtrado por campos clave
+    dataset_filter_state = gr.State(pd.DataFrame())
     
+
     gr.Row(elem_classes="header-tab")
     
     with gr.Tabs():
@@ -437,7 +465,8 @@ with gr.Blocks(title="Análisis Educativo") as app:
                                elem_classes="custom-tab"):
                     tipo_matricula = gr.Radio(
                         label="Tipo de Matrícula", 
-                        choices=["Por Curso", "Por Edad", "Por Población", "Por Trayectoria"],
+                        # choices=["Por Curso", "Por Edad", "Por Población", "Por Trayectoria"],
+                        choices=["Por Curso", "Por Población", "Por Trayectoria"],
                         value="Por Curso",
                         elem_classes="custom-radio"
                     )
@@ -532,28 +561,26 @@ with gr.Blocks(title="Análisis Educativo") as app:
             btn_mostrar.click(
                 fn=show_data,
                 inputs=[dataset_state, tipo_matricula, provincia, departamento, sector, ambito],
-                outputs=[info_label, stats_table, output_table,
+                outputs=[dataset_filter_state, info_label, stats_table, output_table,
                          output_plot_box, output_plot_evolution, indicador, 
                          btn_anterior, btn_siguiente]
             )
 
             indicador.change(
-                fn=create_evolution_graph,
-                inputs=[dataset_state, provincia, departamento, sector, ambito, 
-                        indicador],
+                fn=create_evolution_graph_filtered,
+                inputs=[dataset_filter_state, indicador],
                 outputs=[output_plot_evolution]
             )
 
-            """
             btn_anterior.click(
-                fn=create_prev_evolution_graph,
-                inputs=[dataset_state, provincia, departamento, sector, ambito, indicador],
-                outputs=[output_plot_evolution]
+                fn=create_prev_evolution_graph_filtered,
+                inputs=[dataset_filter_state, indicador],
+                outputs=[indicador, output_plot_evolution]
             )
-            """
+            
             btn_siguiente.click(
-                fn=create_next_evolution_graph,
-                inputs=[dataset_state, provincia, departamento, sector, ambito, indicador],
+                fn=create_next_evolution_graph_filtered,
+                inputs=[dataset_filter_state, indicador],
                 outputs=[indicador, output_plot_evolution]
             )
 
