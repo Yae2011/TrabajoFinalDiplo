@@ -174,7 +174,6 @@
 .custom-dropdown .single-select {
     /* Para el item seleccionado de la lista */
     font-size: var(--font-items) !important;
-    /* Aplicamos font-items */
     color: var(--text-color) !important;
 }
 
@@ -230,7 +229,7 @@
     font-size: var(--font-title3) !important;
     color: var(--text-color) !important;
     text-align: center !important;
-    transition: all 0.2s ease;
+    transition: all 0.2s ease !important;
 }
 .custom-button:hover {
     /* Para el estado encima */
@@ -238,6 +237,30 @@
     transform: translateY(-1px);
 }
 .custom-button:active {
+    /* Para el estado activo (click) */
+    transform: translateY(2px);
+    box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.1) !important;
+}
+.custom-button2 {
+    /* Para el estado pasivo */
+    background-color: var(--button-bg-color) !important;
+    color: var(--text-color) !important;
+    border: none !important;
+    box-shadow: var(--shadow-soft) !important;
+    border-radius: 10px !important;
+    font-weight: bold !important;
+    font-size: var(--font-title3) !important;
+    color: var(--text-color) !important;
+    text-align: center !important;
+    transition: all 0.2s ease !important;
+    width: 50px !important;
+}
+.custom-button2:hover {
+    /* Para el estado encima */
+    background-color: var(--button-hover-bg-color) !important;
+    transform: translateY(-1px);
+}
+.custom-button2:active {
     /* Para el estado activo (click) */
     transform: translateY(2px);
     box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.1) !important;
@@ -276,4 +299,18 @@ table th,
 .table-wrap td,
 .table-wrap th {
     font-size: var(--font-data) !important;
+}
+
+
+
+/* ### PARA UBICAR COMPONENTES UNO A LA PAR DEL OTRO
+------------------------------------------------ */
+.no-stack {
+    display: flex !important;
+    flex-direction: row !important;
+    flex-wrap: nowrap !important;
+    gap: 10px !important;
+}
+.no-stack > .form {
+    min-width: 0 !important; /* Anula el mínimo de 320px de Gradio */
 }

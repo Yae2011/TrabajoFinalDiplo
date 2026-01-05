@@ -25,6 +25,7 @@ def get_file_path(dataset_type):
         return None
     return os.path.join(DATA_PATH, filename)
 
+
 def load_data(dataset_type):
     path = get_file_path(dataset_type)
     if not path or not os.path.exists(path):
@@ -40,21 +41,69 @@ def load_data(dataset_type):
         except:
              return pd.DataFrame(), [f"Error cargando: {e}"]
 
+
 def on_dataset_change(dataset_type):
     df, provincias = load_data(dataset_type)
     if df.empty:
-        return df, gr.update(choices=[], value=None), gr.update(choices=[], value=None), gr.update(value="Ambos"), gr.update(value="Ambos"), "", None, None, None, None
+        return df, gr.update(choices=[], value=None), gr.update(choices=[], value=None), \
+               gr.update(value="Ambos"), gr.update(value="Ambos"), "", None, None, None, None, \
+               gr.Dropdown(choices=[], value=None, interactive=False), \
+               gr.Button(interactive=False), gr.Button(interactive=False)
     
-    lista_provincias = sorted([str(p) for p in provincias])
-    return df, gr.update(choices=lista_provincias, value=None), gr.update(choices=[], value=None), gr.update(value="Ambos"), gr.update(value="Ambos"), "", None, None, None, None
-                                
+    # Se arma el listado ordenado de provincias y se guarda la primera provincia
+    provincias_sorted = sorted([str(p) for p in provincias])
+    prov_first = provincias_sorted[0]
+
+    # Se arma el listado ordenado de departamentos de la primera provincia de la lista
+    # y se guarda el primer departamento de la lista
+    dptos = df[df['provincia'] == prov_first]['departamento'].unique()
+    dptos_sorted = sorted([str(d) for d in dptos if d is not None])
+    dpto_first = dptos_sorted[0]
+
+    # Se arma el listado de las variables numéricas del dataset, excluyendo "periodo"
+    # y se guarda la primera variable de la lista
+    # numeric_cols = df.select_dtypes(include=['number']).columns.tolist()
+    # cols_to_plot = [c for c in numeric_cols if c != 'periodo']
+    # indicadores = cols_to_plot
+    # indicador_first = indicadores[0]
+
+    # Al actualizar el dataset, el valor de la lista desplegabls "provincia" 
+    # muestra la primera provincia del listado y la lista desplegable "departamento"
+    # muestra el primer departamento de la provincia. La lista desplegable "inidicador"
+    # se actualiza recién luego del borón "Mostrar Datos"
+    return df, gr.update(choices=provincias_sorted, value=prov_first), \
+            gr.update(choices=dptos_sorted, value=dpto_first), \
+            gr.update(value="Ambos"), gr.update(value="Ambos"), "", None, None, None, None, \
+            gr.Dropdown(choices=[], value=None, interactive=False), \
+            gr.Button(interactive=False), gr.Button(interactive=False)
+
+
 def on_provincia_change(df, provincia):
-    if df is None or df.empty or not provincia:
-        return gr.update(choices=[], value="")
-    
+    # Se arma el listado ordenado de departamentos de la provincia
+    # y se guarda el primer departamento de la lista
     dptos = df[df['provincia'] == provincia]['departamento'].unique()
     dptos_sorted = sorted([str(d) for d in dptos if d is not None])
-    return gr.update(choices=dptos_sorted, value=None, interactive=True)
+    dpto_first = dptos_sorted[0]
+    
+    return  gr.update(choices=dptos_sorted, value=dpto_first), \
+            gr.update(value="Ambos"), gr.update(value="Ambos"), "", None, None, None, None, \
+            gr.Dropdown(choices=[], value="", interactive=False), \
+            gr.Button(interactive=False), gr.Button(interactive=False)
+
+
+def on_departamento_change():
+    # Al cambiar de departamento se resetea toda la data en pantalla
+    return gr.update(value="Ambos"), gr.update(value="Ambos"), "", None, None, None, None, \
+            gr.Dropdown(choices=[], value="", interactive=False), \
+            gr.Button(interactive=False), gr.Button(interactive=False)
+
+
+def on_opcion_change():
+    # Al cambiar la opción de sector o ámbito se resetea toda la data en pantalla
+    return "", None, None, None, None, \
+            gr.Dropdown(choices=[], value="", interactive=False), \
+            gr.Button(interactive=False), gr.Button(interactive=False)
+
 
 def create_boxplot(df):
     if df is None or df.empty:
@@ -77,7 +126,8 @@ def create_boxplot(df):
         headers.append(col)
         
     # Se crea el gráfico
-    box = ax.boxplot(data_values, patch_artist=True, labels=headers, medianprops=dict(color="white", linewidth=1.5))
+    box = ax.boxplot(data_values, patch_artist=True, tick_labels=headers, 
+                     medianprops=dict(color="white", linewidth=1.5))
     
     # Cajas color celeste
     for patch in box['boxes']:
@@ -90,8 +140,62 @@ def create_boxplot(df):
     
     return fig
 
-def create_evolution_chart(df):
-    if df is None or df.empty:
+
+def create_evolution_graph(df, provincia, departamento, sector, ambito, indicador):
+    if df is None or df.empty or indicador is None:
+        return None
+    
+    # Se filtra el dataset de matrícula con los campos clave
+    df_filtered = get_filtered_subset(df, provincia, departamento, sector, ambito, KEY_COLUMNS, True)
+    
+    if df_filtered.empty:
+        return None
+    
+    # Si no hay columna "período"
+    if 'periodo' not in df_filtered.columns:
+        return None
+
+    # Columnas numéricas para graficar, se excluye la columna "período"
+    numeric_cols = df_filtered.select_dtypes(include=['number']).columns.tolist()
+    # Si el indicador no está en las columnas numéricas del df
+    if indicador not in numeric_cols:
+        return None
+    
+    # Se crea la figura explícitamente
+    fig, ax = plt.subplots(figsize=(10, 4))
+    
+    try:
+        df_sorted = df_filtered.sort_values('periodo')
+        x_data = df_sorted['periodo']
+        
+        ax.plot(x_data, df_sorted[indicador], label=indicador, 
+                marker='o',                 # Tipo marcador
+                linewidth=3.0,              # Espesor línea
+                color='green',              # Color línea
+                markerfacecolor='red',      # Color marcador
+                markeredgecolor='red',      # Color borde marcador
+                markeredgewidth=3.0)        # Espesor borde marcador)
+        
+        titulo = f"NÚMERO DE ESTUDIANTES PARA EL INDICADOR: {indicador.upper()}"
+        ax.set_title(titulo)
+        ax.grid(True, linestyle='--', alpha=0.5)
+        
+        years = range(2011, 2025)
+        ax.set_xticks(years)
+        ax.set_xlim(2010.5, 2024.5)
+        plt.tight_layout() 
+        
+        return fig
+    
+    finally:
+        # Se cierra la figura para liberar memoria del backend de Matplotlib.
+        # Gradio ya ha convertido la 'fig' en una imagen o formato transferible 
+        # antes de que este cierre afecte la visualización en la UI.
+        plt.close(fig)
+
+
+def create_evolution_graph2(df, indicador):
+    if df is None or df.empty or indicador is None:
         return None
     
     # Si no hay columna "período"
@@ -100,45 +204,61 @@ def create_evolution_chart(df):
 
     # Columnas numéricas para graficar, se excluye la columna "período"
     numeric_cols = df.select_dtypes(include=['number']).columns.tolist()
-    cols_to_plot = [c for c in numeric_cols if c != 'periodo']
-    
-    if not cols_to_plot:
+    # Si el indicador no está en las columnas numéricas del df
+    if indicador not in numeric_cols:
         return None
         
     # Se crea la figura para el gráfico
     fig, ax = plt.subplots(figsize=(10, 4))
     
-    # Se ordena por "período"
-    df_sorted = df.sort_values('periodo')
-    x_data = df_sorted['periodo']
+    try:
+        df_sorted = df.sort_values('periodo')
+        x_data = df_sorted['periodo']
+        
+        ax.plot(x_data, df_sorted[indicador], label=indicador,
+                marker='o',                 # Tipo marcador
+                linewidth=3.0,              # Espesor línea
+                color='green',              # Color línea
+                markerfacecolor='red',      # Color marcador
+                markeredgecolor='red',      # Color borde marcador
+                markeredgewidth=3.0)        # Espesor borde marcador)
+        
+        titulo = f"NÚMERO DE ESTUDIANTES PARA EL INDICADOR: {indicador.upper()}"
+        ax.set_title(titulo)
+        ax.grid(True, linestyle='--', alpha=0.5)
+        
+        years = range(2011, 2025)
+        ax.set_xticks(years)
+        ax.set_xlim(2010.5, 2024.5)
+        plt.tight_layout() 
+        
+        return fig
     
-    # Gráfico de líneas con marcador de puntos
-    for col in cols_to_plot:
-        ax.plot(x_data, df_sorted[col], label=col, marker='o')
-    
-    ax.set_title("Cantidad de Estudiantes por Categoría (2011-2024)")
-    ax.grid(True, linestyle='--', alpha=0.5)
-    
-    # Se muestran todos los años del período aunque no tengan datos
-    years = range(2011, 2025)
-    ax.set_xticks(years)
-    ax.set_xlim(2010.5, 2024.5) # Slight padding to show points clearly
-    
-    # Dimensiones de la leyenda
-    # Se calculan las columnas para que entren en 4 filas
-    n_vars = len(cols_to_plot)
-    n_cols = (n_vars + 3) // 4
-    if n_cols < 1: n_cols = 1
-    
-    # Leyenda debajo del gráfico
-    ax.legend(loc='upper center', bbox_to_anchor=(0.5, -0.2),
-              fancybox=False, shadow=False, ncol=n_cols, fontsize=8)
-    
-    # Se ajusta el gráfico para que la leyenda se acomode correctamente
-    plt.tight_layout() 
-    
-    return fig
+    finally:
+        # Se cierra la figura para liberar memoria del backend de Matplotlib.
+        # Gradio ya ha convertido la 'fig' en una imagen o formato transferible 
+        # antes de que este cierre afecte la visualización en la UI.
+        plt.close(fig)
 
+
+def create_next_evolution_graph(df, provincia, departamento, sector, ambito, indicador):
+    
+    # Se obtiene la lista de variables (nombre de columnas numéricas) del df
+    numeric_cols = df.select_dtypes(include=['number']).columns.tolist()
+    # Se elimina la columna numérica del 'periodo'
+    indicadores_cols = [c for c in numeric_cols if c != 'periodo']
+    # Se obtiene el índice del indicador actual
+    indice_actual = indicadores_cols.index(indicador)
+    # Se obtiene el nombre del indicador siguiente
+    siguiente_indice = (indice_actual + 1) % len(indicadores_cols)
+    nuevo_indicador = indicadores_cols[siguiente_indice]
+    
+    # Se genera el gráfico de evolución para el indicador siguiente
+    fig = create_evolution_graph(df, provincia, departamento, sector, ambito, nuevo_indicador)
+
+    return gr.update(value=nuevo_indicador), fig
+
+    
 def get_filtered_subset(df, provincia, departamento, sector, ambito, key_columns, agrupar_detalles=True):
 
     if df is None or df.empty:
@@ -190,33 +310,47 @@ def get_filtered_subset(df, provincia, departamento, sector, ambito, key_columns
     final_cols = group_cols + numeric_cols
     return final_df[final_cols]
 
-def filter_data(df, dataset_type, provincia, departamento, sector, ambito):
+
+def show_data(df, dataset_type, provincia, departamento, sector, ambito):
     filtered = get_filtered_subset(df, provincia, departamento, sector, ambito, KEY_COLUMNS, True)
     
     if filtered.empty:
         info_text = f" MATRÍCULA {dataset_type.upper()} PARA {provincia} - {departamento} (SECTOR {sector.upper()} - ÁMBITO {ambito.upper()}): SIN REGISTROS"
-        return info_text, pd.DataFrame(), pd.DataFrame(), None, None
-        
-    # Calcular estadísticas del dataset filtrado
-    stats = filtered.drop(columns=['periodo'], errors='ignore').describe().round(2).reset_index().rename(columns={'index': 'Medida'})
+        return info_text, pd.DataFrame(), pd.DataFrame(), None, None, None, None, None
 
-    all_cols = list(filtered.columns)
-    
     # Columnas para mostrar del dataset
-    # cols_to_show = [c for c in all_cols if c not in ['provincia', 'departamento', 'sector', 'ambito']]
+    all_cols = list(filtered.columns)
     cols_to_show = [c for c in all_cols if c not in ['provincia', 'departamento']]
-    final_df = filtered[cols_to_show]
 
-    # Mensaje informativo sobre registros y campos
+    # Se arma el listado de las variables numéricas del dataset, excluyendo "periodo"
+    # y se guarda la primera variable de la lista
+    numeric_cols = df.select_dtypes(include=['number']).columns.tolist()
+    cols_to_plot = [c for c in numeric_cols if c != 'periodo']
+    indicadores = cols_to_plot
+    indicador_first = indicadores[0]
+
+    # Data 1: Mensaje informativo sobre registros y campos
     info_text = f" MATRÍCULA {dataset_type.upper()} PARA {provincia} - {departamento} (SECTOR {sector.upper()} - ÁMBITO {ambito.upper()}): {len(filtered)} REGISTROS  -  {len(cols_to_show)} CAMPOS"
+   
+    # Data 2: Calcular estadísticas del dataset filtrado
+    stats = filtered.drop(columns=['periodo'], errors='ignore').describe().round(2).reset_index().rename(columns={'index': 'Medida'})
     
-    # Generar gráfico de cajas
+    # Data 3: Obtener el dataset final con las columnas para mostrar
+    final_df = filtered[cols_to_show]
+  
+    # Data 4: Generar gráfico de cajas
     fig_boxplot = create_boxplot(final_df)
     
-    # Generar gráfico de serie temporal
-    fig_evolution = create_evolution_chart(final_df)
+    # Data 5: Generar gráfico de serie temporal con la variable numérica indicada
+    # OBSERVACIÓN: EL MISMO GRÁFICO VUELVE A GENERARSE CUANDO SE ACTUALIZA EL COMPONENTE
+    # 'indicador', LO QUE OCURRE SIMULTÁNEAMENTE. POR ESO NO ES NECESARIO GENERAR EL GRÁFICO AQUÍ. 
+    # fig_evolution = create_evolution_graph2(final_df, indicador_first)
+    fig_evolution = None
     
-    return info_text, stats, final_df, fig_boxplot, fig_evolution
+    return info_text, stats, final_df, fig_boxplot, fig_evolution, \
+            gr.Dropdown(choices=indicadores, value=indicador_first, interactive=True), \
+            gr.Button(interactive=True), gr.Button(interactive=True)
+
 
 # Funcion para convertir imagen a Base64
 def image_to_base64(image_path):
@@ -284,8 +418,8 @@ with gr.Blocks(title="Análisis Educativo") as app:
                 with gr.Column(scale=2, elem_classes="portrait-bg2"):
                     gr.HTML("Aplicación de algoritmos de Machine Learning "
                             "a las Bases de Datos Abiertas de la Secretaría de Educación "
-                            "del Ministerio de Capital Humano de la República Argentina "
-                            "para el análisis de los indicadores de matrícula escolar "
+                            "del Ministerio de Capital Humano de la República Argentina, "
+                            "para el análisis de los indicadores de matrícula escolar, "
                             "para todas las provincias y CABA y sus respectivos "
                             "departamentos, partidos o comunas.",
                             elem_classes="portrait-subtitle")
@@ -299,7 +433,8 @@ with gr.Blocks(title="Análisis Educativo") as app:
                 gr.HTML("&nbsp;&nbsp;CONSULTA DE DATOS SOBRE JURISDICCIONES EDUCATIVAS", elem_classes="title-text")
             
             with gr.Row():
-                with gr.Column(min_width=180, scale=1, elem_classes="custom-tab"):
+                with gr.Column(min_width=180, # scale=1, 
+                               elem_classes="custom-tab"):
                     tipo_matricula = gr.Radio(
                         label="Tipo de Matrícula", 
                         choices=["Por Curso", "Por Edad", "Por Población", "Por Trayectoria"],
@@ -307,9 +442,12 @@ with gr.Blocks(title="Análisis Educativo") as app:
                         elem_classes="custom-radio"
                     )
         
-                    # Dropdowns
-                    provincia = gr.Dropdown(label="Provincia", choices=[], elem_classes="custom-dropdown")
-                    departamento = gr.Dropdown(label="Departamento", choices=[], elem_classes="custom-dropdown")
+                    provincia = gr.Dropdown(label="Provincia", choices=[],
+                                                # allow_custom_value=True, # Evita el UserWarning al resetear; creo que no es necesario
+                                                elem_classes="custom-dropdown")
+                    departamento = gr.Dropdown(label="Departamento", choices=[],
+                                                # allow_custom_value=True, # Evita el UserWarning al resetear; creo que no es necesario
+                                                elem_classes="custom-dropdown")
             
                     sector = gr.Radio(label="Sector", choices=["Estatal", "Privado", "Ambos"], value="Ambos", elem_classes="custom-radio")
                     ambito = gr.Radio(label="Ámbito", choices=["Urbano", "Rural", "Ambos"], value="Ambos", elem_classes="custom-radio")
@@ -332,39 +470,99 @@ with gr.Blocks(title="Análisis Educativo") as app:
                         output_plot_box = gr.Plot()
                     
                     with gr.Row(elem_classes="custom-tab"):
-                        output_plot_evolution = gr.Plot()
+                        with gr.Column(min_width=150, scale=1):
+                            with gr.Row():
+                                indicador = gr.Dropdown(label="Indicador", choices=[],
+                                                interactive=False,
+                                                allow_custom_value=True,
+                                                elem_classes="custom-dropdown")
+                            with gr.Row(elem_classes="no-stack"):
+                                btn_anterior = gr.Button("<", variant="primary",
+                                                         interactive=False,
+                                                         elem_classes="custom-button2",
+                                                         scale=1, min_width=50)
+                                btn_siguiente = gr.Button(">", variant="primary",
+                                                          interactive=False,
+                                                          elem_classes="custom-button2", 
+                                                          scale=1, min_width=50)
+                        with gr.Column(scale=20):
+                            output_plot_evolution = gr.Plot()
 
-            
+
             tipo_matricula.change(
                 fn=on_dataset_change,
                 inputs=[tipo_matricula],
-                outputs=[dataset_state, provincia, departamento, sector, ambito, info_label, stats_table, output_table, output_plot_box, output_plot_evolution]
+                outputs=[dataset_state, provincia, departamento, sector, ambito,
+                         info_label, stats_table, output_table, output_plot_box,
+                         output_plot_evolution, indicador, btn_anterior, btn_siguiente]
             )
             
             provincia.change(
                 fn=on_provincia_change,
                 inputs=[dataset_state, provincia],
-                outputs=[departamento]
+                outputs=[departamento, sector, ambito,
+                         info_label, stats_table, output_table, output_plot_box, 
+                         output_plot_evolution, indicador, btn_anterior, btn_siguiente]
             )
             
-            btn_mostrar.click(
-                fn=filter_data,
-                inputs=[dataset_state, tipo_matricula, provincia, departamento, sector, ambito],
-                outputs=[info_label, stats_table, output_table, output_plot_box, output_plot_evolution]
+            departamento.change(
+                fn=on_departamento_change,
+                # inputs=[dataset_state, departamento],
+                outputs=[sector, ambito, info_label, stats_table, output_table, 
+                         output_plot_box, output_plot_evolution, indicador, 
+                         btn_anterior, btn_siguiente]
             )
 
-            # input_components = [departamento, sector, ambito]
-            # for comp in input_components:
-            #    comp.change(
-            #        fn=filter_data, 
-            #        inputs=[dataset_state, tipo_matricula, provincia, departamento, sector, ambito],
-            #        outputs=[info_label, stats_table, output_table, output_plot_box, output_plot_evolution]
-            #    )
+            sector.change(
+                fn=on_opcion_change,
+                # inputs=[dataset_state, departamento],
+                outputs=[info_label, stats_table, output_table, 
+                         output_plot_box, output_plot_evolution, indicador,
+                         btn_anterior, btn_siguiente]
+            )
+            
+            ambito.change(
+                fn=on_opcion_change,
+                # inputs=[dataset_state, departamento],
+                outputs=[info_label, stats_table, output_table, 
+                         output_plot_box, output_plot_evolution, indicador, 
+                         btn_anterior, btn_siguiente]
+            )
+
+            btn_mostrar.click(
+                fn=show_data,
+                inputs=[dataset_state, tipo_matricula, provincia, departamento, sector, ambito],
+                outputs=[info_label, stats_table, output_table,
+                         output_plot_box, output_plot_evolution, indicador, 
+                         btn_anterior, btn_siguiente]
+            )
+
+            indicador.change(
+                fn=create_evolution_graph,
+                inputs=[dataset_state, provincia, departamento, sector, ambito, 
+                        indicador],
+                outputs=[output_plot_evolution]
+            )
+
+            """
+            btn_anterior.click(
+                fn=create_prev_evolution_graph,
+                inputs=[dataset_state, provincia, departamento, sector, ambito, indicador],
+                outputs=[output_plot_evolution]
+            )
+            """
+            btn_siguiente.click(
+                fn=create_next_evolution_graph,
+                inputs=[dataset_state, provincia, departamento, sector, ambito, indicador],
+                outputs=[indicador, output_plot_evolution]
+            )
 
             app.load(
                 fn=on_dataset_change, 
                 inputs=[tipo_matricula], 
-                outputs=[dataset_state, provincia, departamento, sector, ambito, info_label, stats_table, output_table, output_plot_box, output_plot_evolution]
+                outputs=[dataset_state, provincia, departamento, sector, ambito,
+                         info_label, stats_table, output_table, output_plot_box,
+                         output_plot_evolution, indicador, btn_anterior, btn_siguiente]
             )
 
         with gr.Tab("Series Temporales"):

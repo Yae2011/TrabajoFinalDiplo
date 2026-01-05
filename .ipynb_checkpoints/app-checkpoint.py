@@ -273,7 +273,7 @@ def calculate_info(df, consulta_type, provincia, departamento, sector, ambito):
     # return f"{ds_name} - {provincia} - {departamento}: {len(filtered)} registros - {data_cols_count} campos"
     return f" MATRÍCULA {consulta_type.upper()} PARA {provincia} - {departamento}:  {len(filtered)} REGISTROS  -  {data_cols_count} CAMPOS"
 
-def filter_data(df, consulta_type, provincia, departamento, sector, ambito):
+def show_data(df, consulta_type, provincia, departamento, sector, ambito):
     filtered = get_filtered_subset(df, consulta_type, provincia, departamento, sector, ambito)
     
     if filtered.empty:
@@ -436,7 +436,7 @@ with gr.Blocks(title="Análisis Educativo") as app:
             
             # 3. Filter and Show
             btn_mostrar.click(
-                fn=filter_data,
+                fn=show_data,
                 inputs=[dataset_state, tipo_matricula, provincia, departamento, sector, ambito],
                 outputs=[stats_table, output_table, info_label, output_plot_box, output_plot_evolution]
             )
