@@ -3,7 +3,7 @@
 :root {
     --input-bg-color: #F5F5F5;
     --container-bg-color: #EBEBEB;
-    --container-bg-color2: #e4e4e4;
+    --container-bg-color2: #BDBDBD;
     --button-bg-color: #E0E0E0;
     --button-hover-bg-color: #BDBDBD;
     --title-bg-color: #EBEBEB;
@@ -20,7 +20,7 @@
 
     /* Sombra suave y delicada unificada */
     --shadow-soft: 8px 8px 15px -3px rgba(0, 0, 0, 0.12), 4px 4px 6px -2px rgba(0, 0, 0, 0.08);
-    --shadow-strong-text: 3px 3px 6px rgba(0, 0, 0, 0.6);
+    --shadow-strong-text: 5px 5px 5px rgba(0, 0, 0, 1);
 }
 
 
@@ -52,7 +52,7 @@
     margin-bottom: 20px important!;
 }
 .portrait-bg-2 { /* Área derecha de la portada: fondo gris y subtítulo */
-    background-color: var(--container-bg-color) !important;
+    background-color: var(--container-bg-color2) !important;
     border-radius: 25px !important;
     padding: 10px !important;
     border: none !important;
@@ -62,9 +62,6 @@
     flex-direction: column !important;
     justify-content: flex-end !important;
 }
-
-
-
 .portrait-bg-video { /* Contenedor para el video y el título */
     background-color: var(--container-bg-color) !important;
     position: relative;
@@ -77,6 +74,10 @@
     display: flex;
 }
 .video-bg { /* El video se posiciona de forma absoluta para quedar al fondo */
+    /* Los tres parámetros siguientes ubican el video, según las dimensiones que posea */
+    left: 0%; /* Punto de origen horizontal en el contenedor padre */
+    top: 20%; /* Punto de origen vertical en el contenedor padre */
+    transform: translate(-0%, -20%); /* Desplazamiento horizontal y vertical, como % de las dimensiones del video */
     position: absolute;
     min-width: 100%;
     min-height: 100%;
@@ -94,7 +95,7 @@
     font-weight: bold !important;
     font-size: var(--font-title0) !important;
     text-align: left !important;
-    margin: 15px;
+    margin: 5px;
 }
 .portrait-subtitle, .portrait-subtitle * {
     font-size: var(--font-title2) !important;
@@ -122,6 +123,7 @@
     padding: 15px;
     box-shadow: var(--shadow-soft) !important;
     width: 100% !important;
+    height: 100% !important;
 }
 
 

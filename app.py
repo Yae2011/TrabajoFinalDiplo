@@ -466,6 +466,7 @@ extra_css = f"""
 .custom-tab {{ background-image: url('data:image/png;base64,{fondo_contenedor}') !important; }}
 .header-tab {{ background-image: url('data:image/png;base64,{fondo_encabezado}') !important; }}
 .portrait-bg-1 {{ background-image: url('data:image/png;base64,{fondo_portada}') !important; }}
+.portrait-bg-2 {{ background-image: url('data:image/png;base64,{fondo_titulo}') !important; }}
 """
 custom_css = base_css + extra_css
 
