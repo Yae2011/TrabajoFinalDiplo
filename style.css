@@ -10,7 +10,7 @@
     --input-border-color: #D3D3D3;
     --text-color: #000000;
 
-    --font-title0: 46px;
+    --font-title0: 40px;
     --font-title1: 20px;
     --font-title2: 18px;
     --font-title3: 14px;
@@ -39,7 +39,7 @@
 
 /* ### ESTILOS PARA LA PORTADA PRINCIPAL 
 ------------------------------------------------ */
-.portrait {
+.portrait-bg-1 { /* Área izquierda de la portada: imagen de fondo y título */
     background-size: cover !important;
     background-position: center !important;
     background-repeat: no-repeat !important;
@@ -51,14 +51,7 @@
     padding: 30px;
     margin-bottom: 20px important!;
 }
-.portrait-bg {
-    background-color: var(--container-bg-color2) !important;
-    border-radius: 25px !important;
-    padding: 10px !important;
-    border: none !important;
-    box-shadow: var(--shadow-soft) !important;
-}
-.portrait-bg2 {
+.portrait-bg-2 { /* Área derecha de la portada: fondo gris y subtítulo */
     background-color: var(--container-bg-color) !important;
     border-radius: 25px !important;
     padding: 10px !important;
@@ -69,13 +62,39 @@
     flex-direction: column !important;
     justify-content: flex-end !important;
 }
-.portrait-title, .portrait-title * {
+
+
+
+.portrait-bg-video { /* Contenedor para el video y el título */
+    background-color: var(--container-bg-color) !important;
+    position: relative;
+    width: 100%;
+    min-height: 450px;
+    overflow: hidden;
+    border: none !important;
+    box-shadow: var(--shadow-soft) !important;
+    border-radius: 25px;
+    display: flex;
+}
+.video-bg { /* El video se posiciona de forma absoluta para quedar al fondo */
+    position: absolute;
+    min-width: 100%;
+    min-height: 100%;
+    /* width: auto;
+    height: auto; */
+    z-index: 0; /* Capa inferior */
+    object-fit:cover; /* El video cubra el área sin deformarse */
+}
+.portrait-title, .portrait-title * { /* El título tiene posición relativa sobre el video */
+    position: relative;
+    z-index: 1;
     text-shadow: var(--shadow-strong-text) !important;
     line-height: 1.1 !important;
     color: white !important;
     font-weight: bold !important;
     font-size: var(--font-title0) !important;
     text-align: left !important;
+    margin: 15px;
 }
 .portrait-subtitle, .portrait-subtitle * {
     font-size: var(--font-title2) !important;

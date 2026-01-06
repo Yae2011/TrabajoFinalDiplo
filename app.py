@@ -426,14 +426,14 @@ def show_data(df, dataset_type, provincia, departamento, sector, ambito):
             gr.Button(interactive=True), gr.Button(interactive=True)
 
 
-# Funcion para convertir imagen a Base64
-def image_to_base64(image_path):
-    if not os.path.exists(image_path):
+# Función para convertir imagen/video a Base64
+def media_to_base64(media_path):
+    if not os.path.exists(media_path):
         return ""
-    with open(image_path, "rb") as img_file:
-        return base64.b64encode(img_file.read()).decode('utf-8')
+    with open(media_path, "rb") as media_file:
+        return base64.b64encode(media_file.read()).decode('utf-8')
 
-# Leer el contenido del CSS externo para agregar
+# Se lee el contenido del CSS externo para agregar
 # las líneas correspondientes a las imágenes de fondo
 css_path = "style.css"
 if os.path.exists(css_path):
@@ -443,19 +443,20 @@ else:
     base_css = ""
     print("Advertencia: style.css no encontrado.")
 
-# Transformación de imágenes PNG a BASE64
+# Transformación de imágenes PNG / videos MP4 a BASE64
 current_dir = os.path.dirname(os.path.abspath(__file__))
 img_path_1 = os.path.join(current_dir, "Images", "App_bg.png")
 img_path_2 = os.path.join(current_dir, "Images", "Title_bg.png")
 img_path_3 = os.path.join(current_dir, "Images", "Container_bg.png")
 img_path_4 = os.path.join(current_dir, "Images", "header_bg.png")
 img_path_5 = os.path.join(current_dir, "Images", "portrait_bg.png")
-
-fondo_app = image_to_base64(img_path_1)
-fondo_titulo = image_to_base64(img_path_2)
-fondo_contenedor = image_to_base64(img_path_3)
-fondo_encabezado = image_to_base64(img_path_4)
-fondo_portada = image_to_base64(img_path_5)
+vid_path_1 = os.path.join(current_dir, "Images", "portrait_bg.mp4")
+fondo_app = media_to_base64(img_path_1)
+fondo_titulo = media_to_base64(img_path_2)
+fondo_contenedor = media_to_base64(img_path_3)
+fondo_encabezado = media_to_base64(img_path_4)
+fondo_portada = media_to_base64(img_path_5)
+video_portada = media_to_base64(vid_path_1)
 
 # Se agregan al CSS leído, las líneas que aplican las imágenes de fondo en BASE64,
 # que no pueden insertarse direcatmente en "style.css"
@@ -464,11 +465,19 @@ extra_css = f"""
 .title-tab {{ background-image: url('data:image/png;base64,{fondo_titulo}') !important; }}
 .custom-tab {{ background-image: url('data:image/png;base64,{fondo_contenedor}') !important; }}
 .header-tab {{ background-image: url('data:image/png;base64,{fondo_encabezado}') !important; }}
-.portrait {{ background-image: url('data:image/png;base64,{fondo_portada}') !important; }}
+.portrait-bg-1 {{ background-image: url('data:image/png;base64,{fondo_portada}') !important; }}
 """
 custom_css = base_css + extra_css
 
-
+# Componente HTML para el video
+portada_video = f'''
+<div>
+    <video autoplay loop muted playsinline class="video-bg">
+        <source src="data:video/mp4;base64,{video_portada}" type="video/mp4">
+        El navegador no soporta la etiqueta de video.
+    </video>
+</div>
+'''
 
 ### INTERFACE GRADIO
 
@@ -485,14 +494,15 @@ with gr.Blocks(title="Análisis Educativo") as app:
     
     with gr.Tabs():
         with gr.Tab("Inicio"):
-            with gr.Row(elem_classes="portrait-bg"):
-                with gr.Column(scale=8, elem_classes="portrait"):
+            with gr.Row():
+                with gr.Column(scale=8, elem_classes="portrait-bg-video"): # elem_classes="portrait-bg-1"):
+                    gr.HTML(portada_video)
                     gr.HTML("ANÁLISIS DE LA MATRÍCULA ESCOLAR<br>"
                             "DE LA REPÚBLICA ARGENTINA,<br>"
                             "EN EL PERÍODO 2011-2024,<br>"
                             "PARA TODAS LAS JURISDICCIONES<br>"
                             "EDUCATIVAS DEL PAÍS", elem_classes="portrait-title")
-                with gr.Column(scale=2, elem_classes="portrait-bg2"):
+                with gr.Column(scale=2, elem_classes="portrait-bg-2"):
                     gr.HTML("Aplicación de algoritmos de Machine Learning "
                             "a las Bases de Datos Abiertas de la Secretaría de Educación "
                             "del Ministerio de Capital Humano de la República Argentina, "
@@ -500,7 +510,7 @@ with gr.Blocks(title="Análisis Educativo") as app:
                             "para todas las provincias y CABA y sus respectivos "
                             "departamentos, partidos o comunas.",
                             elem_classes="portrait-subtitle")
-
+                
         
         with gr.Tab("Proceso"):
             with gr.Row(elem_classes="title-tab"):
