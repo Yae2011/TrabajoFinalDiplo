@@ -157,6 +157,15 @@
 
 
 
+/* ### CONTENEDOR PARA ALTERNAR VISIBLE = TRUE/FALSE
+------------------------------------------------ */
+.special-panel {
+    background-color: "green" !important; /*var(--input-bg-color) !important;*/
+    border: none !important;
+}
+
+
+
 /* ### CONTENEDOR DE TÍTULO PRINCIPAL 
 ------------------------------------------------ */
 .title-tab {

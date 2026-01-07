@@ -54,13 +54,13 @@ def load_data(dataset_type):
              return pd.DataFrame(), [f"Error cargando: {e}"]
 
 
-def on_dataset_change(dataset_type):
+def on_load_page(dataset_type):
     df, provincias = load_data(dataset_type)
+    m_inic = "EL DATASET SELECCIONADO DE MATRÍCULA NO ESTÁ DISPONIBLE"
+
     if df.empty:
         return df, gr.update(choices=[], value=None), gr.update(choices=[], value=None), \
-               gr.update(value="Ambos"), gr.update(value="Ambos"), "", None, None, None, None, None, \
-               gr.Dropdown(choices=[], value=None, interactive=False), \
-               gr.Button(interactive=False), gr.Button(interactive=False)
+                gr.update(value=m_inic)
     
     # Se arma el listado ordenado de provincias y se guarda la primera provincia
     provincias_sorted = sorted([str(p) for p in provincias])
@@ -71,14 +71,42 @@ def on_dataset_change(dataset_type):
     dptos = df[df['provincia'] == prov_first]['departamento'].unique()
     dptos_sorted = sorted([str(d) for d in dptos if d is not None])
     dpto_first = dptos_sorted[0]
+    m_inic = "DEBE SELECCIONARSE EL BOTÓN \"MOSTRAR DATOS\" PARA VISUALIZAR LOS RESULTADOS"
+
+    return df, gr.update(choices=provincias_sorted, value=prov_first), \
+            gr.update(choices=dptos_sorted, value=dpto_first), gr.update(value=m_inic)
+
+
+def on_dataset_change(dataset_type):
+    df, provincias = load_data(dataset_type)
+    m_inic = "EL DATASET SELECCIONADO DE MATRÍCULA NO ESTÁ DISPONIBLE"
+
+    if df.empty:
+        return df, gr.update(choices=[], value=None), gr.update(choices=[], value=None), \
+                gr.update(value="Ambos"), gr.update(value="Ambos"), gr.HTML(value=m_inic), \
+                gr.update(visible=False), None, None, None, None, None, \
+                gr.Dropdown(choices=[], value=None, interactive=False), \
+                gr.Button(interactive=False), gr.Button(interactive=False)
+    
+    # Se arma el listado ordenado de provincias y se guarda la primera provincia
+    provincias_sorted = sorted([str(p) for p in provincias])
+    prov_first = provincias_sorted[0]
+
+    # Se arma el listado ordenado de departamentos de la primera provincia de la lista
+    # y se guarda el primer departamento de la lista
+    dptos = df[df['provincia'] == prov_first]['departamento'].unique()
+    dptos_sorted = sorted([str(d) for d in dptos if d is not None])
+    dpto_first = dptos_sorted[0]
+    m_inic = "DEBE SELECCIONARSE EL BOTÓN \"MOSTRAR DATOS\" PARA VISUALIZAR LOS RESULTADOS"
 
     # Al actualizar el dataset, el valor de la lista desplegabls "provincia" 
     # muestra la primera provincia del listado y la lista desplegable "departamento"
-    # muestra el primer departamento de la provincia. La lista desplegable "inidicador"
-    # se actualiza recién luego del borón "Mostrar Datos"
+    # muestra el primer departamento de la provincia. La lista desplegable "indicador"
+    # se actualiza recién luego de presionar el botón "Mostrar Datos"
     return df, gr.update(choices=provincias_sorted, value=prov_first), \
             gr.update(choices=dptos_sorted, value=dpto_first), \
-            gr.update(value="Ambos"), gr.update(value="Ambos"), "", None, None, None, None, None, \
+            gr.update(value="Ambos"), gr.update(value="Ambos"), gr.HTML(value=m_inic), \
+            gr.update(visible=False), None, None, None, None, None, \
             gr.Dropdown(choices=[], value=None, interactive=False), \
             gr.Button(interactive=False), gr.Button(interactive=False)
 
@@ -90,27 +118,34 @@ def on_provincia_change(df, provincia):
     dptos_sorted = sorted([str(d) for d in dptos if d is not None])
     dpto_first = dptos_sorted[0]
     
+    m_inic = "DEBE SELECCIONARSE EL BOTÓN \"MOSTRAR DATOS\" PARA VISUALIZAR LOS RESULTADOS"
     return  gr.update(choices=dptos_sorted, value=dpto_first), \
-            gr.update(value="Ambos"), gr.update(value="Ambos"), "", None, None, None, None, None, \
+            gr.update(value="Ambos"), gr.update(value="Ambos"), gr.HTML(value=m_inic), \
+            gr.update(visible=False), None, None, None, None, None, \
             gr.Dropdown(choices=[], value="", interactive=False), \
             gr.Button(interactive=False), gr.Button(interactive=False)
 
 
 def on_departamento_change():
     # Al cambiar de departamento se resetea toda la data en pantalla
-    return gr.update(value="Ambos"), gr.update(value="Ambos"), "", None, None, None, None, None, \
+    m_inic = "DEBE SELECCIONARSE EL BOTÓN \"MOSTRAR DATOS\" PARA VISUALIZAR LOS RESULTADOS"
+    return gr.update(value="Ambos"), gr.update(value="Ambos"), gr.HTML(value=m_inic), \
+            gr.update(visible=False), None, None, None, None, None, \
             gr.Dropdown(choices=[], value="", interactive=False), \
             gr.Button(interactive=False), gr.Button(interactive=False)
 
 
 def on_opcion_change():
     # Al cambiar la opción de sector o ámbito se resetea toda la data en pantalla
-    return "", None, None, None, None, None, \
+    m_inic = "DEBE SELECCIONARSE EL BOTÓN \"MOSTRAR DATOS\" PARA VISUALIZAR LOS RESULTADOS"
+    return gr.HTML(value=m_inic), gr.update(visible=False), None, None, None, None, None, \
             gr.Dropdown(choices=[], value="", interactive=False), \
             gr.Button(interactive=False), gr.Button(interactive=False)
 
 
 def create_boxplot_graph(df):
+    # df: dataset filtrado con columnas con "nombres originales"
+
     if df is None or df.empty:
         return None
     
@@ -151,7 +186,9 @@ def create_boxplot_graph(df):
 
 
 def create_evolution_graph(df, indicador):
-        
+    # df: dataset filtrado con columnas con nombres originales
+    # indicador: nombre original de columna
+
     # Se crea la figura para el gráfico
     fig, ax = plt.subplots(figsize=(10, 4))
     
@@ -177,6 +214,12 @@ def create_evolution_graph(df, indicador):
         ax.plot(x_data, p(x_data), color='orange', linestyle='--', 
                 linewidth=2, label='Tendencia')
         
+        # Se calcula el promedio de los datos del indicador
+        media_valor = np.mean(y_data)
+        # Se grafica la línea horizontal representativa de la media
+        ax.hlines(y=media_valor, xmin=x_data.min(), xmax=x_data.max(), 
+                  color='skyblue', linestyle='--', linewidth=2, label='Media')
+
         titulo = f"EVOLUCIÓN DE LA MATRÍCULA: {dict_nlargos[indicador].upper()}"
         ax.set_title(titulo)
         ax.grid(True, linestyle='--', alpha=0.5)
@@ -199,6 +242,8 @@ def create_evolution_graph(df, indicador):
 
 
 def create_histogram_graph(df, indicador):
+    # df: dataset filtrado con columnas con nombres originales
+    # indicador: nombre original de columna
 
     # Creación de la figura
     fig, ax = plt.subplots(figsize=(10, 4))
@@ -239,6 +284,9 @@ def create_histogram_graph(df, indicador):
 
 
 def create_evolution_and_histogram_graphs(df, indicador):
+    # df: dataset filtrado con columnas con nombres originales
+    # indicador: nombre descriptivo corto de columna
+
     if df is None or df.empty or indicador is None:
         return None, None
     
@@ -261,16 +309,18 @@ def create_evolution_and_histogram_graphs(df, indicador):
     
 
 def create_next_evolution_and_histogram_graphs(df, indicador):
-    
+    # df: dataset filtrado con columnas con nombres originales
+    # indicador: nombre descriptivo corto de columna
+
     # Se obtiene la lista de variables (nombre de columnas numéricas) del df
     numeric_cols = df.select_dtypes(include=['number']).columns.tolist()
     # Se elimina la columna numérica del 'periodo'
     indicadores_cols = [c for c in numeric_cols if c != 'periodo']
-    # Se busca la clave original (columna) en el diccionario a partir del valor descriptivo
+    # Se busca la clave original (columna) en el diccionario a partir del nombre corto descriptivo
     indicador = next((k for k, v in dict_ncortos.items() if v == indicador), indicador)
-    # Se obtiene el índice del indicador actual
+    # Se obtiene el índice del indicador actual (nombre corto)
     indice_actual = indicadores_cols.index(indicador)
-    # Se obtiene el nombre del indicador siguiente
+    # Se obtiene el nombre del indicador siguiente (nombre corto)
     indice_sig = (indice_actual + 1) % len(indicadores_cols)
     nuevo_indicador = indicadores_cols[indice_sig]
     
@@ -288,7 +338,9 @@ def create_next_evolution_and_histogram_graphs(df, indicador):
 
 
 def create_prev_evolution_and_histogram_graphs(df, indicador):
-    
+    # df: dataset filtrado con columnas con nombres originales
+    # indicador: nombre descriptivo corto de columna
+
     # Se obtiene la lista de variables (nombre de columnas numéricas) del df
     numeric_cols = df.select_dtypes(include=['number']).columns.tolist()
     # Se elimina la columna numérica del 'periodo'
@@ -371,7 +423,7 @@ def show_data(df, dataset_type, provincia, departamento, sector, ambito):
     
     if filtered.empty:
         info_text = f" MATRÍCULA {dataset_type.upper()} PARA {provincia} - {departamento} (SECTOR {sector.upper()} - ÁMBITO {ambito.upper()}): SIN REGISTROS"
-        return info_text, pd.DataFrame(), pd.DataFrame(), None, None, None, None, None, None
+        return info_text, gr.update(visible=False), pd.DataFrame(), pd.DataFrame(), None, None, None, None, None, None
 
     # Columnas para mostrar del dataset
     all_cols = list(filtered.columns)
@@ -413,15 +465,20 @@ def show_data(df, dataset_type, provincia, departamento, sector, ambito):
     # OBSERVACIÓN: EL MISMO GRÁFICO VUELVE A GENERARSE CUANDO SE ACTUALIZA EL COMPONENTE
     # 'indicador', LO QUE OCURRE SIMULTÁNEAMENTE. POR ESO NO ES NECESARIO GENERAR EL GRÁFICO AQUÍ. 
     # fig_evolution = create_evolution_graph(final_df, indicador_first)
-    fig_evolution = None
+    # fig_evolution = None
     
     # Data 6: Generar gráfico de histograma con la variable numérica indicada
     # OBSERVACIÓN: EL MISMO GRÁFICO VUELVE A GENERARSE CUANDO SE ACTUALIZA EL COMPONENTE
     # 'indicador', LO QUE OCURRE SIMULTÁNEAMENTE. POR ESO NO ES NECESARIO GENERAR EL GRÁFICO AQUÍ. 
     # fig_histogram = create_evolution_graph(final_df, indicador_first)
-    fig_histogram = None
+    # fig_histogram = None
+    
+    fig_evolution = create_evolution_graph(filtered, indicadores_originales[0])
+    fig_histogram = create_histogram_graph(filtered, indicadores_originales[0])
 
-    return filtered, info_text, stats, final_df, fig_boxplot, fig_evolution, fig_histogram, \
+
+    return filtered, info_text, gr.update(visible=True), stats, final_df, \
+            fig_boxplot, fig_evolution, fig_histogram, \
             gr.Dropdown(choices=indicadores, value=indicador_first, interactive=True), \
             gr.Button(interactive=True), gr.Button(interactive=True)
 
@@ -555,45 +612,47 @@ with gr.Blocks(title="Análisis Educativo") as app:
         
                 with gr.Column(scale=20):
                     with gr.Row(elem_classes="custom-tab"):
-                        info_label = gr.HTML(value="", elem_classes="info-display-1")
-
-                    with gr.Row(elem_classes="custom-tab"):
-                        with gr.Column():
-                            gr.HTML(value="ESTADÍSTICAS DEL DATASET", elem_classes="info-display-2")
-                            stats_table = gr.Dataframe(interactive=False, max_height=335)
-                        with gr.Column():
-                            gr.HTML(value="CONTENIDO DEL DATASET", elem_classes="info-display-2")
-                            output_table = gr.Dataframe(interactive=False, max_height=335)
+                        info_label = gr.HTML(value="DEBE SELECCIONARSE EL BOTÓN \"MOSTRAR DATOS\" PARA VISUALIZAR LOS RESULTADOS", elem_classes="info-display-1")
                     
-                    with gr.Row(elem_classes="custom-tab"):
-                        output_plot_box = gr.Plot()
+                    # Componente que contiene toda la información a mostrar y que se alterna en visble = True/False
+                    with gr.Column(visible=False, elem_classes="special-paneñ") as data_dataset:
+                        with gr.Row(elem_classes="custom-tab"):
+                            with gr.Column():
+                                gr.HTML(value="ESTADÍSTICAS DEL DATASET", elem_classes="info-display-2")
+                                stats_table = gr.Dataframe(interactive=False, max_height=335)
+                            with gr.Column():
+                                gr.HTML(value="CONTENIDO DEL DATASET", elem_classes="info-display-2")
+                                output_table = gr.Dataframe(interactive=False, max_height=335)
                     
-                    with gr.Row(elem_classes="custom-tab"):
-                        with gr.Column(min_width=150, scale=1):
-                            with gr.Row():
-                                indicador = gr.Dropdown(label="Indicador", choices=[],
+                        with gr.Row(elem_classes="custom-tab"):
+                            output_plot_box = gr.Plot()
+                        
+                        with gr.Row(elem_classes="custom-tab"):
+                            with gr.Column(min_width=150, scale=1):
+                                with gr.Row():
+                                    indicador = gr.Dropdown(label="Indicador", choices=[],
                                                 interactive=False,
                                                 allow_custom_value=True,
                                                 elem_classes="custom-dropdown")
-                            with gr.Row(elem_classes="no-stack"):
-                                btn_anterior = gr.Button("<", variant="primary",
+                                with gr.Row(elem_classes="no-stack"):
+                                    btn_anterior = gr.Button("<", variant="primary",
                                                          interactive=False,
                                                          elem_classes="custom-button2",
                                                          scale=1, min_width=50)
-                                btn_siguiente = gr.Button(">", variant="primary",
+                                    btn_siguiente = gr.Button(">", variant="primary",
                                                           interactive=False,
-                                                          elem_classes="custom-button2", 
+                                                          elem_classes="custom-button2",
                                                           scale=1, min_width=50)
-                        with gr.Column(scale=20):
-                            output_plot_evolution = gr.Plot()
-                            output_plot_histogram = gr.Plot()
+                            with gr.Column(scale=20):
+                                output_plot_evolution = gr.Plot()
+                                output_plot_histogram = gr.Plot()
 
 
             tipo_matricula.change(
                 fn=on_dataset_change,
                 inputs=[tipo_matricula],
                 outputs=[dataset_state, provincia, departamento, sector, ambito,
-                         info_label, stats_table, output_table, output_plot_box,
+                         info_label, data_dataset, stats_table, output_table, output_plot_box,
                          output_plot_evolution, output_plot_histogram,
                          indicador, btn_anterior, btn_siguiente]
             )
@@ -602,7 +661,7 @@ with gr.Blocks(title="Análisis Educativo") as app:
                 fn=on_provincia_change,
                 inputs=[dataset_state, provincia],
                 outputs=[departamento, sector, ambito,
-                         info_label, stats_table, output_table, output_plot_box, 
+                         info_label, data_dataset, stats_table, output_table, output_plot_box, 
                          output_plot_evolution, output_plot_histogram,
                          indicador, btn_anterior, btn_siguiente]
             )
@@ -610,7 +669,7 @@ with gr.Blocks(title="Análisis Educativo") as app:
             departamento.change(
                 fn=on_departamento_change,
                 # inputs=[dataset_state, departamento],
-                outputs=[sector, ambito, info_label, stats_table, output_table, 
+                outputs=[sector, ambito, info_label, data_dataset, stats_table, output_table, 
                          output_plot_box, output_plot_evolution, 
                          output_plot_histogram, indicador, 
                          btn_anterior, btn_siguiente]
@@ -619,7 +678,7 @@ with gr.Blocks(title="Análisis Educativo") as app:
             sector.change(
                 fn=on_opcion_change,
                 # inputs=[dataset_state, departamento],
-                outputs=[info_label, stats_table, output_table, 
+                outputs=[info_label, data_dataset, stats_table, output_table, 
                          output_plot_box, output_plot_evolution, 
                          output_plot_histogram, indicador,
                          btn_anterior, btn_siguiente]
@@ -628,7 +687,7 @@ with gr.Blocks(title="Análisis Educativo") as app:
             ambito.change(
                 fn=on_opcion_change,
                 # inputs=[dataset_state, departamento],
-                outputs=[info_label, stats_table, output_table, 
+                outputs=[info_label, data_dataset, stats_table, output_table, 
                          output_plot_box, output_plot_evolution,
                          output_plot_histogram,  indicador, 
                          btn_anterior, btn_siguiente]
@@ -637,7 +696,7 @@ with gr.Blocks(title="Análisis Educativo") as app:
             btn_mostrar.click(
                 fn=show_data,
                 inputs=[dataset_state, tipo_matricula, provincia, departamento, sector, ambito],
-                outputs=[dataset_filter_state, info_label, stats_table, output_table,
+                outputs=[dataset_filter_state, info_label, data_dataset, stats_table, output_table,
                          output_plot_box, output_plot_evolution, output_plot_histogram,
                          indicador, btn_anterior, btn_siguiente]
             )
@@ -659,16 +718,13 @@ with gr.Blocks(title="Análisis Educativo") as app:
                 inputs=[dataset_filter_state, indicador],
                 outputs=[indicador, output_plot_evolution, output_plot_histogram]
             )
-
+            
             app.load(
-                fn=on_dataset_change, 
+                fn=on_load_page, 
                 inputs=[tipo_matricula], 
-                outputs=[dataset_state, provincia, departamento, sector, ambito,
-                         info_label, stats_table, output_table, output_plot_box,
-                         output_plot_evolution, output_plot_histogram,
-                         indicador, btn_anterior, btn_siguiente]
+                outputs=[dataset_state, provincia, departamento, info_label]
             )
-
+            
         
         ###### PESTAÑA SERIES TEMPORALES
         with gr.Tab("Series Temporales"):
