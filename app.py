@@ -464,6 +464,7 @@ extra_css = f"""
 .gradio-container {{ background-image: url('data:image/png;base64,{fondo_app}') !important; }}
 .title-tab {{ background-image: url('data:image/png;base64,{fondo_titulo}') !important; }}
 .custom-tab {{ background-image: url('data:image/png;base64,{fondo_contenedor}') !important; }}
+.custom-tab-2 {{ background-image: url('data:image/png;base64,{fondo_contenedor}') !important; }}
 .header-tab {{ background-image: url('data:image/png;base64,{fondo_encabezado}') !important; }}
 .portrait-bg-1 {{ background-image: url('data:image/png;base64,{fondo_portada}') !important; }}
 .portrait-bg-2 {{ background-image: url('data:image/png;base64,{fondo_titulo}') !important; }}
@@ -493,6 +494,7 @@ with gr.Blocks(title="Análisis Educativo") as app:
 
     gr.Row(elem_classes="header-tab")
     
+    ###### PESTAÑA INICIO
     with gr.Tabs():
         with gr.Tab("Inicio"):
             with gr.Row():
@@ -511,18 +513,21 @@ with gr.Blocks(title="Análisis Educativo") as app:
                             "para todas las provincias y CABA y sus respectivos "
                             "departamentos, partidos o comunas.",
                             elem_classes="portrait-subtitle")
-                
         
+
+        ###### PESTAÑA PROCESO
         with gr.Tab("Proceso"):
             with gr.Row(elem_classes="title-tab"):
                 gr.HTML("&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;FLUJOGRAMA DEL PROCESO", elem_classes="title-text")
             
         
+        ###### PESTAÑA DASHBOARD
         with gr.Tab("Dashboard"):
             with gr.Row(elem_classes="title-tab"):
                 gr.HTML("&nbsp;&nbsp;INDICADORES DE MATRÍCULA", elem_classes="title-text")
         
         
+        ###### PESTAÑA EDA
         with gr.Tab("EDA"):
             with gr.Row(elem_classes="title-tab"):
                 gr.HTML("&nbsp;&nbsp;VISUALIZACIÓN DE DATOS DE LAS JURISDICCIONES EDUCATIVAS", elem_classes="title-text")
@@ -539,10 +544,8 @@ with gr.Blocks(title="Análisis Educativo") as app:
                     )
         
                     provincia = gr.Dropdown(label="Provincia", choices=[],
-                                                # allow_custom_value=True, # Evita el UserWarning al resetear; creo que no es necesario
                                                 elem_classes="custom-dropdown")
                     departamento = gr.Dropdown(label="Departamento", choices=[],
-                                                # allow_custom_value=True, # Evita el UserWarning al resetear; creo que no es necesario
                                                 elem_classes="custom-dropdown")
             
                     sector = gr.Radio(label="Sector", choices=["Estatal", "Privado", "Ambos"], value="Ambos", elem_classes="custom-radio")
@@ -667,31 +670,77 @@ with gr.Blocks(title="Análisis Educativo") as app:
             )
 
         
-        with gr.Tab("Series Temporales - Jorge"):
+        ###### PESTAÑA SERIES TEMPORALES
+        with gr.Tab("Series Temporales"):
             with gr.Row(elem_classes="title-tab"):
-                gr.HTML("&nbsp;&nbsp;DEFINICIÓN DE LAS SERIES TEMPORALES A SER COMPARADAS", elem_classes="title-text")
+                gr.HTML("&nbsp;&nbsp;COMPARACIÓN DE SERIES TEMPORALES APLICANDO LA TRANSFORMADA RÁPIDA DE FOURIER", elem_classes="title-text")
             
-        
+            with gr.Row(elem_classes="custom-tab-2"):    
+                gr.HTML("&nbsp;&nbsp;1. SELECCIÓN DE LAS SERIES TEMPORALES A COMPARAR", elem_classes="subtitle-text")
+            with gr.Row():
+                with gr.Column(min_width=180, elem_classes="custom-tab"):
+                    mat = gr.Radio(label="Tipo de Matrícula", 
+                            choices=["Por Curso", "Por Población", "Por Trayectoria"],
+                            value="Por Curso", elem_classes="custom-radio")
+                    var = gr.Dropdown(label="Variable", choices=[], elem_classes="custom-dropdown")
+                with gr.Column(scale=20):
+                    with gr.Row(elem_classes="custom-tab"):
+                        prov1 = gr.Dropdown(label="", choices=[], elem_classes="custom-dropdown")
+                        dep1 = gr.Dropdown(label="", choices=[], elem_classes="custom-dropdown")
+                        sec1 = gr.Dropdown(label="", choices=[], elem_classes="custom-dropdown")
+                        amb1 = gr.Dropdown(label="", choices=[], elem_classes="custom-dropdown")
+                        tend1 = gr.Plot()
+                    with gr.Row(elem_classes="custom-tab"):
+                        prov2 = gr.Dropdown(label="", choices=[], elem_classes="custom-dropdown")
+                        dep2 = gr.Dropdown(label="", choices=[], elem_classes="custom-dropdown")
+                        sec2 = gr.Dropdown(label="", choices=[], elem_classes="custom-dropdown")
+                        amb2 = gr.Dropdown(label="", choices=[], elem_classes="custom-dropdown")
+                        tend2 = gr.Plot()
+                    with gr.Row(elem_classes="custom-tab"):
+                        prov3 = gr.Dropdown(label="", choices=[], elem_classes="custom-dropdown")
+                        dep3 = gr.Dropdown(label="", choices=[], elem_classes="custom-dropdown")
+                        sec3 = gr.Dropdown(label="", choices=[], elem_classes="custom-dropdown")
+                        amb3 = gr.Dropdown(label="", choices=[], elem_classes="custom-dropdown")
+                        tend3 = gr.Plot()
+            
+            with gr.Row(elem_classes="custom-tab-2"):    
+                gr.HTML("&nbsp;&nbsp;2. TEST DE DICKEY-FÜLLER AUMENTADO (ADF)", elem_classes="subtitle-text")
+            
+            with gr.Row(elem_classes="custom-tab-2"):    
+                gr.HTML("&nbsp;&nbsp;3. SELECCIÓN DEL MODELO Y VALORES DE SUS HIPERPARÁMETROS APLICANDO UN ALGORITMO GENÉTICO", elem_classes="subtitle-text")  
+            
+            with gr.Row(elem_classes="custom-tab-2"):    
+                gr.HTML("&nbsp;&nbsp;4. PREDICCIÓN DE LAS SERIES", elem_classes="subtitle-text")
+           
+            with gr.Row(elem_classes="custom-tab-2"):    
+                gr.HTML("&nbsp;&nbsp;5. TRANSFORMADA DE FOURIER PARA LAS SERIES TEMPORALES A COMPARAR", elem_classes="subtitle-text")              
+
+
+        ###### PESTAÑA BOSQUES ALEATORIOS
         with gr.Tab("Bosques Aleatorios"):
             with gr.Row(elem_classes="title-tab"):
                 gr.HTML("&nbsp;&nbsp;ANÁLISIS DE INDICADORES EDUCATIVOS MEDIANTE BOSQUES ALEATORIOS", elem_classes="title-text")
                 
         
+        ###### PESTAÑA PROBABILIDAD BAYESIANA
         with gr.Tab("Probabilidad Bayesiana"):
             with gr.Row(elem_classes="title-tab"):
                 gr.HTML("&nbsp;&nbsp;ANÁLISIS DE SERIES TEMPORALES MEDIANTE PROBABILIDAD BAYESIANA", elem_classes="title-text")
         
         
+        ###### PESTAÑA REDES NEURONALES
         with gr.Tab("Redes Neuronales"):
             with gr.Row(elem_classes="title-tab"):
                 gr.HTML("&nbsp;&nbsp;ANÁLISIS DE INDICADORES EDUCATIVOS MEDIANTE REDES NEURONALES", elem_classes="title-text")
         
         
+        ###### PESTAÑA KNN & SVM
         with gr.Tab("KNN & SVM"):
             with gr.Row(elem_classes="title-tab"):
                 gr.HTML("&nbsp;&nbsp;ANÁLISIS DE INDICADORES EDUCATIVOS CON K-NN Y SVM", elem_classes="title-text")
             
         
+        ###### PESTAÑA CONCLUSIONES
         with gr.Tab("Conclusiones"):
             with gr.Row(elem_classes="title-tab"):
                 gr.HTML("&nbsp;&nbsp;CONCLUSIONES", elem_classes="title-text")

@@ -114,7 +114,7 @@
 
 
 
-/* ### CONTENEDOR GENERAL 
+/* ### CONTENEDORES GENERALES
 ------------------------------------------------ */
 .custom-tab {
     /* background-image: asignada en formato Base64 en app.py */
@@ -124,6 +124,18 @@
     box-shadow: var(--shadow-soft) !important;
     width: 100% !important;
     height: 100% !important;
+}
+.custom-tab-2 {
+    /* background-image: asignada en formato Base64 en app.py */
+    border-radius: 10px;
+    border: none !important;
+    padding-top: 0px;
+    padding-bottom: 6px;
+    box-shadow: var(--shadow-soft) !important;
+    width: 100% !important;
+    height: 100% !important;
+    margin-top: 30px;
+    margin-bottom: 5px;
 }
 
 
@@ -156,10 +168,17 @@
     width: 100% !important;
     vertical-align: middle !important;
 }
-
 .title-text {
     font-weight: bold !important;
     font-size: var(--font-title1) !important;
+    color: var(--text-color) !important;
+    text-align: left !important;
+    padding-top: 3px !important;
+    padding-left: 5px !important;
+}
+.subtitle-text {
+    font-weight: bold !important;
+    font-size: var(--font-title3) !important;
     color: var(--text-color) !important;
     text-align: left !important;
     padding-top: 3px !important;
