@@ -156,12 +156,30 @@
 }
 
 
-
-/* ### CONTENEDOR PARA ALTERNAR VISIBLE = TRUE/FALSE
+/* ### CONTENEDOR PARA MOSTRAR/OCULTAR SU CONTENIDO
+   ### Hay que aplicar todos estos estilos para que no aparezca
+   ### un borde rojo parpadeante muy molesto 
 ------------------------------------------------ */
-.special-panel {
-    background-color: "green" !important; /*var(--input-bg-color) !important;*/
+* Forzar que el contenedor no tenga NINGÚN borde ni animación de error */
+.special-panel, 
+.special-panel.stale, 
+.special-panel.pending, 
+.special-panel.error {
     border: none !important;
+    outline: none !important;
+    box-shadow: none !important;
+    animation: none !important;
+    transition: none !important;
+    background: transparent !important;
+}
+/* Eliminar la línea roja específica de validación de Gradio */
+.special-panel > div {
+    border: none !important;
+}
+/* Ocultar el indicador de carga que genera el parpadeo */
+.special-panel .generating {
+    display: none !important;
+    visibility: hidden !important;
 }
 
 

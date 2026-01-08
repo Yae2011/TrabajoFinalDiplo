@@ -462,20 +462,10 @@ def show_data(df, dataset_type, provincia, departamento, sector, ambito):
     fig_boxplot = create_boxplot_graph(final_df)
     
     # Data 5: Generar gráfico de serie temporal con la variable numérica indicada
-    # OBSERVACIÓN: EL MISMO GRÁFICO VUELVE A GENERARSE CUANDO SE ACTUALIZA EL COMPONENTE
-    # 'indicador', LO QUE OCURRE SIMULTÁNEAMENTE. POR ESO NO ES NECESARIO GENERAR EL GRÁFICO AQUÍ. 
-    # fig_evolution = create_evolution_graph(final_df, indicador_first)
-    # fig_evolution = None
+    fig_evolution = create_evolution_graph(filtered, indicadores_originales[0])
     
     # Data 6: Generar gráfico de histograma con la variable numérica indicada
-    # OBSERVACIÓN: EL MISMO GRÁFICO VUELVE A GENERARSE CUANDO SE ACTUALIZA EL COMPONENTE
-    # 'indicador', LO QUE OCURRE SIMULTÁNEAMENTE. POR ESO NO ES NECESARIO GENERAR EL GRÁFICO AQUÍ. 
-    # fig_histogram = create_evolution_graph(final_df, indicador_first)
-    # fig_histogram = None
-    
-    fig_evolution = create_evolution_graph(filtered, indicadores_originales[0])
     fig_histogram = create_histogram_graph(filtered, indicadores_originales[0])
-
 
     return filtered, info_text, gr.update(visible=True), stats, final_df, \
             fig_boxplot, fig_evolution, fig_histogram, \
@@ -614,8 +604,8 @@ with gr.Blocks(title="Análisis Educativo") as app:
                     with gr.Row(elem_classes="custom-tab"):
                         info_label = gr.HTML(value="DEBE SELECCIONARSE EL BOTÓN \"MOSTRAR DATOS\" PARA VISUALIZAR LOS RESULTADOS", elem_classes="info-display-1")
                     
-                    # Componente que contiene toda la información a mostrar y que se alterna en visble = True/False
-                    with gr.Column(visible=False, elem_classes="special-paneñ") as data_dataset:
+                    # Componente que contiene toda la información a mostrar y que alterna visble = True/False
+                    with gr.Column(visible=False, elem_classes="special-panel") as data_dataset:
                         with gr.Row(elem_classes="custom-tab"):
                             with gr.Column():
                                 gr.HTML(value="ESTADÍSTICAS DEL DATASET", elem_classes="info-display-2")
@@ -625,7 +615,7 @@ with gr.Blocks(title="Análisis Educativo") as app:
                                 output_table = gr.Dataframe(interactive=False, max_height=335)
                     
                         with gr.Row(elem_classes="custom-tab"):
-                            output_plot_box = gr.Plot()
+                            output_plot_box = gr.Plot(show_label=False)
                         
                         with gr.Row(elem_classes="custom-tab"):
                             with gr.Column(min_width=150, scale=1):
@@ -644,8 +634,8 @@ with gr.Blocks(title="Análisis Educativo") as app:
                                                           elem_classes="custom-button2",
                                                           scale=1, min_width=50)
                             with gr.Column(scale=20):
-                                output_plot_evolution = gr.Plot()
-                                output_plot_histogram = gr.Plot()
+                                output_plot_evolution = gr.Plot(show_label=False)
+                                output_plot_histogram = gr.Plot(show_label=False)
 
 
             tipo_matricula.change(
