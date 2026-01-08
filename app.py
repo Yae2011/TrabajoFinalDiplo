@@ -7,6 +7,7 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 
 
+# region CONSTANTES Y DICCIONARIOS
 # --- Constantes ---
 DATA_PATH = "./Datasets"
 FILE_MAP = {
@@ -15,7 +16,6 @@ FILE_MAP = {
     "Por Población": "Poblacion 2011-2024.csv",
     "Por Trayectoria": "Trayectoria 2011-2024.csv"
 }
-
 KEY_COLUMNS = ['periodo', 'provincia', 'departamento', 'sector', 'ambito']
 
 # Se cargan las descripciones de las variables de los datasets en un diccionario
@@ -26,17 +26,15 @@ dict_nlargos = df_vars.set_index(df_vars.columns[0])[df_vars.columns[1]].to_dict
 variables = os.path.join(DATA_PATH, "Nombres_Cortos.csv")
 df_vars = pd.read_csv(variables, header=None, encoding='latin-1', sep=',')
 dict_ncortos = df_vars.set_index(df_vars.columns[0])[df_vars.columns[1]].to_dict()
+# endregion
 
-# --- Dataframe Global ---
-# Se almacena el DataFrame actual para evitar recargarlo en cada interacción.
-# Para una aplicación local de Gradio, conviene utilizar gr.State() en la interfaz (UI).
 
+# region FUNCIONES DE LECTURA DE ARCHIVOS
 def get_file_path(dataset_type):
     filename = FILE_MAP.get(dataset_type)
     if not filename:
         return None
     return os.path.join(DATA_PATH, filename)
-
 
 def load_data(dataset_type):
     path = get_file_path(dataset_type)
@@ -52,8 +50,10 @@ def load_data(dataset_type):
              return df, list(df['provincia'].unique())
         except:
              return pd.DataFrame(), [f"Error cargando: {e}"]
+# endregion
 
 
+# region FUNCIONES PARA LA PESTAÑA "EDA"
 def tab_EDA_on_load(dataset_type):
     df, provincias = load_data(dataset_type)
     m_inic = "EL DATASET SELECCIONADO DE MATRÍCULA NO ESTÁ DISPONIBLE"
@@ -75,7 +75,6 @@ def tab_EDA_on_load(dataset_type):
 
     return df, gr.update(choices=provincias_sorted, value=prov_first), \
             gr.update(choices=dptos_sorted, value=dpto_first), gr.update(value=m_inic)
-
 
 def tab_EDA_on_dataset_change(dataset_type):
     df, provincias = load_data(dataset_type)
@@ -110,7 +109,6 @@ def tab_EDA_on_dataset_change(dataset_type):
             gr.Dropdown(choices=[], value=None, interactive=False), \
             gr.Button(interactive=False), gr.Button(interactive=False)
 
-
 def tab_EDA_on_provincia_change(df, provincia):
     # Se arma el listado ordenado de departamentos de la provincia
     # y se guarda el primer departamento de la lista
@@ -125,7 +123,6 @@ def tab_EDA_on_provincia_change(df, provincia):
             gr.Dropdown(choices=[], value="", interactive=False), \
             gr.Button(interactive=False), gr.Button(interactive=False)
 
-
 def tab_EDA_on_departamento_change():
     # Al cambiar de departamento se resetea toda la data en pantalla
     m_inic = "DEBE SELECCIONARSE EL BOTÓN \"MOSTRAR DATOS\" PARA VISUALIZAR LOS RESULTADOS"
@@ -134,14 +131,12 @@ def tab_EDA_on_departamento_change():
             gr.Dropdown(choices=[], value="", interactive=False), \
             gr.Button(interactive=False), gr.Button(interactive=False)
 
-
 def tab_EDA_on_opcion_change():
     # Al cambiar la opción de sector o ámbito se resetea toda la data en pantalla
     m_inic = "DEBE SELECCIONARSE EL BOTÓN \"MOSTRAR DATOS\" PARA VISUALIZAR LOS RESULTADOS"
     return gr.HTML(value=m_inic), gr.update(visible=False), None, None, None, None, None, None, \
             gr.Dropdown(choices=[], value="", interactive=False), \
             gr.Button(interactive=False), gr.Button(interactive=False)
-
 
 def tab_EDA_create_boxplot_graph(df):
     # df: dataset filtrado con columnas con "nombres originales"
@@ -183,7 +178,6 @@ def tab_EDA_create_boxplot_graph(df):
     plt.tight_layout()
     
     return fig
-
 
 def tab_EDA_create_evolution_graph(df, indicador):
     # df: dataset filtrado con columnas con nombres originales
@@ -239,7 +233,6 @@ def tab_EDA_create_evolution_graph(df, indicador):
         # Gradio ya ha convertido la 'fig' en una imagen o formato transferible 
         # antes de que este cierre afecte la visualización en la UI.
         plt.close(fig)
-
 
 def tab_EDA_create_normal_dist_graph(df, indicador):
     # df: dataset filtrado con columnas con nombres originales
@@ -304,7 +297,6 @@ def tab_EDA_create_normal_dist_graph(df, indicador):
         # Gradio ya ha procesado el objeto 'fig' antes de este cierre.
         plt.close(fig)
 
-
 def tab_EDA_create_histogram_graph(df, indicador):
     # df: dataset filtrado con columnas con nombres originales
     # indicador: nombre original de columna
@@ -346,7 +338,6 @@ def tab_EDA_create_histogram_graph(df, indicador):
         # Liberación de memoria para compatibilidad con Gradio/Streamlit
         plt.close(fig)
 
-
 def tab_EDA_create_all_graphs(df, indicador):
     # df: dataset filtrado con columnas con nombres originales
     # indicador: nombre descriptivo corto de columna
@@ -356,7 +347,7 @@ def tab_EDA_create_all_graphs(df, indicador):
     
     # Si no hay columna "período"
     if 'periodo' not in df.columns:
-        return None, None
+        return None, None, None
 
     # Columnas numéricas para graficar, se excluye la columna "período"
     numeric_cols = df.select_dtypes(include=['number']).columns.tolist()
@@ -372,7 +363,6 @@ def tab_EDA_create_all_graphs(df, indicador):
     
     return fig1, fig2, fig3
     
-
 def tab_EDA_create_next_all_graphs(df, indicador):
     # df: dataset filtrado con columnas con nombres originales
     # indicador: nombre descriptivo corto de columna
@@ -404,7 +394,6 @@ def tab_EDA_create_next_all_graphs(df, indicador):
 
     return gr.update(value=indicador_ncorto), fig1, fig2, fig3
 
-
 def tab_EDA_create_prev_all_graphs(df, indicador):
     # df: dataset filtrado con columnas con nombres originales
     # indicador: nombre descriptivo corto de columna
@@ -435,7 +424,6 @@ def tab_EDA_create_prev_all_graphs(df, indicador):
     indicador_ncorto = dict_ncortos.get(nuevo_indicador)
 
     return gr.update(value=indicador_ncorto), fig1, fig2, fig3
-
 
 def get_filtered_subset(df, provincia, departamento, sector, ambito, key_columns, agrupar_detalles=True):
 
@@ -487,7 +475,6 @@ def get_filtered_subset(df, provincia, departamento, sector, ambito, key_columns
     # Reordenar columnas para que las dimensiones precedan a las métricas
     final_cols = group_cols + numeric_cols
     return final_df[final_cols]
-
 
 def tab_EDA_show_data(df, dataset_type, provincia, departamento, sector, ambito):
     filtered = get_filtered_subset(df, provincia, departamento, sector, ambito, KEY_COLUMNS, True)
@@ -546,7 +533,10 @@ def tab_EDA_show_data(df, dataset_type, provincia, departamento, sector, ambito)
             gr.Dropdown(choices=indicadores, value=indicador_first, interactive=True), \
             gr.Button(interactive=True), gr.Button(interactive=True)
 
+# endregion
 
+
+# region FUNCIONES PARA IMAGENES/VIDEOS EN BASE64 E INCLUSIÓN EN CÓDIGO CSS
 # Función para convertir imagen/video a Base64
 def media_to_base64(media_path):
     if not os.path.exists(media_path):
@@ -601,8 +591,12 @@ portada_video = f'''
     </video>
 </div>
 '''
+# endregion
 
-### INTERFACE GRADIO
+
+
+
+###### INTERFACE GRADIO ######
 
 with gr.Blocks(title="Análisis Educativo") as app:
     gr.HTML(f"<style>{custom_css}</style>")
@@ -615,8 +609,12 @@ with gr.Blocks(title="Análisis Educativo") as app:
 
     gr.Row(elem_classes="header-tab")
     
-    ###### PESTAÑA INICIO
+
+    ###### ESTRUCTURA DE PESTAÑAS
     with gr.Tabs():
+
+
+        ###### PESTAÑA INICIO
         with gr.Tab("Inicio"):
             with gr.Row():
                 with gr.Column(scale=8, elem_classes="portrait-bg-video"): # elem_classes="portrait-bg-1"):
@@ -796,6 +794,7 @@ with gr.Blocks(title="Análisis Educativo") as app:
                 outputs=[dataset_state, provincia, departamento, info_label]
             )
         
+
         ###### PESTAÑA SERIES TEMPORALES
         with gr.Tab("Series Temporales"):
             with gr.Row(elem_classes="title-tab"):
