@@ -16,6 +16,7 @@
     --font-title3: 14px;
     --font-title4: 12px;
     --font-items: 12px;
+    --font-items-small: 12px;
     --font-data: 12px;
 
     /* Sombra suave y delicada unificada */
@@ -244,6 +245,36 @@
     color: var(--text-color) !important;
 }
 
+.custom-dropdown-small {
+    /* Para todo el conjunto */
+    background-color: var(--input-bg-color) !important;
+    border: 1px solid var(--input-border-color) !important;
+    box-shadow: var(--shadow-soft) !important;
+    border-radius: 5px !important;
+    margin-bottom: 0px !important;
+    padding: 0px !important;
+}
+.custom-dropdown-small span[data-testid="block-info"] {
+    /* Para el título */
+    color: var(--text-color) !important;
+    font-size: var(--font-title4) !important;
+    font-weight: bold !important;
+    margin-bottom: 0px !important;
+    display: block !important;
+    padding: 0px !important;
+}
+.custom-dropdown-small ul.options li.item {
+    /* Para las opciones de la lista */
+    font-size: var(--font-items-small) !important;
+}
+.custom-dropdown-small .token-view,
+.custom-dropdown-small input,
+.custom-dropdown-small .single-select {
+    /* Para el item seleccionado de la lista */
+    font-size: var(--font-items-small) !important;
+    color: var(--text-color) !important;
+    padding: 0px !important;
+}
 
 
 /* ### LISTA DE BOTONES DE OPCIÓN  

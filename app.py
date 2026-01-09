@@ -239,7 +239,7 @@ def tab_EDA_create_normal_dist_graph(df, indicador):
     # indicador: nombre original de columna
 
     # Se crea la figura para el gráfico
-    fig, ax = plt.subplots(figsize=(10, 4))
+    fig, ax = plt.subplots(figsize=(6, 3))
     
     try:
         # Se extraen los datos y se eliminan valores nulos para el cálculo estadístico
@@ -272,13 +272,13 @@ def tab_EDA_create_normal_dist_graph(df, indicador):
         ax.fill_between(x_fill, y_fill, color='red', alpha=0.3, label='Área SD (±1σ)')
 
         # Se grafica la línea vertical representativa de la media
-        ax.axvline(x=mu, color='orange', linestyle='--', linewidth=2, label=f'Media: {mu:.2f}')
+        ax.axvline(x=mu, color='red', linestyle='--', linewidth=2, label=f'Media: {mu:.2f}')
 
         # Configuración de títulos y etiquetas utilizando el diccionario de nombres largos
-        titulo = f"DISTRIBUCIÓN NORMAL Y DISPERSIÓN: {dict_nlargos[indicador].upper()}"
+        titulo = f"DISTRIBUCIÓN NORMAL: {dict_nlargos[indicador].upper()}"
         ax.set_title(titulo)
-        ax.set_xlabel("Valor de Matrícula")
-        ax.set_ylabel("Densidad")
+        ax.set_xlabel("MATRÍCULA")
+        ax.set_ylabel("DENSIDAD")
         ax.grid(True, linestyle='--', alpha=0.5)
         
         # Se agrega la leyenda para identificar media y área de dispersión
@@ -302,7 +302,7 @@ def tab_EDA_create_histogram_graph(df, indicador):
     # indicador: nombre original de columna
 
     # Creación de la figura
-    fig, ax = plt.subplots(figsize=(10, 4))
+    fig, ax = plt.subplots(figsize=(6, 3))
     
     try:
         data = df[indicador].dropna()
@@ -536,6 +536,132 @@ def tab_EDA_show_data(df, dataset_type, provincia, departamento, sector, ambito)
 # endregion
 
 
+# region FUNCIONES PARA LA PESTAÑA "SERIES TEMPORALES"
+
+def tab_ST_on_mat_change(dataset_type):
+    df, provincias = load_data(dataset_type)
+
+    if df.empty:
+        return df, gr.update(choices=[], value=None), gr.update(choices=[], value=None), \
+                gr.update(value="Ambos"), gr.update(value="Ambos"), \
+                gr.update(choices=[], value=None), None, \
+                gr.update(choices=[], value=None), gr.update(choices=[], value=None), \
+                gr.update(value="Ambos"), gr.update(value="Ambos"), \
+                gr.update(choices=[], value=None), None, \
+                gr.update(choices=[], value=None), gr.update(choices=[], value=None), \
+                gr.update(value="Ambos"), gr.update(value="Ambos"), \
+                gr.update(choices=[], value=None), None
+    
+    # Se arma el listado ordenado de provincias y se guarda la primera provincia
+    provincias_sorted = sorted([str(p) for p in provincias])
+    prov_first = provincias_sorted[0]
+
+    # Se arma el listado ordenado de departamentos de la primera provincia de la lista
+    # y se guarda el primer departamento de la lista
+    dptos = df[df['provincia'] == prov_first]['departamento'].unique()
+    dptos_sorted = sorted([str(d) for d in dptos if d is not None])
+    dpto_first = dptos_sorted[0]
+
+    # Listado de las variables numéricas del dataset, excluyendo "periodo"
+    # y se guarda la primera variable de la lista
+    numeric_cols = df.select_dtypes(include=['number']).columns.tolist()
+    cols_to_plot = [c for c in numeric_cols if c != 'periodo']
+    indicadores_originales = cols_to_plot
+    # Se renombran los indicadores (nombres de columnas numéricas) con los nombres cortos del diccionario
+    indicadores = [dict_ncortos.get(col, col) for col in indicadores_originales]
+    # Se guarda el nombre corto del primer indicador
+    indicador_first = indicadores[0]
+
+    # Se filtra el dataset de matrícula
+    sector = "Ambos"
+    ambito = "Ambos"
+    filtered = get_filtered_subset(df, prov_first, dpto_first, sector, ambito, KEY_COLUMNS, True)
+
+    # Se genera el gráfico para el primer indicador
+    graph = tab_EDA_create_evolution_graph(filtered, indicadores_originales[0])
+
+    # Al actualizar el dataset, se muestra la primera provincia, el primer departamento,
+    # sector = "Ambos", ambiente="Ambos", el primer indicador y el gráfico correspodiente.
+    # Se hace para las tres series temporales 
+    return df, gr.update(choices=provincias_sorted, value=prov_first), \
+            gr.update(choices=dptos_sorted, value=dpto_first), \
+            gr.update(choices=["Estatal", "Privado", "Ambos"], value="Ambos"), \
+            gr.update(choices=["Urbano", "Rural", "Ambos"], value="Ambos"), \
+            gr.update(choices=indicadores, value=indicador_first), graph, \
+            gr.update(choices=provincias_sorted, value=prov_first), \
+            gr.update(choices=dptos_sorted, value=dpto_first), \
+            gr.update(choices=["Estatal", "Privado", "Ambos"], value="Ambos"), \
+            gr.update(choices=["Urbano", "Rural", "Ambos"], value="Ambos"), \
+            gr.update(choices=indicadores, value=indicador_first), graph, \
+            gr.update(choices=provincias_sorted, value=prov_first), \
+            gr.update(choices=dptos_sorted, value=dpto_first), \
+            gr.update(choices=["Estatal", "Privado", "Ambos"], value="Ambos"), \
+            gr.update(choices=["Urbano", "Rural", "Ambos"], value="Ambos"), \
+            gr.update(choices=indicadores, value=indicador_first), graph
+            
+
+def tab_ST_on_prov_change(df, provincia, sector, ambito, indicador):
+    # Se arma el listado ordenado de departamentos de la provincia
+    # y se guarda el primer departamento de la lista
+    dptos = df[df['provincia'] == provincia]['departamento'].unique()
+    dptos_sorted = sorted([str(d) for d in dptos if d is not None])
+    dpto_first = dptos_sorted[0]
+    
+    # Como el parámetro "indicador" se recibe con el nombre descriptivo corto
+    # se debe convertir a su nombre original
+    ind_orig = next((k for k, v in dict_ncortos.items() if v == indicador), indicador)
+
+    # Se filtra el dataset de matrícula
+    filtered = get_filtered_subset(df, provincia, dpto_first, sector, ambito, KEY_COLUMNS, True)
+    
+    if filtered.empty:
+        return None
+    
+    # Se genera el gráfico para el primer indicador
+    graph = tab_EDA_create_evolution_graph(filtered, ind_orig)
+
+    return  gr.update(choices=dptos_sorted, value=dpto_first), graph
+
+
+def tab_ST_on_dep_change(df, provincia, departamento, sector, ambito, indicador):
+
+    # Como el parámetro "indicador" se recibe con el nombre descriptivo corto
+    # se debe convertir a su nombre original
+    ind_orig = next((k for k, v in dict_ncortos.items() if v == indicador), indicador)
+
+    # Se filtra el dataset de matrícula
+    filtered = get_filtered_subset(df, provincia, departamento, sector, ambito, KEY_COLUMNS, True)
+    
+    if filtered.empty:
+        return None
+    
+    # Se genera el gráfico para el primer indicador
+    graph = tab_EDA_create_evolution_graph(filtered, ind_orig)
+
+    return graph
+
+
+def tab_ST_on_option_change(df, provincia, departamento, sector, ambito, indicador):
+
+    # Como el parámetro "indicador" se recibe con el nombre descriptivo corto
+    # se debe convertir a su nombre original
+    ind_orig = next((k for k, v in dict_ncortos.items() if v == indicador), indicador)
+
+    # Se filtra el dataset de matrícula
+    filtered = get_filtered_subset(df, provincia, departamento, sector, ambito, KEY_COLUMNS, True)
+    
+    if filtered.empty:
+        return None
+    
+    # Se genera el gráfico para el primer indicador
+    graph = tab_EDA_create_evolution_graph(filtered, ind_orig)
+
+    return graph
+
+# endregion
+
+
+
 # region FUNCIONES PARA IMAGENES/VIDEOS EN BASE64 E INCLUSIÓN EN CÓDIGO CSS
 # Función para convertir imagen/video a Base64
 def media_to_base64(media_path):
@@ -690,23 +816,25 @@ with gr.Blocks(title="Análisis Educativo") as app:
                             output_plot_box = gr.Plot(show_label=False)
                         
                         with gr.Row(elem_classes="custom-tab"):
-                            with gr.Column(min_width=150, scale=1):
+                            with gr.Column():
                                 with gr.Row():
-                                    indicador = gr.Dropdown(label="Indicador", choices=[],
-                                                interactive=False,
-                                                allow_custom_value=True,
-                                                elem_classes="custom-dropdown")
-                                with gr.Row(elem_classes="no-stack"):
-                                    btn_anterior = gr.Button("<", variant="primary",
-                                                         interactive=False,
-                                                         elem_classes="custom-button2",
-                                                         scale=1, min_width=50)
-                                    btn_siguiente = gr.Button(">", variant="primary",
-                                                          interactive=False,
-                                                          elem_classes="custom-button2",
-                                                          scale=1, min_width=50)
-                            with gr.Column(scale=20):
-                                output_plot_evolution = gr.Plot(show_label=False)
+                                    with gr.Column(min_width=150, scale=1):
+                                        with gr.Row():
+                                            indicador = gr.Dropdown(label="Indicador", choices=[],
+                                                        interactive=False,
+                                                        allow_custom_value=True,
+                                                        elem_classes="custom-dropdown")
+                                        with gr.Row(elem_classes="no-stack"):
+                                            btn_anterior = gr.Button("<", variant="primary",
+                                                                interactive=False,
+                                                                elem_classes="custom-button2",
+                                                                scale=1, min_width=50)
+                                            btn_siguiente = gr.Button(">", variant="primary",
+                                                                interactive=False,
+                                                                elem_classes="custom-button2",
+                                                                scale=1, min_width=50)
+                                    with gr.Column(scale=20):
+                                        output_plot_evolution = gr.Plot(show_label=False)
                                 with gr.Row():
                                     output_plot_histogram = gr.Plot(show_label=False)
                                     output_plot_normal_dist = gr.Plot(show_label=False)
@@ -796,41 +924,82 @@ with gr.Blocks(title="Análisis Educativo") as app:
         
 
         ###### PESTAÑA SERIES TEMPORALES
-        with gr.Tab("Series Temporales"):
+        with gr.Tab("Series Temporales") as tab_ST:
             with gr.Row(elem_classes="title-tab"):
                 gr.HTML("&nbsp;&nbsp;COMPARACIÓN DE SERIES TEMPORALES APLICANDO LA TRANSFORMADA RÁPIDA DE FOURIER", elem_classes="title-text")
             
             with gr.Row(elem_classes="custom-tab-2"):    
                 gr.HTML("&nbsp;&nbsp;1. SELECCIÓN DE LAS SERIES TEMPORALES A COMPARAR", elem_classes="subtitle-text")
+            
             with gr.Row():
                 with gr.Column(min_width=180, elem_classes="custom-tab"):
                     mat = gr.Radio(label="Tipo de Matrícula", 
                             choices=["Por Curso", "Por Población", "Por Trayectoria"],
                             value="Por Curso", elem_classes="custom-radio")
-                    var = gr.Dropdown(label="Variable", choices=[], elem_classes="custom-dropdown")
+                    
                 with gr.Column(scale=20):
+
                     with gr.Row(elem_classes="custom-tab"):
-                        with gr.Column(min_width=180):
-                            prov1 = gr.Dropdown(label="", choices=[], elem_classes="custom-dropdown")
-                            dep1 = gr.Dropdown(label="", choices=[], elem_classes="custom-dropdown")
-                        with gr.Column(min_width=180):
-                            sec1 = gr.Dropdown(label="", choices=[], elem_classes="custom-dropdown")
-                            amb1 = gr.Dropdown(label="", choices=[], elem_classes="custom-dropdown")
+                        with gr.Column(min_width=250):
+                            with gr.Row():
+                                gr.HTML("Provincia")
+                                prov1 = gr.Dropdown(label="", choices=[], elem_classes="custom-dropdown-small")
+                            with gr.Row():
+                                gr.HTML("Departamento")
+                                dep1 = gr.Dropdown(label="", choices=[], elem_classes="custom-dropdown-small")
+                            with gr.Row():
+                                gr.HTML("Sector")
+                                sec1 = gr.Dropdown(label="", choices=[], elem_classes="custom-dropdown-small")
+                            with gr.Row():
+                                gr.HTML("Ámbito")
+                                amb1 = gr.Dropdown(label="", choices=[], elem_classes="custom-dropdown-small")
+                            with gr.Row():
+                                gr.HTML("Indicador")
+                                var1 = gr.Dropdown(label="", choices=[], elem_classes="custom-dropdown-small")
                         with gr.Column(scale=20):
                             tend1 = gr.Plot(show_label=False)
+
                     with gr.Row(elem_classes="custom-tab"):
-                        prov2 = gr.Dropdown(label="", choices=[], elem_classes="custom-dropdown")
-                        dep2 = gr.Dropdown(label="", choices=[], elem_classes="custom-dropdown")
-                        sec2 = gr.Dropdown(label="", choices=[], elem_classes="custom-dropdown")
-                        amb2 = gr.Dropdown(label="", choices=[], elem_classes="custom-dropdown")
-                        tend2 = gr.Plot()
+                        with gr.Column(min_width=250):
+                            with gr.Row():
+                                gr.HTML("Provincia")
+                                prov2 = gr.Dropdown(label="", choices=[], elem_classes="custom-dropdown-small")
+                            with gr.Row():
+                                gr.HTML("Departamento")
+                                dep2 = gr.Dropdown(label="", choices=[], elem_classes="custom-dropdown-small")
+                            with gr.Row():
+                                gr.HTML("Sector")
+                                sec2 = gr.Dropdown(label="", choices=[], elem_classes="custom-dropdown-small")
+                            with gr.Row():
+                                gr.HTML("Ámbito")
+                                amb2 = gr.Dropdown(label="", choices=[], elem_classes="custom-dropdown-small")
+                            with gr.Row():
+                                gr.HTML("Indicador")
+                                var2 = gr.Dropdown(label="", choices=[], elem_classes="custom-dropdown-small")
+                        with gr.Column(scale=20):
+                            tend2 = gr.Plot(show_label=False)
+
                     with gr.Row(elem_classes="custom-tab"):
-                        prov3 = gr.Dropdown(label="", choices=[], elem_classes="custom-dropdown")
-                        dep3 = gr.Dropdown(label="", choices=[], elem_classes="custom-dropdown")
-                        sec3 = gr.Dropdown(label="", choices=[], elem_classes="custom-dropdown")
-                        amb3 = gr.Dropdown(label="", choices=[], elem_classes="custom-dropdown")
-                        tend3 = gr.Plot()
-            
+                        with gr.Column(min_width=250):
+                            with gr.Row():
+                                gr.HTML("Provincia")
+                                prov3 = gr.Dropdown(label="", choices=[], elem_classes="custom-dropdown-small")
+                            with gr.Row():
+                                gr.HTML("Departamento")
+                                dep3= gr.Dropdown(label="", choices=[], elem_classes="custom-dropdown-small")
+                            with gr.Row():
+                                gr.HTML("Sector")
+                                sec3 = gr.Dropdown(label="", choices=[], elem_classes="custom-dropdown-small")
+                            with gr.Row():
+                                gr.HTML("Ámbito")
+                                amb3 = gr.Dropdown(label="", choices=[], elem_classes="custom-dropdown-small")
+                            with gr.Row():
+                                gr.HTML("Indicador")
+                                var3 = gr.Dropdown(label="", choices=[], elem_classes="custom-dropdown-small")
+                        with gr.Column(scale=20):
+                            tend3 = gr.Plot(show_label=False)
+
+
             with gr.Row(elem_classes="custom-tab-2"):    
                 gr.HTML("&nbsp;&nbsp;2. TEST DE DICKEY-FÜLLER AUMENTADO (ADF)", elem_classes="subtitle-text")
             
@@ -842,6 +1011,113 @@ with gr.Blocks(title="Análisis Educativo") as app:
            
             with gr.Row(elem_classes="custom-tab-2"):    
                 gr.HTML("&nbsp;&nbsp;5. TRANSFORMADA DE FOURIER PARA LAS SERIES TEMPORALES A COMPARAR", elem_classes="subtitle-text")              
+
+
+            mat.change(
+                fn=tab_ST_on_mat_change,
+                inputs=[mat],
+                outputs=[dataset_state, prov1, dep1, sec1, amb1, var1, tend1,
+                         prov2, dep2, sec2, amb2, var2, tend2,
+                         prov3, dep3, sec3, amb3, var3, tend3]
+            )
+            
+            prov1.change(
+                fn=tab_ST_on_prov_change,
+                inputs=[dataset_state, prov1, sec1, amb1, var1],
+                outputs=[dep1, tend1]
+            )
+
+            prov2.change(
+                fn=tab_ST_on_prov_change,
+                inputs=[dataset_state, prov2, sec2, amb2, var2],
+                outputs=[dep2, tend2]
+            )
+            
+            prov3.change(
+                fn=tab_ST_on_prov_change,
+                inputs=[dataset_state, prov3, sec3, amb3, var3],
+                outputs=[dep3, tend3]
+            )
+            
+            dep1.change(
+                fn=tab_ST_on_dep_change,
+                inputs=[dataset_state, prov1, dep1, sec1, amb1, var1],
+                outputs=[tend1]
+            )
+
+            dep2.change(
+                fn=tab_ST_on_dep_change,
+                inputs = [dataset_state, prov2, dep2, sec2, amb2, var2],
+                outputs=[tend2]
+            )
+
+            dep3.change(
+                fn=tab_ST_on_dep_change,
+                inputs = [dataset_state, prov3, dep3, sec3, amb3, var3],
+                outputs=[tend3]
+            )
+
+            sec1.change(
+                fn=tab_ST_on_option_change,
+                inputs = [dataset_state, prov1, dep1, sec1, amb1, var1],
+                outputs=[tend1]
+            )
+            
+            sec2.change(
+                fn=tab_ST_on_option_change,
+                inputs = [dataset_state, prov2, dep2, sec2, amb2, var2],
+                outputs=[tend2]
+            )
+
+            sec3.change(
+                fn=tab_ST_on_option_change,
+                inputs = [dataset_state, prov3, dep3, sec3, amb3, var3],
+                outputs=[tend3]
+            )
+
+            amb1.change(
+                fn=tab_ST_on_option_change,
+                inputs = [dataset_state, prov1, dep1, sec1, amb1, var1],
+                outputs=[tend1]
+            )
+            
+            amb2.change(
+                fn=tab_ST_on_option_change,
+                inputs = [dataset_state, prov2, dep2, sec2, amb2, var2],
+                outputs=[tend2]
+            )
+
+            amb3.change(
+                fn=tab_ST_on_option_change,
+                inputs = [dataset_state, prov3, dep3, sec3, amb3, var3],
+                outputs=[tend3]
+            )
+
+            var1.change(
+                fn=tab_ST_on_option_change,
+                inputs = [dataset_state, prov1, dep1, sec1, amb1, var1],
+                outputs=[tend1]
+            )
+            
+            var2.change(
+                fn=tab_ST_on_option_change,
+                inputs = [dataset_state, prov2, dep2, sec2, amb2, var2],
+                outputs=[tend2]
+            )
+
+            var3.change(
+                fn=tab_ST_on_option_change,
+                inputs = [dataset_state, prov3, dep3, sec3, amb3, var3],
+                outputs=[tend3]
+            )
+
+            tab_ST.select(
+                fn=tab_ST_on_mat_change,
+                inputs=[mat],
+                outputs=[dataset_state, prov1, dep1, sec1, amb1, var1, tend1,
+                         prov2, dep2, sec2, amb2, var2, tend2,
+                         prov3, dep3, sec3, amb3, var3, tend3]
+            )
 
 
         ###### PESTAÑA BOSQUES ALEATORIOS
