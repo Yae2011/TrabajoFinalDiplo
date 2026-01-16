@@ -121,7 +121,10 @@
     /* background-image: asignada en formato Base64 en app.py */
     border-radius: 10px;
     border: none !important;
-    padding: 15px;
+    padding-top: 15px;
+    padding-left: 15px;
+    padding-right: 10px;
+    padding-bottom: 5px;
     box-shadow: var(--shadow-soft) !important;
     width: 100% !important;
     height: 100% !important;
@@ -161,7 +164,6 @@
    ### Hay que aplicar todos estos estilos para que no aparezca
    ### un borde rojo parpadeante muy molesto 
 ------------------------------------------------ */
-* Forzar que el contenedor no tenga NINGÚN borde ni animación de error */
 .special-panel, 
 .special-panel.stale, 
 .special-panel.pending, 
@@ -185,7 +187,7 @@
 
 
 
-/* ### CONTENEDOR DE TÍTULO PRINCIPAL 
+/* ### CONTENEDOR DE TÍTULOS 
 ------------------------------------------------ */
 .title-tab {
     /* background-image: asignada en formato Base64 en app.py */
@@ -212,6 +214,16 @@
     padding-top: 3px !important;
     padding-left: 5px !important;
 }
+.title-group {
+    font-weight: bold !important;
+    font-size: var(--font-title3) !important;
+    color: var(--text-color) !important;
+    text-align: left !important;
+    padding-top: 0px !important;
+    padding-left: 5px !important;
+    padding-bottom: 0px !important;
+}
+
 
 
 
@@ -244,7 +256,6 @@
     font-size: var(--font-items) !important;
     color: var(--text-color) !important;
 }
-
 .custom-dropdown-small {
     /* Para todo el conjunto */
     background-color: var(--input-bg-color) !important;
@@ -275,6 +286,7 @@
     color: var(--text-color) !important;
     padding: 0px !important;
 }
+
 
 
 /* ### LISTA DE BOTONES DE OPCIÓN  
@@ -310,6 +322,22 @@
     margin-bottom: 0px !important;
     padding-top: 0px !important;
     padding-bottom: 0px !important;
+}
+
+
+
+/* ### CASILLA DE VERIFICACIÓN  
+------------------------------------------------ */
+.custom-checkbox {
+    background-color: var(--input-bg-color) !important;
+    color: var(--text-color) !important;
+    font-size: var(--font-title3) !important;
+    font-weight: bold !important;
+    padding: 10px !important;
+    border-radius: 10px !important;
+    border: none !important;
+    box-shadow: var(--shadow-soft) !important;
+    margin-bottom: 8px !important;
 }
 
 
@@ -412,3 +440,4 @@ table th,
 .no-stack > .form {
     min-width: 0 !important; /* Anula el mínimo de 320px de Gradio */
 }
+

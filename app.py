@@ -17,6 +17,7 @@ FILE_MAP = {
     "Por Trayectoria": "Trayectoria 2011-2024.csv"
 }
 KEY_COLUMNS = ['periodo', 'provincia', 'departamento', 'sector', 'ambito']
+MIN_REG = 14 # Cantidad mínima de registros para cada serie temporal (serie 2011-2024 = 14 registros anuales)
 
 # Se cargan las descripciones de las variables de los datasets en un diccionario
 # para títulos de gráficos de evolución de matrícula
@@ -54,13 +55,14 @@ def load_data(dataset_type):
 
 
 # region FUNCIONES PARA LA PESTAÑA "EDA"
-def tab_EDA_on_load(dataset_type):
+def tab_EDA_on_load(dataset_type, mostrar):
     df, provincias = load_data(dataset_type)
-    m_inic = "EL DATASET SELECCIONADO DE MATRÍCULA NO ESTÁ DISPONIBLE"
-
+    
     if df.empty:
-        return df, gr.update(choices=[], value=None), gr.update(choices=[], value=None), \
-                gr.update(value=m_inic)
+        m_inic = "EL DATASET SELECCIONADO DE MATRÍCULA NO ESTÁ DISPONIBLE"
+        return df, pd.DataFrame(), None, None, gr.update(value=m_inic), gr.update(visible=False), \
+            pd.DataFrame(), pd.DataFrame(), \
+            None, None, None, None, None, None, None
     
     # Se arma el listado ordenado de provincias y se guarda la primera provincia
     provincias_sorted = sorted([str(p) for p in provincias])
@@ -71,11 +73,79 @@ def tab_EDA_on_load(dataset_type):
     dptos = df[df['provincia'] == prov_first]['departamento'].unique()
     dptos_sorted = sorted([str(d) for d in dptos if d is not None])
     dpto_first = dptos_sorted[0]
-    m_inic = "DEBE SELECCIONARSE EL BOTÓN \"MOSTRAR DATOS\" PARA VISUALIZAR LOS RESULTADOS"
 
-    return df, gr.update(choices=provincias_sorted, value=prov_first), \
-            gr.update(choices=dptos_sorted, value=dpto_first), gr.update(value=m_inic)
+    if mostrar:
+        sector = "Ambos"
+        ambito = "Ambos"
+        filtered = get_filtered_subset(df, prov_first, dpto_first, sector, ambito, KEY_COLUMNS, True, min_reg=MIN_REG)
+        
+        if filtered.empty:
+            m_inic = f" MATRÍCULA {dataset_type.upper()} PARA {provincia} - {departamento} (SECTOR {sector.upper()} - ÁMBITO {ambito.upper()}): SIN REGISTROS"
+            return df, pd.DataFrame(), gr.update(choices=provincias_sorted, value=prov_first), \
+                gr.update(choices=dptos_sorted, value=dpto_first), gr.update(value=m_inic), \
+                gr.update(visible=False), pd.DataFrame(), pd.DataFrame(), \
+                None, None, None, None, None, None, None
 
+        # Columnas para mostrar del dataset
+        all_cols = list(filtered.columns)
+        cols_to_show = [c for c in all_cols if c not in ['provincia', 'departamento']]
+
+        # Se arma el listado de las variables numéricas del dataset, excluyendo "periodo"
+        # y se guarda la primera variable de la lista
+        numeric_cols = df.select_dtypes(include=['number']).columns.tolist()
+        cols_to_plot = [c for c in numeric_cols if c != 'periodo']
+        indicadores_originales = cols_to_plot
+        # Se renombran los indicadores (nombres de columnas numéricas) con los nombres cortos del diccionario
+        indicadores = [dict_ncortos.get(col, col) for col in indicadores_originales]
+        indicador_first = indicadores[0]
+
+        # Data 1: Mensaje informativo sobre registros y campos
+        m_inic = f" MATRÍCULA {dataset_type.upper()} PARA {prov_first} - {dpto_first} (SECTOR {sector.upper()} - ÁMBITO {ambito.upper()}): {len(filtered)} REGISTROS  -  {len(cols_to_show)} CAMPOS"
+    
+        # Data 2: Calcular estadísticas del dataset filtrado
+        stats = (
+                filtered.drop(columns=['periodo'], errors='ignore')
+                .describe()
+                .round(2)
+                .reset_index()
+                .rename(columns={'index': 'Medida'})
+                )
+
+        # Se renombran las columnas con los nombres cortos
+        # El parámetro 'errors="ignore"' evita conflictos si una clave del diccionario no está en el DF
+        stats = stats.rename(columns=dict_ncortos)
+
+        # Data 3: Obtener el dataset final con las columnas para mostrar, 
+        # renombrando las columnas con los nombres cortos
+        final_df = filtered[cols_to_show].rename(columns=dict_ncortos)
+    
+        # Data 4: Generar gráfico de cajas
+        fig_boxplot = tab_EDA_create_boxplot_graph(final_df)
+        
+        # Data 5: Generar gráfico de serie temporal con la variable numérica indicada
+        fig_evolution = tab_EDA_create_evolution_graph(filtered, indicadores_originales[0], med_glob=True,
+                                           tend=True, med_mov=False, sd_mov=False, tipo_mov=0)
+        
+        # Data 6: Generar gráfico de histograma con la variable numérica indicada
+        fig_histogram = tab_EDA_create_histogram_graph(filtered, indicadores_originales[0])
+
+        # Data 7: Generar gráfico de distribución normal con la variable numérica indicada
+        fig_normal_dist = tab_EDA_create_normal_dist_graph(filtered, indicadores_originales[0])
+
+        return df, filtered, gr.update(choices=provincias_sorted, value=prov_first), \
+            gr.update(choices=dptos_sorted, value=dpto_first), gr.update(value=m_inic), \
+            gr.update(visible=True), stats, final_df, \
+            fig_boxplot, fig_evolution, fig_histogram, fig_normal_dist, \
+            gr.Dropdown(choices=indicadores, value=indicador_first, interactive=True), \
+            gr.Button(interactive=True), gr.Button(interactive=True)
+
+    else:
+        m_inic = "DEBE SELECCIONARSE EL BOTÓN \"MOSTRAR DATOS\" PARA VISUALIZAR LOS RESULTADOS"
+        return df, pd.DataFrame(), gr.update(choices=provincias_sorted, value=prov_first), \
+            gr.update(choices=dptos_sorted, value=dpto_first), gr.update(value=m_inic), \
+            gr.update(visible=False), pd.DataFrame(), pd.DataFrame(), \
+            None, None, None, None, None, None, None
+            
 def tab_EDA_on_dataset_change(dataset_type):
     df, provincias = load_data(dataset_type)
     m_inic = "EL DATASET SELECCIONADO DE MATRÍCULA NO ESTÁ DISPONIBLE"
@@ -179,9 +249,14 @@ def tab_EDA_create_boxplot_graph(df):
     
     return fig
 
-def tab_EDA_create_evolution_graph(df, indicador):
+def tab_EDA_create_evolution_graph(df, indicador, med_glob=True, tend=True, med_mov=False, sd_mov=False, tipo_mov=1):
     # df: dataset filtrado con columnas con nombres originales
     # indicador: nombre original de columna
+    # med_glob: grafica la media global
+    # tend: grafica la tendencia
+    # med_mov: grafica la media móvil
+    # sd_mov: grafica la SD móvil
+    # tipo_mov: ventana para media y SD móviles (2: k=2; 3: k=3 hacia atrás; 4: k=3 centrado)
 
     # Se crea la figura para el gráfico
     fig, ax = plt.subplots(figsize=(10, 4))
@@ -191,35 +266,65 @@ def tab_EDA_create_evolution_graph(df, indicador):
         x_data = df_sorted['periodo']
         y_data = df_sorted[indicador]
         
-        ax.plot(x_data, y_data, label=indicador,
+        ax.plot(x_data, y_data, label="Matrícula",
                 marker='o',                 # Tipo marcador
                 linewidth=3.0,              # Espesor línea
                 color='green',              # Color línea
                 markerfacecolor='red',      # Color marcador
                 markeredgecolor='red',      # Color borde marcador
                 markeredgewidth=3.0)        # Espesor borde marcador)
-        
-        # Se calcula la línea de tendencia (Regresión lineal: y = mx + b)
-        # Se obtienen la pendiente (z[0]) y la intersección (z[1])
-        z = np.polyfit(x_data, y_data, 1)
-        p = np.poly1d(z)
-        
-        # Se grafica la línea de tendencia
-        ax.plot(x_data, p(x_data), color='orange', linestyle='--', 
+
+        if med_glob: # Se calcula el promedio de los datos del indicador
+            media_valor = np.mean(y_data)
+            # Se grafica la línea horizontal representativa de la media
+            ax.hlines(y=media_valor, xmin=x_data.min(), xmax=x_data.max(), 
+                  color='skyblue', linestyle='--', linewidth=2, label='Media Global')
+                    
+        if tend: # Se calcula la línea de tendencia (Regresión lineal: y = mx + b)
+            # Se obtienen la pendiente (z[0]) y la intersección (z[1])
+            z = np.polyfit(x_data, y_data, 1)
+            p = np.poly1d(z)
+            # Se grafica la línea de tendencia
+            ax.plot(x_data, p(x_data), color='orange', linestyle='--', 
                 linewidth=2, label='Tendencia')
         
-        # Se calcula el promedio de los datos del indicador
-        media_valor = np.mean(y_data)
-        # Se grafica la línea horizontal representativa de la media
-        ax.hlines(y=media_valor, xmin=x_data.min(), xmax=x_data.max(), 
-                  color='skyblue', linestyle='--', linewidth=2, label='Media')
+        if med_mov or sd_mov:
+            # Configuración de la ventana (k) y centrado según tipo_mov
+            # 2: k=2; 3: k=3 hacia atrás; 4: k=3 centrado; otro: k=2
+            if tipo_mov == 3:
+                k, centro = 3, False
+                lab_graph = "3 atrás"
+            elif tipo_mov == 4:
+                k, centro = 3, True
+                lab_graph = "3 centrado"
+            else:
+                k, centro = 2, False
+                lab_graph = "2"
+
+            if med_mov: # Cálculo de la media móvil
+                y_med_mov = y_data.rolling(window=k, center=centro).mean()
+                ax.plot(x_data, y_med_mov, color='purple', linestyle='-', 
+                        linewidth=2, label=f'Media Móvil (k={lab_graph})')
+
+            # Cálculo de la desviación estándar móvil
+            if sd_mov:
+                y_sd_mov = y_data.rolling(window=k, center=centro).std()
+                # Se grafica la dispersión como una banda sombreada alrededor de la serie (opcional)
+                # O como una línea independiente. Aquí se opta por línea por consistencia:
+                ax.plot(x_data, y_sd_mov, color='gray', linestyle='--', 
+                        linewidth=1.5, label=f'SD Móvil (k={lab_graph})')
+                
+                # Banda de confianza (Media Móvil ± SD Móvil)
+                # if med_mov:
+                    # ax.fill_between(x_data, y_med_mov - y_sd_mov, y_med_mov + y_sd_mov, 
+                                    # color='yellow', alpha=0.1, label='Banda Variabilidad')
 
         titulo = f"EVOLUCIÓN DE LA MATRÍCULA: {dict_nlargos[indicador].upper()}"
         ax.set_title(titulo)
         ax.grid(True, linestyle='--', alpha=0.5)
         
-        # se agrega la leyenda para diferenciar la serie de la tendencia
-        # ax.legend()
+        # se agrega la leyenda para diferenciar las diferentes líneas
+        ax.legend()
 
         years = range(2011, 2025)
         ax.set_xticks(years)
@@ -357,7 +462,8 @@ def tab_EDA_create_all_graphs(df, indicador):
     if indicador not in numeric_cols:
         return None, None
     
-    fig1 = tab_EDA_create_evolution_graph(df, indicador)
+    fig1 = tab_EDA_create_evolution_graph(df, indicador, med_glob=True,
+                                           tend=True, med_mov=False, sd_mov=False, tipo_mov=0)
     fig2 = tab_EDA_create_histogram_graph(df, indicador)
     fig3 = tab_EDA_create_normal_dist_graph(df, indicador)
     
@@ -380,7 +486,8 @@ def tab_EDA_create_next_all_graphs(df, indicador):
     nuevo_indicador = indicadores_cols[indice_sig]
     
     # Se genera el gráfico de evolución para el indicador siguiente
-    fig1 = tab_EDA_create_evolution_graph(df, nuevo_indicador)
+    fig1 = tab_EDA_create_evolution_graph(df, nuevo_indicador, med_glob=True,
+                                           tend=True, med_mov=False, sd_mov=False, tipo_mov=0)
 
     # Se genera el gráfico de histograma para el indicador siguiente
     fig2 = tab_EDA_create_histogram_graph(df, nuevo_indicador)
@@ -411,7 +518,8 @@ def tab_EDA_create_prev_all_graphs(df, indicador):
     nuevo_indicador = indicadores_cols[indice_ant]
     
     # Se genera el gráfico de evolución para el indicador siguiente
-    fig1 = tab_EDA_create_evolution_graph(df, nuevo_indicador)
+    fig1 = tab_EDA_create_evolution_graph(df, nuevo_indicador, med_glob=True,
+                                           tend=True, med_mov=False, sd_mov=False, tipo_mov=0)
 
     # Se genera el gráfico de histograma para el indicador siguiente
     fig2 = tab_EDA_create_histogram_graph(df, nuevo_indicador)
@@ -425,7 +533,7 @@ def tab_EDA_create_prev_all_graphs(df, indicador):
 
     return gr.update(value=indicador_ncorto), fig1, fig2, fig3
 
-def get_filtered_subset(df, provincia, departamento, sector, ambito, key_columns, agrupar_detalles=True):
+def get_filtered_subset_2(df, provincia, departamento, sector, ambito, key_columns, agrupar_detalles=True):
 
     if df is None or df.empty:
         return pd.DataFrame() # Retorna DF vacío si no hay datos
@@ -476,12 +584,70 @@ def get_filtered_subset(df, provincia, departamento, sector, ambito, key_columns
     final_cols = group_cols + numeric_cols
     return final_df[final_cols]
 
+def get_filtered_subset(df, provincia, departamento, sector, ambito, key_columns, agrupar_detalles=True, min_reg=0):
+
+    if df is None or df.empty:
+        return pd.DataFrame() # Retorna DF vacío si no hay datos
+    
+    if not provincia or not departamento:
+        return pd.DataFrame()
+
+    # Filtrado inicial
+    res_df = df[(df['provincia'] == provincia) & (df['departamento'] == departamento)].copy()
+    
+    # Aplicación de filtros condicionales
+    if sector != 'Ambos':
+        res_df = res_df[res_df['sector'] == sector]
+        
+    if ambito != 'Ambos':
+        res_df = res_df[res_df['ambito'] == ambito]
+
+    if res_df.empty:
+        # return pd.DataFrame(columns=df.columns) # Retorna estructura original vacía
+        return pd.DataFrame()
+
+    # Si agrupar_detalles es True, forzamos la etiqueta 'Ambos' en las filas
+    if agrupar_detalles:
+        if sector == 'Ambos' and 'sector' in res_df.columns:
+            res_df['sector'] = 'Ambos'
+        if ambito == 'Ambos' and 'ambito' in res_df.columns:
+            res_df['ambito'] = 'Ambos'
+
+    # Definición de dimensiones de agrupación
+    group_cols = list(key_columns)
+    
+    # Añadimos dimensiones opcionales si existen en el DataFrame
+    for col in ['grado', 'sector', 'ambito']:
+        if col in res_df.columns and col not in group_cols:
+            group_cols.append(col)
+    
+    # Identificación de métricas (solo numéricas)
+    numeric_cols = [col for col in res_df.columns 
+                    if col not in group_cols and pd.api.types.is_numeric_dtype(res_df[col])]
+    
+    # Agregación
+    final_df = res_df.groupby(group_cols, as_index=False)[numeric_cols].sum()
+    
+    # Limpieza final para Gradio
+    # Gradio a veces tiene problemas con tipos de datos complejos o NaNs en la visualización
+    final_df = final_df.fillna(0)
+    
+    # Verificación del umbral mínimo de registros solicitado
+    if len(final_df) < min_reg: # Comprueba si el tamaño del DF es menor al umbral
+        # return pd.DataFrame(columns=final_df.columns)
+        return pd.DataFrame()
+
+    # Reordenar columnas para que las dimensiones precedan a las métricas
+    final_cols = group_cols + numeric_cols
+    return final_df[final_cols]
+
 def tab_EDA_show_data(df, dataset_type, provincia, departamento, sector, ambito):
-    filtered = get_filtered_subset(df, provincia, departamento, sector, ambito, KEY_COLUMNS, True)
+    filtered = get_filtered_subset(df, provincia, departamento, sector, ambito, KEY_COLUMNS, True, min_reg=MIN_REG)
     
     if filtered.empty:
         info_text = f" MATRÍCULA {dataset_type.upper()} PARA {provincia} - {departamento} (SECTOR {sector.upper()} - ÁMBITO {ambito.upper()}): SIN REGISTROS"
-        return info_text, gr.update(visible=False), pd.DataFrame(), pd.DataFrame(), None, None, None, None, None, None, None
+        return info_text, gr.update(visible=False), pd.DataFrame(), pd.DataFrame(), \
+            None, None, None, None, None, None, None
 
     # Columnas para mostrar del dataset
     all_cols = list(filtered.columns)
@@ -520,7 +686,8 @@ def tab_EDA_show_data(df, dataset_type, provincia, departamento, sector, ambito)
     fig_boxplot = tab_EDA_create_boxplot_graph(final_df)
     
     # Data 5: Generar gráfico de serie temporal con la variable numérica indicada
-    fig_evolution = tab_EDA_create_evolution_graph(filtered, indicadores_originales[0])
+    fig_evolution = tab_EDA_create_evolution_graph(filtered, indicadores_originales[0], med_glob=True,
+                                           tend=True, med_mov=False, sd_mov=False, tipo_mov=0)
     
     # Data 6: Generar gráfico de histograma con la variable numérica indicada
     fig_histogram = tab_EDA_create_histogram_graph(filtered, indicadores_originales[0])
@@ -533,7 +700,14 @@ def tab_EDA_show_data(df, dataset_type, provincia, departamento, sector, ambito)
             gr.Dropdown(choices=indicadores, value=indicador_first, interactive=True), \
             gr.Button(interactive=True), gr.Button(interactive=True)
 
-# endregion
+def tab_EDA_on_checkbox(checkbox):
+    if checkbox:
+        return gr.update(visible=False)
+    else:
+        return gr.update(visible=True)
+                          
+
+# endregion FUNCIONES PARA LA PESTAÑA "EDA"
 
 
 # region FUNCIONES PARA LA PESTAÑA "SERIES TEMPORALES"
@@ -575,10 +749,11 @@ def tab_ST_on_mat_change(dataset_type):
     # Se filtra el dataset de matrícula
     sector = "Ambos"
     ambito = "Ambos"
-    filtered = get_filtered_subset(df, prov_first, dpto_first, sector, ambito, KEY_COLUMNS, True)
+    filtered = get_filtered_subset(df, prov_first, dpto_first, sector, ambito, KEY_COLUMNS, True, min_reg=MIN_REG)
 
     # Se genera el gráfico para el primer indicador
-    graph = tab_EDA_create_evolution_graph(filtered, indicadores_originales[0])
+    graph = tab_EDA_create_evolution_graph(filtered, indicadores_originales[0], med_glob=True,
+                                           tend=True, med_mov=True, sd_mov=True, tipo_mov=4)
 
     # Al actualizar el dataset, se muestra la primera provincia, el primer departamento,
     # sector = "Ambos", ambiente="Ambos", el primer indicador y el gráfico correspodiente.
@@ -599,7 +774,6 @@ def tab_ST_on_mat_change(dataset_type):
             gr.update(choices=["Urbano", "Rural", "Ambos"], value="Ambos"), \
             gr.update(choices=indicadores, value=indicador_first), graph
             
-
 def tab_ST_on_prov_change(df, provincia, sector, ambito, indicador):
     # Se arma el listado ordenado de departamentos de la provincia
     # y se guarda el primer departamento de la lista
@@ -612,13 +786,14 @@ def tab_ST_on_prov_change(df, provincia, sector, ambito, indicador):
     ind_orig = next((k for k, v in dict_ncortos.items() if v == indicador), indicador)
 
     # Se filtra el dataset de matrícula
-    filtered = get_filtered_subset(df, provincia, dpto_first, sector, ambito, KEY_COLUMNS, True)
+    filtered = get_filtered_subset(df, provincia, dpto_first, sector, ambito, KEY_COLUMNS, True, min_reg=MIN_REG)
     
     if filtered.empty:
-        return None
+        return None, None
     
     # Se genera el gráfico para el primer indicador
-    graph = tab_EDA_create_evolution_graph(filtered, ind_orig)
+    graph = tab_EDA_create_evolution_graph(filtered, ind_orig, med_glob=True,
+                                           tend=True, med_mov=True, sd_mov=True, tipo_mov=4)
 
     return  gr.update(choices=dptos_sorted, value=dpto_first), graph
 
@@ -630,13 +805,14 @@ def tab_ST_on_dep_change(df, provincia, departamento, sector, ambito, indicador)
     ind_orig = next((k for k, v in dict_ncortos.items() if v == indicador), indicador)
 
     # Se filtra el dataset de matrícula
-    filtered = get_filtered_subset(df, provincia, departamento, sector, ambito, KEY_COLUMNS, True)
+    filtered = get_filtered_subset(df, provincia, departamento, sector, ambito, KEY_COLUMNS, True, min_reg=MIN_REG)
     
     if filtered.empty:
         return None
     
     # Se genera el gráfico para el primer indicador
-    graph = tab_EDA_create_evolution_graph(filtered, ind_orig)
+    graph = tab_EDA_create_evolution_graph(filtered, ind_orig, med_glob=True,
+                                           tend=True, med_mov=True, sd_mov=True, tipo_mov=4)
 
     return graph
 
@@ -648,18 +824,18 @@ def tab_ST_on_option_change(df, provincia, departamento, sector, ambito, indicad
     ind_orig = next((k for k, v in dict_ncortos.items() if v == indicador), indicador)
 
     # Se filtra el dataset de matrícula
-    filtered = get_filtered_subset(df, provincia, departamento, sector, ambito, KEY_COLUMNS, True)
+    filtered = get_filtered_subset(df, provincia, departamento, sector, ambito, KEY_COLUMNS, True, min_reg=MIN_REG)
     
     if filtered.empty:
         return None
     
     # Se genera el gráfico para el primer indicador
-    graph = tab_EDA_create_evolution_graph(filtered, ind_orig)
+    graph = tab_EDA_create_evolution_graph(filtered, ind_orig, med_glob=True,
+                                           tend=True, med_mov=True, sd_mov=True, tipo_mov=4)
 
     return graph
 
-# endregion
-
+# endregion FUNCIONES PARA LA PESTAÑA "SERIES TEMPORALES"
 
 
 # region FUNCIONES PARA IMAGENES/VIDEOS EN BASE64 E INCLUSIÓN EN CÓDIGO CSS
@@ -717,7 +893,7 @@ portada_video = f'''
     </video>
 </div>
 '''
-# endregion
+# endregion FUNCIONES PARA IMAGENES/VIDEOS EN BASE64 E INCLUSIÓN EN CÓDIGO CSS
 
 
 
@@ -795,8 +971,9 @@ with gr.Blocks(title="Análisis Educativo") as app:
             
                     sector = gr.Radio(label="Sector", choices=["Estatal", "Privado", "Ambos"], value="Ambos", elem_classes="custom-radio")
                     ambito = gr.Radio(label="Ámbito", choices=["Urbano", "Rural", "Ambos"], value="Ambos", elem_classes="custom-radio")
-                
-                    btn_mostrar = gr.Button("Mostrar Datos", variant="primary", elem_classes="custom-button")
+                    
+                    chk_mostrar = gr.Checkbox(label="Automático", value=True, elem_classes="custom-checkbox")
+                    btn_mostrar = gr.Button("Mostrar Datos", variant="primary", visible=False, elem_classes="custom-button")
         
                 with gr.Column(scale=20):
                     with gr.Row(elem_classes="custom-tab"):
@@ -840,6 +1017,7 @@ with gr.Blocks(title="Análisis Educativo") as app:
                                     output_plot_normal_dist = gr.Plot(show_label=False)
 
 
+            '''
             tipo_matricula.change(
                 fn=tab_EDA_on_dataset_change,
                 inputs=[tipo_matricula],
@@ -910,16 +1088,22 @@ with gr.Blocks(title="Análisis Educativo") as app:
                 outputs=[indicador, output_plot_evolution, output_plot_histogram,
                         output_plot_normal_dist]
             )
-            
-            '''app.load(
-                fn=on_load_page, 
-                inputs=[tipo_matricula], 
-                outputs=[dataset_state, provincia, departamento, info_label]
-            )'''
+            '''
+
+            chk_mostrar.select(
+                fn=tab_EDA_on_checkbox,
+                inputs=[chk_mostrar],
+                outputs=[btn_mostrar]
+            )
+
             tab_EDA.select(
                 fn=tab_EDA_on_load, 
-                inputs=[tipo_matricula], 
-                outputs=[dataset_state, provincia, departamento, info_label]
+                inputs=[tipo_matricula, chk_mostrar], 
+                outputs=[dataset_state, dataset_filter_state, provincia, departamento, info_label,
+                            data_dataset, stats_table, output_table,
+                            output_plot_box, output_plot_evolution,
+                            output_plot_histogram, output_plot_normal_dist,
+                            indicador, btn_anterior, btn_siguiente]
             )
         
 
@@ -932,11 +1116,21 @@ with gr.Blocks(title="Análisis Educativo") as app:
                 gr.HTML("&nbsp;&nbsp;1. SELECCIÓN DE LAS SERIES TEMPORALES A COMPARAR", elem_classes="subtitle-text")
             
             with gr.Row():
-                with gr.Column(min_width=180, elem_classes="custom-tab"):
-                    mat = gr.Radio(label="Tipo de Matrícula", 
+                with gr.Column(min_width=180):
+                    with gr.Row(elem_classes="custom-tab"):
+                        mat = gr.Radio(label="Tipo de Matrícula", 
                             choices=["Por Curso", "Por Población", "Por Trayectoria"],
                             value="Por Curso", elem_classes="custom-radio")
-                    
+                    with gr.Row(elem_classes="custom-tab"):
+                        with gr.Column():
+                            gr.HTML("Opciones de Gráficos", elem_classes="title-group")
+                            graph_mg = gr.Checkbox(label="Media Global", value=True, elem_classes="custom-checkbox")
+                            graph_tend = gr.Checkbox(label="Tendencia", value=True, elem_classes="custom-checkbox")
+                            graph_mm = gr.Radio(label="Media Móvil", choices=["No", "k = 2 atrás",
+                                                            "k = 3 atrás", "k = 3 centrado"],
+                                                            value="k = 3 centrado", elem_classes="custom-radio")
+                            graph_sd = gr.Checkbox(label="SD Móvil", value=False, elem_classes="custom-checkbox")
+
                 with gr.Column(scale=20):
 
                     with gr.Row(elem_classes="custom-tab"):
