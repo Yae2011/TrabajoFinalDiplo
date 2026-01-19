@@ -160,6 +160,7 @@
 }
 
 
+
 /* ### CONTENEDOR PARA MOSTRAR/OCULTAR SU CONTENIDO
    ### Hay que aplicar todos estos estilos para que no aparezca
    ### un borde rojo parpadeante muy molesto 
@@ -339,6 +340,20 @@
     box-shadow: var(--shadow-soft) !important;
     margin-bottom: 8px !important;
 }
+.custom-checkbox-2 {
+    background-color: var(--input-bg-color) !important;
+    color: var(--text-color) !important;
+    font-size: var(--font-title3) !important;
+    font-weight: bold !important;
+    padding-left: 10px !important;
+    padding-top: 5px !important;
+    padding-bottom: 5px !important;
+    border-radius: 10px !important;
+    border: none !important;
+    box-shadow: var(--shadow-soft) !important;
+    margin-top: 0px !important;
+    margin-bottom: 0px !important;
+}
 
 
 
@@ -356,6 +371,7 @@
     color: var(--text-color) !important;
     text-align: center !important;
     transition: all 0.2s ease !important;
+    margin-bottom: 10px !important;
 }
 .custom-button:hover {
     /* Para el estado encima */
@@ -380,6 +396,8 @@
     text-align: center !important;
     transition: all 0.2s ease !important;
     width: 50px !important;
+    margin-top: -10px !important;
+    margin-bottom: 38px !important;
 }
 .custom-button2:hover {
     /* Para el estado encima */
@@ -399,7 +417,7 @@
 .info-display-1 {
     font-weight: bold !important;
     font-size: var(--font-title2) !important;
-    margin-bottom: 0px !important;
+    margin-top: -4px !important;
 }
 
 

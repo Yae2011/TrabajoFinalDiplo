@@ -55,14 +55,17 @@ def load_data(dataset_type):
 
 
 # region FUNCIONES PARA LA PESTAÑA "EDA"
-def tab_EDA_on_load(dataset_type, mostrar):
+def tab_EDA_on_load(dataset_type, automatico):
     df, provincias = load_data(dataset_type)
     
     if df.empty:
-        m_inic = "EL DATASET SELECCIONADO DE MATRÍCULA NO ESTÁ DISPONIBLE"
-        return df, pd.DataFrame(), None, None, gr.update(value=m_inic), gr.update(visible=False), \
+        m_inic = "EL DATASET DE MATRÍCULA SELECCIONADO NO ESTÁ DISPONIBLE"
+        return pd.DataFrame(), pd.DataFrame(), gr.update(choices=[], value=None), \
+            gr.update(choices=[], value=None), \
+            gr.update(value="Ambos"), gr.update(value="Ambos"), \
+            gr.update(value=m_inic), gr.update(visible=False), \
             pd.DataFrame(), pd.DataFrame(), \
-            None, None, None, None, None, None, None
+            None, None, None, None, None, None, None, gr.update(visible=True)
     
     # Se arma el listado ordenado de provincias y se guarda la primera provincia
     provincias_sorted = sorted([str(p) for p in provincias])
@@ -74,88 +77,31 @@ def tab_EDA_on_load(dataset_type, mostrar):
     dptos_sorted = sorted([str(d) for d in dptos if d is not None])
     dpto_first = dptos_sorted[0]
 
-    if mostrar:
+    if automatico:
         sector = "Ambos"
         ambito = "Ambos"
-        filtered = get_filtered_subset(df, prov_first, dpto_first, sector, ambito, KEY_COLUMNS, True, min_reg=MIN_REG)
-        
-        if filtered.empty:
-            m_inic = f" MATRÍCULA {dataset_type.upper()} PARA {provincia} - {departamento} (SECTOR {sector.upper()} - ÁMBITO {ambito.upper()}): SIN REGISTROS"
-            return df, pd.DataFrame(), gr.update(choices=provincias_sorted, value=prov_first), \
-                gr.update(choices=dptos_sorted, value=dpto_first), gr.update(value=m_inic), \
-                gr.update(visible=False), pd.DataFrame(), pd.DataFrame(), \
-                None, None, None, None, None, None, None
-
-        # Columnas para mostrar del dataset
-        all_cols = list(filtered.columns)
-        cols_to_show = [c for c in all_cols if c not in ['provincia', 'departamento']]
-
-        # Se arma el listado de las variables numéricas del dataset, excluyendo "periodo"
-        # y se guarda la primera variable de la lista
-        numeric_cols = df.select_dtypes(include=['number']).columns.tolist()
-        cols_to_plot = [c for c in numeric_cols if c != 'periodo']
-        indicadores_originales = cols_to_plot
-        # Se renombran los indicadores (nombres de columnas numéricas) con los nombres cortos del diccionario
-        indicadores = [dict_ncortos.get(col, col) for col in indicadores_originales]
-        indicador_first = indicadores[0]
-
-        # Data 1: Mensaje informativo sobre registros y campos
-        m_inic = f" MATRÍCULA {dataset_type.upper()} PARA {prov_first} - {dpto_first} (SECTOR {sector.upper()} - ÁMBITO {ambito.upper()}): {len(filtered)} REGISTROS  -  {len(cols_to_show)} CAMPOS"
-    
-        # Data 2: Calcular estadísticas del dataset filtrado
-        stats = (
-                filtered.drop(columns=['periodo'], errors='ignore')
-                .describe()
-                .round(2)
-                .reset_index()
-                .rename(columns={'index': 'Medida'})
-                )
-
-        # Se renombran las columnas con los nombres cortos
-        # El parámetro 'errors="ignore"' evita conflictos si una clave del diccionario no está en el DF
-        stats = stats.rename(columns=dict_ncortos)
-
-        # Data 3: Obtener el dataset final con las columnas para mostrar, 
-        # renombrando las columnas con los nombres cortos
-        final_df = filtered[cols_to_show].rename(columns=dict_ncortos)
-    
-        # Data 4: Generar gráfico de cajas
-        fig_boxplot = tab_EDA_create_boxplot_graph(final_df)
-        
-        # Data 5: Generar gráfico de serie temporal con la variable numérica indicada
-        fig_evolution = tab_EDA_create_evolution_graph(filtered, indicadores_originales[0], med_glob=True,
-                                           tend=True, med_mov=False, sd_mov=False, tipo_mov=0)
-        
-        # Data 6: Generar gráfico de histograma con la variable numérica indicada
-        fig_histogram = tab_EDA_create_histogram_graph(filtered, indicadores_originales[0])
-
-        # Data 7: Generar gráfico de distribución normal con la variable numérica indicada
-        fig_normal_dist = tab_EDA_create_normal_dist_graph(filtered, indicadores_originales[0])
-
-        return df, filtered, gr.update(choices=provincias_sorted, value=prov_first), \
-            gr.update(choices=dptos_sorted, value=dpto_first), gr.update(value=m_inic), \
-            gr.update(visible=True), stats, final_df, \
-            fig_boxplot, fig_evolution, fig_histogram, fig_normal_dist, \
-            gr.Dropdown(choices=indicadores, value=indicador_first, interactive=True), \
-            gr.Button(interactive=True), gr.Button(interactive=True)
+        return tab_EDA_show_data(df, dataset_type, prov_first, dpto_first, sector, ambito, True)
 
     else:
         m_inic = "DEBE SELECCIONARSE EL BOTÓN \"MOSTRAR DATOS\" PARA VISUALIZAR LOS RESULTADOS"
         return df, pd.DataFrame(), gr.update(choices=provincias_sorted, value=prov_first), \
-            gr.update(choices=dptos_sorted, value=dpto_first), gr.update(value=m_inic), \
+            gr.update(choices=dptos_sorted, value=dpto_first), \
+            gr.update(value="Ambos"), gr.update(value="Ambos"), \
+            gr.update(value=m_inic), \
             gr.update(visible=False), pd.DataFrame(), pd.DataFrame(), \
-            None, None, None, None, None, None, None
+            None, None, None, None, None, None, None, gr.update(visible=True)
             
-def tab_EDA_on_dataset_change(dataset_type):
+def tab_EDA_on_dataset_change(dataset_type, automatico):
     df, provincias = load_data(dataset_type)
-    m_inic = "EL DATASET SELECCIONADO DE MATRÍCULA NO ESTÁ DISPONIBLE"
+    m_inic = "EL DATASET DE MATRÍCULA SELECCIONADO NO ESTÁ DISPONIBLE"
 
     if df.empty:
-        return df, gr.update(choices=[], value=None), gr.update(choices=[], value=None), \
+        return df, pd.DataFrame(), gr.update(choices=[], value=None), gr.update(choices=[], value=None), \
                 gr.update(value="Ambos"), gr.update(value="Ambos"), gr.HTML(value=m_inic), \
                 gr.update(visible=False), None, None, None, None, None, None, \
                 gr.Dropdown(choices=[], value=None, interactive=False), \
-                gr.Button(interactive=False), gr.Button(interactive=False)
+                gr.Button(interactive=False), gr.Button(interactive=False), \
+                gr.update(visible=True)
     
     # Se arma el listado ordenado de provincias y se guarda la primera provincia
     provincias_sorted = sorted([str(p) for p in provincias])
@@ -166,47 +112,75 @@ def tab_EDA_on_dataset_change(dataset_type):
     dptos = df[df['provincia'] == prov_first]['departamento'].unique()
     dptos_sorted = sorted([str(d) for d in dptos if d is not None])
     dpto_first = dptos_sorted[0]
-    m_inic = "DEBE SELECCIONARSE EL BOTÓN \"MOSTRAR DATOS\" PARA VISUALIZAR LOS RESULTADOS"
 
-    # Al actualizar el dataset, el valor de la lista desplegabls "provincia" 
-    # muestra la primera provincia del listado y la lista desplegable "departamento"
-    # muestra el primer departamento de la provincia. La lista desplegable "indicador"
-    # se actualiza recién luego de presionar el botón "Mostrar Datos"
-    return df, gr.update(choices=provincias_sorted, value=prov_first), \
-            gr.update(choices=dptos_sorted, value=dpto_first), \
-            gr.update(value="Ambos"), gr.update(value="Ambos"), gr.HTML(value=m_inic), \
-            gr.update(visible=False), None, None, None, None, None, None, \
-            gr.Dropdown(choices=[], value=None, interactive=False), \
-            gr.Button(interactive=False), gr.Button(interactive=False)
+    if automatico:
+        sector = "Ambos"
+        ambito = "Ambos"
+        return tab_EDA_show_data(df, dataset_type, prov_first, dpto_first, sector, ambito, True)
+    else:
+        m_inic = "DEBE SELECCIONARSE EL BOTÓN \"MOSTRAR DATOS\" PARA VISUALIZAR LOS RESULTADOS"
+        # Al actualizar el dataset, la lista "provincia" muestra la primera provincia
+        # y la lista "departamento" muestra el primer departamento. La lista "indicador"
+        # se actualiza recién luego de presionar el botón "Mostrar Datos"
+        return df, pd.DataFrame(), gr.update(choices=provincias_sorted, value=prov_first), \
+                gr.update(choices=dptos_sorted, value=dpto_first), \
+                gr.update(value="Ambos"), gr.update(value="Ambos"), gr.HTML(value=m_inic), \
+                gr.update(visible=False), None, None, None, None, None, None, \
+                gr.Dropdown(choices=[], value=None, interactive=False), \
+                gr.Button(interactive=False), gr.Button(interactive=False), \
+                gr.update(visible=True)
 
-def tab_EDA_on_provincia_change(df, provincia):
+def tab_EDA_on_provincia_change(df, df_filtered, dataset_type, provincia, automatico):
+
     # Se arma el listado ordenado de departamentos de la provincia
     # y se guarda el primer departamento de la lista
     dptos = df[df['provincia'] == provincia]['departamento'].unique()
     dptos_sorted = sorted([str(d) for d in dptos if d is not None])
     dpto_first = dptos_sorted[0]
     
-    m_inic = "DEBE SELECCIONARSE EL BOTÓN \"MOSTRAR DATOS\" PARA VISUALIZAR LOS RESULTADOS"
-    return  gr.update(choices=dptos_sorted, value=dpto_first), \
-            gr.update(value="Ambos"), gr.update(value="Ambos"), gr.HTML(value=m_inic), \
-            gr.update(visible=False), None, None, None, None, None, None, \
-            gr.Dropdown(choices=[], value="", interactive=False), \
-            gr.Button(interactive=False), gr.Button(interactive=False)
+    if automatico:
+        sector = "Ambos"
+        ambito = "Ambos"
+        return tab_EDA_show_data(df, dataset_type, provincia, dpto_first, sector, ambito, True)
+    else:
+        m_inic = "DEBE SELECCIONARSE EL BOTÓN \"MOSTRAR DATOS\" PARA VISUALIZAR LOS RESULTADOS"
+        return df, df_filtered, gr.update(value=provincia), \
+                gr.update(choices=dptos_sorted, value=dpto_first), \
+                gr.update(value="Ambos"), gr.update(value="Ambos"), gr.HTML(value=m_inic), \
+                gr.update(visible=False), None, None, None, None, None, None, \
+                gr.Dropdown(choices=[], value=None, interactive=False), \
+                gr.Button(interactive=False), gr.Button(interactive=False), \
+                gr.update(visible=True)
 
-def tab_EDA_on_departamento_change():
-    # Al cambiar de departamento se resetea toda la data en pantalla
-    m_inic = "DEBE SELECCIONARSE EL BOTÓN \"MOSTRAR DATOS\" PARA VISUALIZAR LOS RESULTADOS"
-    return gr.update(value="Ambos"), gr.update(value="Ambos"), gr.HTML(value=m_inic), \
-            gr.update(visible=False), None, None, None, None, None, None, \
-            gr.Dropdown(choices=[], value="", interactive=False), \
-            gr.Button(interactive=False), gr.Button(interactive=False)
+def tab_EDA_on_departamento_change(df, df_filtered, dataset_type, provincia, departamento, automatico):
 
-def tab_EDA_on_opcion_change():
-    # Al cambiar la opción de sector o ámbito se resetea toda la data en pantalla
-    m_inic = "DEBE SELECCIONARSE EL BOTÓN \"MOSTRAR DATOS\" PARA VISUALIZAR LOS RESULTADOS"
-    return gr.HTML(value=m_inic), gr.update(visible=False), None, None, None, None, None, None, \
-            gr.Dropdown(choices=[], value="", interactive=False), \
-            gr.Button(interactive=False), gr.Button(interactive=False)
+    if automatico:
+        sector = "Ambos"
+        ambito = "Ambos"
+        return tab_EDA_show_data(df, dataset_type, provincia, departamento, sector, ambito, True)
+    else:
+        m_inic = "DEBE SELECCIONARSE EL BOTÓN \"MOSTRAR DATOS\" PARA VISUALIZAR LOS RESULTADOS"
+        return df, df_filtered, gr.update(value=provincia), \
+                gr.update(value=departamento), \
+                gr.update(value="Ambos"), gr.update(value="Ambos"), gr.HTML(value=m_inic), \
+                gr.update(visible=False), None, None, None, None, None, None, \
+                gr.Dropdown(choices=[], value=None, interactive=False), \
+                gr.Button(interactive=False), gr.Button(interactive=False), \
+                gr.update(visible=True)
+
+def tab_EDA_on_opcion_change(df, df_filtered, dataset_type, provincia, departamento, sector, ambito, automatico):
+
+    if automatico:
+        return tab_EDA_show_data(df, dataset_type, provincia, departamento, sector, ambito, True)
+    else:
+        m_inic = "DEBE SELECCIONARSE EL BOTÓN \"MOSTRAR DATOS\" PARA VISUALIZAR LOS RESULTADOS"
+        return df, df_filtered, gr.update(value=provincia), \
+                gr.update(value=departamento), \
+                gr.update(value=sector), gr.update(value=ambito), gr.HTML(value=m_inic), \
+                gr.update(visible=False), None, None, None, None, None, None, \
+                gr.Dropdown(choices=[], value=None, interactive=False), \
+                gr.Button(interactive=False), gr.Button(interactive=False), \
+                gr.update(visible=True)
 
 def tab_EDA_create_boxplot_graph(df):
     # df: dataset filtrado con columnas con "nombres originales"
@@ -249,13 +223,14 @@ def tab_EDA_create_boxplot_graph(df):
     
     return fig
 
-def tab_EDA_create_evolution_graph(df, indicador, med_glob=True, tend=True, med_mov=False, sd_mov=False, tipo_mov=1):
+def tab_EDA_create_evolution_graph(df, indicador, serie=True, med_glob=True, tend=True, med_mov=False, sd_mov=False, tipo_mov=4):
     # df: dataset filtrado con columnas con nombres originales
     # indicador: nombre original de columna
-    # med_glob: grafica la media global
-    # tend: grafica la tendencia
-    # med_mov: grafica la media móvil
-    # sd_mov: grafica la SD móvil
+    # serie: muestra la serie de datos
+    # med_glob: muestra la media global
+    # tend: muestra la tendencia
+    # med_mov: muestra la media móvil
+    # sd_mov: muestra la SD móvil
     # tipo_mov: ventana para media y SD móviles (2: k=2; 3: k=3 hacia atrás; 4: k=3 centrado)
 
     # Se crea la figura para el gráfico
@@ -266,7 +241,8 @@ def tab_EDA_create_evolution_graph(df, indicador, med_glob=True, tend=True, med_
         x_data = df_sorted['periodo']
         y_data = df_sorted[indicador]
         
-        ax.plot(x_data, y_data, label="Matrícula",
+        if serie: # Se grafica la serie temporal de datos
+            ax.plot(x_data, y_data, label="Matrícula",
                 marker='o',                 # Tipo marcador
                 linewidth=3.0,              # Espesor línea
                 color='green',              # Color línea
@@ -301,18 +277,30 @@ def tab_EDA_create_evolution_graph(df, indicador, med_glob=True, tend=True, med_
                 k, centro = 2, False
                 lab_graph = "2"
 
+            y_med_mov = y_data.rolling(window=k, center=centro).mean()
             if med_mov: # Cálculo de la media móvil
-                y_med_mov = y_data.rolling(window=k, center=centro).mean()
-                ax.plot(x_data, y_med_mov, color='purple', linestyle='-', 
+                ax.plot(x_data, y_med_mov, color='purple', linestyle='--', 
                         linewidth=2, label=f'Media Móvil (k={lab_graph})')
 
-            # Cálculo de la desviación estándar móvil
-            if sd_mov:
+            if sd_mov: # Cálculo de la desviación estándar móvil
                 y_sd_mov = y_data.rolling(window=k, center=centro).std()
-                # Se grafica la dispersión como una banda sombreada alrededor de la serie (opcional)
-                # O como una línea independiente. Aquí se opta por línea por consistencia:
-                ax.plot(x_data, y_sd_mov, color='gray', linestyle='--', 
-                        linewidth=1.5, label=f'SD Móvil (k={lab_graph})')
+                
+                # Se grafica la SD aplicada a la media  (Media +/- SD)
+                y_superior = y_med_mov + y_sd_mov
+                y_inferior = y_med_mov - y_sd_mov
+        
+                # Generación del área sombreada
+                ax.fill_between(x_data, y_inferior, y_superior, color='purple', alpha=0.2, 
+                        label=f'SD Móvil (k={lab_graph})')
+        
+                # Líneas tenues para marcar los límites de la SD
+                ax.plot(x_data, y_superior, color='purple', linestyle='--', linewidth=0.5, alpha=0.5)
+                ax.plot(x_data, y_inferior, color='purple', linestyle='--', linewidth=0.5, alpha=0.5)
+                
+                # Grafica el valor absoluto de la SD, generalmente en la parte inferior
+                # del eje Y quitándole escala a la serie principal de datos
+                # ax.plot(x_data, y_sd_mov, color='gray', linestyle='--', 
+                #        linewidth=1.5, label=f'SD Móvil (k={lab_graph})')
                 
                 # Banda de confianza (Media Móvil ± SD Móvil)
                 # if med_mov:
@@ -323,8 +311,9 @@ def tab_EDA_create_evolution_graph(df, indicador, med_glob=True, tend=True, med_
         ax.set_title(titulo)
         ax.grid(True, linestyle='--', alpha=0.5)
         
-        # se agrega la leyenda para diferenciar las diferentes líneas
-        ax.legend()
+        # se agrega la leyenda para diferenciar las diferentes líneas, si las hay
+        if serie or med_glob or tend or med_mov or sd_mov:
+            ax.legend()
 
         years = range(2011, 2025)
         ax.set_xticks(years)
@@ -443,7 +432,7 @@ def tab_EDA_create_histogram_graph(df, indicador):
         # Liberación de memoria para compatibilidad con Gradio/Streamlit
         plt.close(fig)
 
-def tab_EDA_create_all_graphs(df, indicador):
+def tab_EDA_create_all_graphs(df, indicador, serie, mg, tend, mm, sd):
     # df: dataset filtrado con columnas con nombres originales
     # indicador: nombre descriptivo corto de columna
 
@@ -462,14 +451,36 @@ def tab_EDA_create_all_graphs(df, indicador):
     if indicador not in numeric_cols:
         return None, None
     
-    fig1 = tab_EDA_create_evolution_graph(df, indicador, med_glob=True,
-                                           tend=True, med_mov=False, sd_mov=False, tipo_mov=0)
+    fig1 = tab_EDA_create_evolution_graph(df, indicador, serie, mg, tend, mm, sd, tipo_mov=4)
     fig2 = tab_EDA_create_histogram_graph(df, indicador)
     fig3 = tab_EDA_create_normal_dist_graph(df, indicador)
     
     return fig1, fig2, fig3
+
+def tab_EDA_options_graph(df, indicador, serie, mg, tend, mm, sd):
+    # df: dataset filtrado con columnas con nombres originales
+    # indicador: nombre descriptivo corto de columna
+
+    if df is None or df.empty or indicador is None:
+        return None
     
-def tab_EDA_create_next_all_graphs(df, indicador):
+    # Si no hay columna "período"
+    if 'periodo' not in df.columns:
+        return None
+
+    # Columnas numéricas para graficar, se excluye la columna "período"
+    numeric_cols = df.select_dtypes(include=['number']).columns.tolist()
+    # Se busca la clave original (columna) en el diccionario a partir del valor descriptivo
+    indicador = next((k for k, v in dict_ncortos.items() if v == indicador), indicador)
+    # Si el indicador no está en las columnas numéricas del df
+    if indicador not in numeric_cols:
+        return None
+    
+    fig = tab_EDA_create_evolution_graph(df, indicador, serie, mg, tend, mm, sd, 4)
+   
+    return fig
+    
+def tab_EDA_create_next_all_graphs(df, indicador, serie, mg, tend, mm, sd):
     # df: dataset filtrado con columnas con nombres originales
     # indicador: nombre descriptivo corto de columna
 
@@ -486,8 +497,7 @@ def tab_EDA_create_next_all_graphs(df, indicador):
     nuevo_indicador = indicadores_cols[indice_sig]
     
     # Se genera el gráfico de evolución para el indicador siguiente
-    fig1 = tab_EDA_create_evolution_graph(df, nuevo_indicador, med_glob=True,
-                                           tend=True, med_mov=False, sd_mov=False, tipo_mov=0)
+    fig1 = tab_EDA_create_evolution_graph(df, nuevo_indicador, serie, mg, tend, mm, sd, tipo_mov=4)
 
     # Se genera el gráfico de histograma para el indicador siguiente
     fig2 = tab_EDA_create_histogram_graph(df, nuevo_indicador)
@@ -501,7 +511,7 @@ def tab_EDA_create_next_all_graphs(df, indicador):
 
     return gr.update(value=indicador_ncorto), fig1, fig2, fig3
 
-def tab_EDA_create_prev_all_graphs(df, indicador):
+def tab_EDA_create_prev_all_graphs(df, indicador, serie, mg, tend, mm, sd):
     # df: dataset filtrado con columnas con nombres originales
     # indicador: nombre descriptivo corto de columna
 
@@ -518,8 +528,7 @@ def tab_EDA_create_prev_all_graphs(df, indicador):
     nuevo_indicador = indicadores_cols[indice_ant]
     
     # Se genera el gráfico de evolución para el indicador siguiente
-    fig1 = tab_EDA_create_evolution_graph(df, nuevo_indicador, med_glob=True,
-                                           tend=True, med_mov=False, sd_mov=False, tipo_mov=0)
+    fig1 = tab_EDA_create_evolution_graph(df, nuevo_indicador, serie, mg, tend, mm, sd, tipo_mov=4)
 
     # Se genera el gráfico de histograma para el indicador siguiente
     fig2 = tab_EDA_create_histogram_graph(df, nuevo_indicador)
@@ -641,13 +650,23 @@ def get_filtered_subset(df, provincia, departamento, sector, ambito, key_columns
     final_cols = group_cols + numeric_cols
     return final_df[final_cols]
 
-def tab_EDA_show_data(df, dataset_type, provincia, departamento, sector, ambito):
+def tab_EDA_show_data(df, dataset_type, provincia, departamento, sector, ambito, automatico):
+
+    # Se arma el listado ordenado de departamentos de la provincia
+    # y se guarda el primer departamento de la lista
+    dptos = df[df['provincia'] == provincia]['departamento'].unique()
+    dptos_sorted = sorted([str(d) for d in dptos if d is not None])
+    # if departamento is None: # Cuando se cambió la provincia pero no se seleccionó un departamento
+    #    departamento = dptos_sorted[0]
+
     filtered = get_filtered_subset(df, provincia, departamento, sector, ambito, KEY_COLUMNS, True, min_reg=MIN_REG)
     
     if filtered.empty:
         info_text = f" MATRÍCULA {dataset_type.upper()} PARA {provincia} - {departamento} (SECTOR {sector.upper()} - ÁMBITO {ambito.upper()}): SIN REGISTROS"
-        return info_text, gr.update(visible=False), pd.DataFrame(), pd.DataFrame(), \
-            None, None, None, None, None, None, None
+        return df, filtered, gr.update(value=provincia), gr.update(value=departamento), \
+            gr.update(value=sector), gr.update(value=ambito), \
+            info_text, gr.update(visible=False), pd.DataFrame(), pd.DataFrame(), \
+            None, None, None, None, None, None, gr.update(visible=True)
 
     # Columnas para mostrar del dataset
     all_cols = list(filtered.columns)
@@ -686,8 +705,8 @@ def tab_EDA_show_data(df, dataset_type, provincia, departamento, sector, ambito)
     fig_boxplot = tab_EDA_create_boxplot_graph(final_df)
     
     # Data 5: Generar gráfico de serie temporal con la variable numérica indicada
-    fig_evolution = tab_EDA_create_evolution_graph(filtered, indicadores_originales[0], med_glob=True,
-                                           tend=True, med_mov=False, sd_mov=False, tipo_mov=0)
+    fig_evolution = tab_EDA_create_evolution_graph(filtered, indicadores_originales[0], serie=True, med_glob=True,
+                                           tend=True, med_mov=False, sd_mov=False, tipo_mov=4)
     
     # Data 6: Generar gráfico de histograma con la variable numérica indicada
     fig_histogram = tab_EDA_create_histogram_graph(filtered, indicadores_originales[0])
@@ -695,16 +714,42 @@ def tab_EDA_show_data(df, dataset_type, provincia, departamento, sector, ambito)
     # Data 7: Generar gráfico de distribución normal con la variable numérica indicada
     fig_normal_dist = tab_EDA_create_normal_dist_graph(filtered, indicadores_originales[0])
 
-    return filtered, info_text, gr.update(visible=True), stats, final_df, \
+    if automatico:
+        return df, filtered, gr.update(value=provincia), gr.update(choices=dptos_sorted, value=departamento), \
+            gr.update(value=sector), gr.update(value=ambito), \
+            info_text, gr.update(visible=True), stats, final_df, \
             fig_boxplot, fig_evolution, fig_histogram, fig_normal_dist, \
             gr.Dropdown(choices=indicadores, value=indicador_first, interactive=True), \
-            gr.Button(interactive=True), gr.Button(interactive=True)
-
-def tab_EDA_on_checkbox(checkbox):
-    if checkbox:
-        return gr.update(visible=False)
+            gr.Button(interactive=True), gr.Button(interactive=True), gr.update(visible=False)
     else:
-        return gr.update(visible=True)
+        return df, filtered, gr.update(value=provincia), gr.update(choices=dptos_sorted, value=departamento), \
+            gr.update(value=sector), gr.update(value=ambito), \
+            info_text, gr.update(visible=True), stats, final_df, \
+            fig_boxplot, fig_evolution, fig_histogram, fig_normal_dist, \
+            gr.Dropdown(choices=indicadores, value=indicador_first, interactive=True), \
+            gr.Button(interactive=True), gr.Button(interactive=True), gr.update(visible=True)
+
+def tab_EDA_on_checkbox(dataset_type, provincia, departamento, sector, ambito, automatico):
+    df, provincias = load_data(dataset_type)
+
+    if df.empty:
+        return df, pd.DataFrame(), gr.update(choices=[], value=None), gr.update(choices=[], value=None), \
+                gr.update(value="Ambos"), gr.update(value="Ambos"), gr.HTML(value=m_inic), \
+                gr.update(visible=False), None, None, None, None, None, None, \
+                gr.Dropdown(choices=[], value=None, interactive=False), \
+                gr.Button(interactive=False), gr.Button(interactive=False), \
+                gr.update(visible=True)
+
+    if automatico: # Se marcó la casilla "Automático", se muestra toda la data y se oculta el botón "Mostrar datos"
+        return tab_EDA_show_data(df, dataset_type, provincia, departamento, sector, ambito, True)
+    else: # Se desmarcó la casilla "Automático"; se limpia toda la data y se muestra el botón "Mostrar datos"
+        m_inic = "DEBE SELECCIONARSE EL BOTÓN \"MOSTRAR DATOS\" PARA VISUALIZAR LOS RESULTADOS"
+        return df, pd.DataFrame(), gr.update(value=provincia), \
+            gr.update(value=departamento), \
+            gr.update(value="Ambos"), gr.update(value="Ambos"), \
+            gr.update(value=m_inic), \
+            gr.update(visible=False), pd.DataFrame(), pd.DataFrame(), \
+            None, None, None, None, None, None, None, gr.update(visible=True)
                           
 
 # endregion FUNCIONES PARA LA PESTAÑA "EDA"
@@ -752,7 +797,7 @@ def tab_ST_on_mat_change(dataset_type):
     filtered = get_filtered_subset(df, prov_first, dpto_first, sector, ambito, KEY_COLUMNS, True, min_reg=MIN_REG)
 
     # Se genera el gráfico para el primer indicador
-    graph = tab_EDA_create_evolution_graph(filtered, indicadores_originales[0], med_glob=True,
+    graph = tab_EDA_create_evolution_graph(filtered, indicadores_originales[0], serie=True, med_glob=True,
                                            tend=True, med_mov=True, sd_mov=True, tipo_mov=4)
 
     # Al actualizar el dataset, se muestra la primera provincia, el primer departamento,
@@ -792,11 +837,10 @@ def tab_ST_on_prov_change(df, provincia, sector, ambito, indicador):
         return None, None
     
     # Se genera el gráfico para el primer indicador
-    graph = tab_EDA_create_evolution_graph(filtered, ind_orig, med_glob=True,
+    graph = tab_EDA_create_evolution_graph(filtered, ind_orig, serie=True, med_glob=True,
                                            tend=True, med_mov=True, sd_mov=True, tipo_mov=4)
 
     return  gr.update(choices=dptos_sorted, value=dpto_first), graph
-
 
 def tab_ST_on_dep_change(df, provincia, departamento, sector, ambito, indicador):
 
@@ -811,11 +855,10 @@ def tab_ST_on_dep_change(df, provincia, departamento, sector, ambito, indicador)
         return None
     
     # Se genera el gráfico para el primer indicador
-    graph = tab_EDA_create_evolution_graph(filtered, ind_orig, med_glob=True,
+    graph = tab_EDA_create_evolution_graph(filtered, ind_orig, serie=True, med_glob=True,
                                            tend=True, med_mov=True, sd_mov=True, tipo_mov=4)
 
     return graph
-
 
 def tab_ST_on_option_change(df, provincia, departamento, sector, ambito, indicador):
 
@@ -830,7 +873,7 @@ def tab_ST_on_option_change(df, provincia, departamento, sector, ambito, indicad
         return None
     
     # Se genera el gráfico para el primer indicador
-    graph = tab_EDA_create_evolution_graph(filtered, ind_orig, med_glob=True,
+    graph = tab_EDA_create_evolution_graph(filtered, ind_orig, serie=True, med_glob=True,
                                            tend=True, med_mov=True, sd_mov=True, tipo_mov=4)
 
     return graph
@@ -972,8 +1015,8 @@ with gr.Blocks(title="Análisis Educativo") as app:
                     sector = gr.Radio(label="Sector", choices=["Estatal", "Privado", "Ambos"], value="Ambos", elem_classes="custom-radio")
                     ambito = gr.Radio(label="Ámbito", choices=["Urbano", "Rural", "Ambos"], value="Ambos", elem_classes="custom-radio")
                     
-                    chk_mostrar = gr.Checkbox(label="Automático", value=True, elem_classes="custom-checkbox")
-                    btn_mostrar = gr.Button("Mostrar Datos", variant="primary", visible=False, elem_classes="custom-button")
+                    chk_mostrar = gr.Checkbox(label="Automático", value=False, elem_classes="custom-checkbox")
+                    btn_mostrar = gr.Button("Mostrar Datos", variant="primary", visible=True, elem_classes="custom-button")
         
                 with gr.Column(scale=20):
                     with gr.Row(elem_classes="custom-tab"):
@@ -1010,6 +1053,13 @@ with gr.Blocks(title="Análisis Educativo") as app:
                                                                 interactive=False,
                                                                 elem_classes="custom-button2",
                                                                 scale=1, min_width=50)
+                                        with gr.Row():
+                                            with gr.Column():
+                                                chk_serie = gr.Checkbox(label="Serie", value=True, elem_classes="custom-checkbox-2")
+                                                chk_mg = gr.Checkbox(label="Media Global", value=True, elem_classes="custom-checkbox-2")
+                                                chk_tend = gr.Checkbox(label="Tendencia", value=True, elem_classes="custom-checkbox-2")
+                                                chk_mm = gr.Checkbox(label="Media Móvil", value=False, elem_classes="custom-checkbox-2")
+                                                chk_sd = gr.Checkbox(label="SD Móvil", value=False, elem_classes="custom-checkbox-2")
                                     with gr.Column(scale=20):
                                         output_plot_evolution = gr.Plot(show_label=False)
                                 with gr.Row():
@@ -1017,93 +1067,153 @@ with gr.Blocks(title="Análisis Educativo") as app:
                                     output_plot_normal_dist = gr.Plot(show_label=False)
 
 
-            '''
             tipo_matricula.change(
                 fn=tab_EDA_on_dataset_change,
-                inputs=[tipo_matricula],
-                outputs=[dataset_state, provincia, departamento, sector, ambito,
-                         info_label, data_dataset, stats_table, output_table, output_plot_box,
-                         output_plot_evolution, output_plot_histogram, output_plot_normal_dist,
-                         indicador, btn_anterior, btn_siguiente]
+                inputs=[tipo_matricula, chk_mostrar],
+                outputs=[dataset_state, dataset_filter_state, provincia, departamento, 
+                            sector, ambito, info_label,
+                            data_dataset, stats_table, output_table,
+                            output_plot_box, output_plot_evolution,
+                            output_plot_histogram, output_plot_normal_dist,
+                            indicador, btn_anterior, btn_siguiente, btn_mostrar]
             )
             
             provincia.change(
                 fn=tab_EDA_on_provincia_change,
-                inputs=[dataset_state, provincia],
-                outputs=[departamento, sector, ambito,
-                         info_label, data_dataset, stats_table, output_table, output_plot_box, 
-                         output_plot_evolution, output_plot_histogram, output_plot_normal_dist,
-                         indicador, btn_anterior, btn_siguiente]
+                inputs=[dataset_state, dataset_filter_state, tipo_matricula, provincia, chk_mostrar],
+                outputs=[dataset_state, dataset_filter_state, provincia, departamento, 
+                            sector, ambito, info_label,
+                            data_dataset, stats_table, output_table,
+                            output_plot_box, output_plot_evolution,
+                            output_plot_histogram, output_plot_normal_dist,
+                            indicador, btn_anterior, btn_siguiente, btn_mostrar]
             )
             
             departamento.change(
                 fn=tab_EDA_on_departamento_change,
-                outputs=[sector, ambito, info_label, data_dataset, stats_table, output_table, 
-                         output_plot_box, output_plot_evolution, 
-                         output_plot_histogram, output_plot_normal_dist, indicador, 
-                         btn_anterior, btn_siguiente]
+                inputs=[dataset_state, dataset_filter_state, tipo_matricula, provincia, departamento, chk_mostrar],
+                outputs=[dataset_state, dataset_filter_state, provincia, departamento, 
+                            sector, ambito, info_label,
+                            data_dataset, stats_table, output_table,
+                            output_plot_box, output_plot_evolution,
+                            output_plot_histogram, output_plot_normal_dist,
+                            indicador, btn_anterior, btn_siguiente, btn_mostrar]
             )
 
             sector.change(
                 fn=tab_EDA_on_opcion_change,
-                outputs=[info_label, data_dataset, stats_table, output_table, 
-                         output_plot_box, output_plot_evolution, 
-                         output_plot_histogram, output_plot_normal_dist, indicador,
-                         btn_anterior, btn_siguiente]
+                inputs=[dataset_state, dataset_filter_state, tipo_matricula, provincia,
+                        departamento, sector, ambito, chk_mostrar],
+                outputs=[dataset_state, dataset_filter_state, provincia, departamento, 
+                            sector, ambito, info_label,
+                            data_dataset, stats_table, output_table,
+                            output_plot_box, output_plot_evolution,
+                            output_plot_histogram, output_plot_normal_dist,
+                            indicador, btn_anterior, btn_siguiente, btn_mostrar]
             )
             
             ambito.change(
                 fn=tab_EDA_on_opcion_change,
-                outputs=[info_label, data_dataset, stats_table, output_table, 
-                         output_plot_box, output_plot_evolution,
-                         output_plot_histogram, output_plot_normal_dist, indicador, 
-                         btn_anterior, btn_siguiente]
+                inputs=[dataset_state, dataset_filter_state, tipo_matricula, provincia,
+                        departamento, sector, ambito, chk_mostrar],
+                outputs=[dataset_state, dataset_filter_state, provincia, departamento, 
+                            sector, ambito, info_label,
+                            data_dataset, stats_table, output_table,
+                            output_plot_box, output_plot_evolution,
+                            output_plot_histogram, output_plot_normal_dist,
+                            indicador, btn_anterior, btn_siguiente, btn_mostrar]
             )
 
             btn_mostrar.click(
                 fn=tab_EDA_show_data,
-                inputs=[dataset_state, tipo_matricula, provincia, departamento, sector, ambito],
-                outputs=[dataset_filter_state, info_label, data_dataset, stats_table, output_table,
-                            output_plot_box, output_plot_evolution, output_plot_histogram,
-                            output_plot_normal_dist,
-                            indicador, btn_anterior, btn_siguiente]
+                inputs=[dataset_state, tipo_matricula, provincia,
+                        departamento, sector, ambito, chk_mostrar],
+                outputs=[dataset_state, dataset_filter_state, provincia, departamento, 
+                            sector, ambito, info_label,
+                            data_dataset, stats_table, output_table,
+                            output_plot_box, output_plot_evolution,
+                            output_plot_histogram, output_plot_normal_dist,
+                            indicador, btn_anterior, btn_siguiente, btn_mostrar]
             )
 
             indicador.change(
                 fn=tab_EDA_create_all_graphs,
-                inputs=[dataset_filter_state, indicador],
+                inputs=[dataset_filter_state, indicador, chk_serie, chk_mg, chk_tend,
+                       chk_mm, chk_sd],
                 outputs=[output_plot_evolution, output_plot_histogram, output_plot_normal_dist]
             )
 
             btn_anterior.click(
                 fn=tab_EDA_create_prev_all_graphs,
-                inputs=[dataset_filter_state, indicador],
+                inputs=[dataset_filter_state, indicador, chk_serie, chk_mg, chk_tend,
+                       chk_mm, chk_sd],
                 outputs=[indicador, output_plot_evolution, output_plot_histogram,
                         output_plot_normal_dist]
             )
             
             btn_siguiente.click(
                 fn=tab_EDA_create_next_all_graphs,
-                inputs=[dataset_filter_state, indicador],
+                inputs=[dataset_filter_state, indicador, chk_serie, chk_mg, chk_tend,
+                       chk_mm, chk_sd],
                 outputs=[indicador, output_plot_evolution, output_plot_histogram,
                         output_plot_normal_dist]
             )
-            '''
+
+            chk_serie.change(
+                fn=tab_EDA_options_graph,
+                inputs=[dataset_filter_state, indicador, chk_serie, chk_mg, chk_tend,
+                       chk_mm, chk_sd],
+                outputs=[output_plot_evolution]
+            )
+
+            chk_mg.change(
+                fn=tab_EDA_options_graph,
+                inputs=[dataset_filter_state, indicador, chk_serie, chk_mg, chk_tend,
+                       chk_mm, chk_sd],
+                outputs=[output_plot_evolution]
+            )
+
+            chk_tend.change(
+                fn=tab_EDA_options_graph,
+                inputs=[dataset_filter_state, indicador, chk_serie, chk_mg, chk_tend,
+                       chk_mm, chk_sd],
+                outputs=[output_plot_evolution]
+            )
+
+            chk_mm.change(
+                fn=tab_EDA_options_graph,
+                inputs=[dataset_filter_state, indicador, chk_serie, chk_mg, chk_tend,
+                       chk_mm, chk_sd],
+                outputs=[output_plot_evolution]
+            )
+
+            chk_sd.change(
+                fn=tab_EDA_options_graph,
+                inputs=[dataset_filter_state, indicador, chk_serie, chk_mg, chk_tend,
+                       chk_mm, chk_sd],
+                outputs=[output_plot_evolution]
+            )
 
             chk_mostrar.select(
                 fn=tab_EDA_on_checkbox,
-                inputs=[chk_mostrar],
-                outputs=[btn_mostrar]
+                inputs=[tipo_matricula, provincia, departamento, sector, ambito, chk_mostrar],
+                outputs=[dataset_state, dataset_filter_state, provincia, departamento, 
+                            sector, ambito, info_label,
+                            data_dataset, stats_table, output_table,
+                            output_plot_box, output_plot_evolution,
+                            output_plot_histogram, output_plot_normal_dist,
+                            indicador, btn_anterior, btn_siguiente, btn_mostrar]
             )
 
             tab_EDA.select(
                 fn=tab_EDA_on_load, 
                 inputs=[tipo_matricula, chk_mostrar], 
-                outputs=[dataset_state, dataset_filter_state, provincia, departamento, info_label,
+                outputs=[dataset_state, dataset_filter_state, provincia, departamento, 
+                            sector, ambito, info_label,
                             data_dataset, stats_table, output_table,
                             output_plot_box, output_plot_evolution,
                             output_plot_histogram, output_plot_normal_dist,
-                            indicador, btn_anterior, btn_siguiente]
+                            indicador, btn_anterior, btn_siguiente, btn_mostrar]
             )
         
 
