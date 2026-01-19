@@ -60,15 +60,11 @@ def tab_EDA_on_load(dataset_type, automatico):
     
     if df.empty:
         m_inic = "EL DATASET DE MATRÍCULA SELECCIONADO NO ESTÁ DISPONIBLE"
-        return pd.DataFrame(), pd.DataFrame(), gr.update(choices=[], value=None), \
-            gr.update(choices=[], value=None), \
-            gr.update(value="Ambos"), gr.update(value="Ambos"), \
-            gr.update(value=m_inic), gr.update(visible=False), \
-            pd.DataFrame(), pd.DataFrame(), \
-            None, None, None, None, \
-            gr.Dropdown(choices=[], value=None, interactive=False), \
-            gr.Button(interactive=False), gr.Button(interactive=False), gr.update(visible=True)
-    
+        return df, pd.DataFrame(), gr.update(choices=[], value=None), gr.update(choices=[], value=None), \
+                gr.update(value="Ambos"), gr.update(value="Ambos"), gr.HTML(value=m_inic), \
+                gr.update(visible=False), pd.DataFrame(), pd.DataFrame(), None, None, None, None, \
+                gr.Dropdown(choices=[], value=None, interactive=False), \
+                gr.Button(interactive=False), gr.Button(interactive=False), gr.update(visible=True)
     # Se arma el listado ordenado de provincias y se guarda la primera provincia
     provincias_sorted = sorted([str(p) for p in provincias])
     prov_first = provincias_sorted[0]
@@ -89,18 +85,20 @@ def tab_EDA_on_load(dataset_type, automatico):
         return df, pd.DataFrame(), gr.update(choices=provincias_sorted, value=prov_first), \
             gr.update(choices=dptos_sorted, value=dpto_first), \
             gr.update(value="Ambos"), gr.update(value="Ambos"), \
-            gr.update(value=m_inic), \
-            gr.update(visible=False), pd.DataFrame(), pd.DataFrame(), \
-            None, None, None, None, None, None, None, gr.update(visible=True)
+            gr.update(value=m_inic), gr.update(visible=False), \
+            pd.DataFrame(), pd.DataFrame(), \
+            None, None, None, None, \
+            gr.Dropdown(choices=[], value=None, interactive=False), \
+            gr.Button(interactive=False), gr.Button(interactive=False), gr.update(visible=True)
             
 def tab_EDA_on_dataset_change(dataset_type, automatico):
     df, provincias = load_data(dataset_type)
-    m_inic = "EL DATASET DE MATRÍCULA SELECCIONADO NO ESTÁ DISPONIBLE"
-
+    
     if df.empty:
+        m_inic = "EL DATASET DE MATRÍCULA SELECCIONADO NO ESTÁ DISPONIBLE"
         return df, pd.DataFrame(), gr.update(choices=[], value=None), gr.update(choices=[], value=None), \
                 gr.update(value="Ambos"), gr.update(value="Ambos"), gr.HTML(value=m_inic), \
-                gr.update(visible=False), None, None, None, None, None, None, \
+                gr.update(visible=False), pd.DataFrame(), pd.DataFrame(), None, None, None, None, \
                 gr.Dropdown(choices=[], value=None, interactive=False), \
                 gr.Button(interactive=False), gr.Button(interactive=False), gr.update(visible=True)
     
@@ -736,9 +734,11 @@ def tab_EDA_on_checkbox(dataset_type, provincia, departamento, sector, ambito, a
     df, provincias = load_data(dataset_type)
 
     if df.empty:
+        m_inic = "EL DATASET DE MATRÍCULA SELECCIONADO NO ESTÁ DISPONIBLE"
         return df, pd.DataFrame(), gr.update(choices=[], value=None), gr.update(choices=[], value=None), \
                 gr.update(value="Ambos"), gr.update(value="Ambos"), gr.HTML(value=m_inic), \
-                gr.update(visible=False), None, None, None, None, None, None, \
+                gr.update(visible=False), pd.DataFrame(), pd.DataFrame(), \
+                None, None, None, None, \
                 gr.Dropdown(choices=[], value=None, interactive=False), \
                 gr.Button(interactive=False), gr.Button(interactive=False), \
                 gr.update(visible=True)
