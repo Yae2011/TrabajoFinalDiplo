@@ -65,7 +65,9 @@ def tab_EDA_on_load(dataset_type, automatico):
             gr.update(value="Ambos"), gr.update(value="Ambos"), \
             gr.update(value=m_inic), gr.update(visible=False), \
             pd.DataFrame(), pd.DataFrame(), \
-            None, None, None, None, None, None, None, gr.update(visible=True)
+            None, None, None, None, \
+            gr.Dropdown(choices=[], value=None, interactive=False), \
+            gr.Button(interactive=False), gr.Button(interactive=False), gr.update(visible=True)
     
     # Se arma el listado ordenado de provincias y se guarda la primera provincia
     provincias_sorted = sorted([str(p) for p in provincias])
@@ -100,8 +102,7 @@ def tab_EDA_on_dataset_change(dataset_type, automatico):
                 gr.update(value="Ambos"), gr.update(value="Ambos"), gr.HTML(value=m_inic), \
                 gr.update(visible=False), None, None, None, None, None, None, \
                 gr.Dropdown(choices=[], value=None, interactive=False), \
-                gr.Button(interactive=False), gr.Button(interactive=False), \
-                gr.update(visible=True)
+                gr.Button(interactive=False), gr.Button(interactive=False), gr.update(visible=True)
     
     # Se arma el listado ordenado de provincias y se guarda la primera provincia
     provincias_sorted = sorted([str(p) for p in provincias])
@@ -666,7 +667,9 @@ def tab_EDA_show_data(df, dataset_type, provincia, departamento, sector, ambito,
         return df, filtered, gr.update(value=provincia), gr.update(value=departamento), \
             gr.update(value=sector), gr.update(value=ambito), \
             info_text, gr.update(visible=False), pd.DataFrame(), pd.DataFrame(), \
-            None, None, None, None, None, None, gr.update(visible=True)
+            None, None, None, None, \
+            gr.Dropdown(choices=[], value=None, interactive=False), \
+            gr.Button(interactive=True), gr.Button(interactive=True), gr.update(visible=True)
 
     # Columnas para mostrar del dataset
     all_cols = list(filtered.columns)
@@ -749,7 +752,9 @@ def tab_EDA_on_checkbox(dataset_type, provincia, departamento, sector, ambito, a
             gr.update(value="Ambos"), gr.update(value="Ambos"), \
             gr.update(value=m_inic), \
             gr.update(visible=False), pd.DataFrame(), pd.DataFrame(), \
-            None, None, None, None, None, None, None, gr.update(visible=True)
+            None, None, None, None, \
+            gr.Dropdown(choices=[], value=None, interactive=False), \
+            gr.Button(interactive=False), gr.Button(interactive=False), gr.update(visible=True)
                           
 
 # endregion FUNCIONES PARA LA PESTAÑA "EDA"
