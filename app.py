@@ -65,6 +65,7 @@ def tab_EDA_on_load(dataset_type, automatico):
                 gr.update(visible=False), pd.DataFrame(), pd.DataFrame(), None, None, None, None, \
                 gr.Dropdown(choices=[], value=None, interactive=False), \
                 gr.Button(interactive=False), gr.Button(interactive=False), gr.update(visible=True)
+    
     # Se arma el listado ordenado de provincias y se guarda la primera provincia
     provincias_sorted = sorted([str(p) for p in provincias])
     prov_first = provincias_sorted[0]
@@ -716,19 +717,16 @@ def tab_EDA_show_data(df, dataset_type, provincia, departamento, sector, ambito,
     fig_normal_dist = tab_EDA_create_normal_dist_graph(filtered, indicadores_originales[0])
 
     if automatico:
-        return df, filtered, gr.update(value=provincia), gr.update(choices=dptos_sorted, value=departamento), \
-            gr.update(value=sector), gr.update(value=ambito), \
-            info_text, gr.update(visible=True), stats, final_df, \
-            fig_boxplot, fig_evolution, fig_histogram, fig_normal_dist, \
-            gr.Dropdown(choices=indicadores, value=indicador_first, interactive=True), \
-            gr.Button(interactive=True), gr.Button(interactive=True), gr.update(visible=False)
+        mostrar_boton = False
     else:
-        return df, filtered, gr.update(value=provincia), gr.update(choices=dptos_sorted, value=departamento), \
+        mostrar_boton = True
+
+    return df, filtered, gr.update(value=provincia), gr.update(choices=dptos_sorted, value=departamento), \
             gr.update(value=sector), gr.update(value=ambito), \
             info_text, gr.update(visible=True), stats, final_df, \
             fig_boxplot, fig_evolution, fig_histogram, fig_normal_dist, \
             gr.Dropdown(choices=indicadores, value=indicador_first, interactive=True), \
-            gr.Button(interactive=True), gr.Button(interactive=True), gr.update(visible=True)
+            gr.Button(interactive=True), gr.Button(interactive=True), gr.update(visible=mostrar_boton)
 
 def tab_EDA_on_checkbox(dataset_type, provincia, departamento, sector, ambito, automatico):
     df, provincias = load_data(dataset_type)
