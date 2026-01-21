@@ -64,7 +64,9 @@ def tab_EDA_on_load(dataset_type, automatico):
                 gr.update(value="Ambos"), gr.update(value="Ambos"), gr.HTML(value=m_inic), \
                 gr.update(visible=False), pd.DataFrame(), pd.DataFrame(), None, None, None, None, \
                 gr.Dropdown(choices=[], value=None, interactive=False), \
-                gr.Button(interactive=False), gr.Button(interactive=False), gr.update(visible=True)
+                gr.Button(interactive=False), gr.Button(interactive=False), gr.update(visible=True), \
+                gr.Checkbox(value=True), gr.Checkbox(value=True), gr.Checkbox(value=True), \
+                gr.Checkbox(value=False), gr.Checkbox(value=False)
     
     # Se arma el listado ordenado de provincias y se guarda la primera provincia
     provincias_sorted = sorted([str(p) for p in provincias])
@@ -90,7 +92,9 @@ def tab_EDA_on_load(dataset_type, automatico):
             pd.DataFrame(), pd.DataFrame(), \
             None, None, None, None, \
             gr.Dropdown(choices=[], value=None, interactive=False), \
-            gr.Button(interactive=False), gr.Button(interactive=False), gr.update(visible=True)
+            gr.Button(interactive=False), gr.Button(interactive=False), gr.update(visible=True), \
+            gr.Checkbox(value=True), gr.Checkbox(value=True), gr.Checkbox(value=True), \
+            gr.Checkbox(value=False), gr.Checkbox(value=False)
             
 def tab_EDA_on_dataset_change(dataset_type, automatico):
     df, provincias = load_data(dataset_type)
@@ -101,7 +105,9 @@ def tab_EDA_on_dataset_change(dataset_type, automatico):
                 gr.update(value="Ambos"), gr.update(value="Ambos"), gr.HTML(value=m_inic), \
                 gr.update(visible=False), pd.DataFrame(), pd.DataFrame(), None, None, None, None, \
                 gr.Dropdown(choices=[], value=None, interactive=False), \
-                gr.Button(interactive=False), gr.Button(interactive=False), gr.update(visible=True)
+                gr.Button(interactive=False), gr.Button(interactive=False), gr.update(visible=True), \
+                gr.Checkbox(value=True), gr.Checkbox(value=True), gr.Checkbox(value=True), \
+                gr.Checkbox(value=False), gr.Checkbox(value=False)
     
     # Se arma el listado ordenado de provincias y se guarda la primera provincia
     provincias_sorted = sorted([str(p) for p in provincias])
@@ -128,7 +134,9 @@ def tab_EDA_on_dataset_change(dataset_type, automatico):
                 gr.update(visible=False), None, None, None, None, None, None, \
                 gr.Dropdown(choices=[], value=None, interactive=False), \
                 gr.Button(interactive=False), gr.Button(interactive=False), \
-                gr.update(visible=True)
+                gr.update(visible=True), \
+                gr.Checkbox(value=True), gr.Checkbox(value=True), gr.Checkbox(value=True), \
+                gr.Checkbox(value=False), gr.Checkbox(value=False)
 
 def tab_EDA_on_provincia_change(df, df_filtered, dataset_type, provincia, automatico):
 
@@ -150,7 +158,9 @@ def tab_EDA_on_provincia_change(df, df_filtered, dataset_type, provincia, automa
                 gr.update(visible=False), None, None, None, None, None, None, \
                 gr.Dropdown(choices=[], value=None, interactive=False), \
                 gr.Button(interactive=False), gr.Button(interactive=False), \
-                gr.update(visible=True)
+                gr.update(visible=True), \
+                gr.Checkbox(value=True), gr.Checkbox(value=True), gr.Checkbox(value=True), \
+                gr.Checkbox(value=False), gr.Checkbox(value=False)
 
 def tab_EDA_on_departamento_change(df, df_filtered, dataset_type, provincia, departamento, automatico):
 
@@ -166,7 +176,9 @@ def tab_EDA_on_departamento_change(df, df_filtered, dataset_type, provincia, dep
                 gr.update(visible=False), None, None, None, None, None, None, \
                 gr.Dropdown(choices=[], value=None, interactive=False), \
                 gr.Button(interactive=False), gr.Button(interactive=False), \
-                gr.update(visible=True)
+                gr.update(visible=True), \
+                gr.Checkbox(value=True), gr.Checkbox(value=True), gr.Checkbox(value=True), \
+                gr.Checkbox(value=False), gr.Checkbox(value=False)
 
 def tab_EDA_on_opcion_change(df, df_filtered, dataset_type, provincia, departamento, sector, ambito, automatico):
 
@@ -180,7 +192,9 @@ def tab_EDA_on_opcion_change(df, df_filtered, dataset_type, provincia, departame
                 gr.update(visible=False), None, None, None, None, None, None, \
                 gr.Dropdown(choices=[], value=None, interactive=False), \
                 gr.Button(interactive=False), gr.Button(interactive=False), \
-                gr.update(visible=True)
+                gr.update(visible=True), \
+                gr.Checkbox(value=True), gr.Checkbox(value=True), gr.Checkbox(value=True), \
+                gr.Checkbox(value=False), gr.Checkbox(value=False)
 
 def tab_EDA_create_boxplot_graph(df):
     # df: dataset filtrado con columnas con "nombres originales"
@@ -668,7 +682,9 @@ def tab_EDA_show_data(df, dataset_type, provincia, departamento, sector, ambito,
             info_text, gr.update(visible=False), pd.DataFrame(), pd.DataFrame(), \
             None, None, None, None, \
             gr.Dropdown(choices=[], value=None, interactive=False), \
-            gr.Button(interactive=True), gr.Button(interactive=True), gr.update(visible=True)
+            gr.Button(interactive=True), gr.Button(interactive=True), gr.update(visible=True), \
+            gr.Checkbox(value=True), gr.Checkbox(value=True), gr.Checkbox(value=True), \
+            gr.Checkbox(value=False), gr.Checkbox(value=False)
 
     # Columnas para mostrar del dataset
     all_cols = list(filtered.columns)
@@ -726,7 +742,9 @@ def tab_EDA_show_data(df, dataset_type, provincia, departamento, sector, ambito,
             info_text, gr.update(visible=True), stats, final_df, \
             fig_boxplot, fig_evolution, fig_histogram, fig_normal_dist, \
             gr.Dropdown(choices=indicadores, value=indicador_first, interactive=True), \
-            gr.Button(interactive=True), gr.Button(interactive=True), gr.update(visible=mostrar_boton)
+            gr.Button(interactive=True), gr.Button(interactive=True), gr.update(visible=mostrar_boton), \
+            gr.Checkbox(value=True), gr.Checkbox(value=True), gr.Checkbox(value=True), \
+            gr.Checkbox(value=False), gr.Checkbox(value=False)
 
 def tab_EDA_on_checkbox(dataset_type, provincia, departamento, sector, ambito, automatico):
     df, provincias = load_data(dataset_type)
@@ -739,7 +757,9 @@ def tab_EDA_on_checkbox(dataset_type, provincia, departamento, sector, ambito, a
                 None, None, None, None, \
                 gr.Dropdown(choices=[], value=None, interactive=False), \
                 gr.Button(interactive=False), gr.Button(interactive=False), \
-                gr.update(visible=True)
+                gr.update(visible=True), \
+                gr.Checkbox(value=True), gr.Checkbox(value=True), gr.Checkbox(value=True), \
+                gr.Checkbox(value=False), gr.Checkbox(value=False)
 
     if automatico: # Se marcó la casilla "Automático", se muestra toda la data y se oculta el botón "Mostrar datos"
         return tab_EDA_show_data(df, dataset_type, provincia, departamento, sector, ambito, True)
@@ -752,7 +772,9 @@ def tab_EDA_on_checkbox(dataset_type, provincia, departamento, sector, ambito, a
             gr.update(visible=False), pd.DataFrame(), pd.DataFrame(), \
             None, None, None, None, \
             gr.Dropdown(choices=[], value=None, interactive=False), \
-            gr.Button(interactive=False), gr.Button(interactive=False), gr.update(visible=True)
+            gr.Button(interactive=False), gr.Button(interactive=False), gr.update(visible=True), \
+            gr.Checkbox(value=True), gr.Checkbox(value=True), gr.Checkbox(value=True), \
+            gr.Checkbox(value=False), gr.Checkbox(value=False)
                           
 
 # endregion FUNCIONES PARA LA PESTAÑA "EDA"
@@ -760,7 +782,7 @@ def tab_EDA_on_checkbox(dataset_type, provincia, departamento, sector, ambito, a
 
 # region FUNCIONES PARA LA PESTAÑA "SERIES TEMPORALES"
 
-def tab_ST_on_mat_change(dataset_type):
+def tab_ST_on_mat_change(dataset_type, serie, mg, tend, mm, sd):
     df, provincias = load_data(dataset_type)
 
     if df.empty:
@@ -797,11 +819,14 @@ def tab_ST_on_mat_change(dataset_type):
     # Se filtra el dataset de matrícula
     sector = "Ambos"
     ambito = "Ambos"
-    filtered = get_filtered_subset(df, prov_first, dpto_first, sector, ambito, KEY_COLUMNS, True, min_reg=MIN_REG)
+    filtered = get_filtered_subset(df, prov_first, dpto_first, sector, ambito, 
+                                   KEY_COLUMNS, True, min_reg=MIN_REG)
 
     # Se genera el gráfico para el primer indicador
-    graph = tab_EDA_create_evolution_graph(filtered, indicadores_originales[0], serie=True, med_glob=True,
-                                           tend=True, med_mov=True, sd_mov=True, tipo_mov=4)
+    mmov =  0 < mm < 4
+    tipo = mm + 1
+    graph = tab_EDA_create_evolution_graph(filtered, indicadores_originales[0], serie, mg,
+                                           tend, mmov, sd, tipo)
 
     # Al actualizar el dataset, se muestra la primera provincia, el primer departamento,
     # sector = "Ambos", ambiente="Ambos", el primer indicador y el gráfico correspodiente.
@@ -820,9 +845,10 @@ def tab_ST_on_mat_change(dataset_type):
             gr.update(choices=dptos_sorted, value=dpto_first), \
             gr.update(choices=["Estatal", "Privado", "Ambos"], value="Ambos"), \
             gr.update(choices=["Urbano", "Rural", "Ambos"], value="Ambos"), \
-            gr.update(choices=indicadores, value=indicador_first), graph
+            gr.update(choices=indicadores, value=indicador_first), graph, \
+            filtered, filtered, filtered
             
-def tab_ST_on_prov_change(df, provincia, sector, ambito, indicador):
+def tab_ST_on_prov_change(df, provincia, sector, ambito, indicador, serie, mg, tend, mm, sd):
     # Se arma el listado ordenado de departamentos de la provincia
     # y se guarda el primer departamento de la lista
     dptos = df[df['provincia'] == provincia]['departamento'].unique()
@@ -834,36 +860,20 @@ def tab_ST_on_prov_change(df, provincia, sector, ambito, indicador):
     ind_orig = next((k for k, v in dict_ncortos.items() if v == indicador), indicador)
 
     # Se filtra el dataset de matrícula
-    filtered = get_filtered_subset(df, provincia, dpto_first, sector, ambito, KEY_COLUMNS, True, min_reg=MIN_REG)
+    filtered = get_filtered_subset(df, provincia, dpto_first, sector, ambito, 
+                                   KEY_COLUMNS, True, min_reg=MIN_REG)
     
     if filtered.empty:
         return None, None
     
     # Se genera el gráfico para el primer indicador
-    graph = tab_EDA_create_evolution_graph(filtered, ind_orig, serie=True, med_glob=True,
-                                           tend=True, med_mov=True, sd_mov=True, tipo_mov=4)
+    mmov =  0 < mm < 4
+    tipo = mm + 1
+    graph = tab_EDA_create_evolution_graph(filtered, ind_orig, serie, mg, tend, mmov, sd, tipo)
 
-    return  gr.update(choices=dptos_sorted, value=dpto_first), graph
+    return  gr.update(choices=dptos_sorted, value=dpto_first), filtered, graph
 
-def tab_ST_on_dep_change(df, provincia, departamento, sector, ambito, indicador):
-
-    # Como el parámetro "indicador" se recibe con el nombre descriptivo corto
-    # se debe convertir a su nombre original
-    ind_orig = next((k for k, v in dict_ncortos.items() if v == indicador), indicador)
-
-    # Se filtra el dataset de matrícula
-    filtered = get_filtered_subset(df, provincia, departamento, sector, ambito, KEY_COLUMNS, True, min_reg=MIN_REG)
-    
-    if filtered.empty:
-        return None
-    
-    # Se genera el gráfico para el primer indicador
-    graph = tab_EDA_create_evolution_graph(filtered, ind_orig, serie=True, med_glob=True,
-                                           tend=True, med_mov=True, sd_mov=True, tipo_mov=4)
-
-    return graph
-
-def tab_ST_on_option_change(df, provincia, departamento, sector, ambito, indicador):
+def tab_ST_on_dep_change(df, provincia, departamento, sector, ambito, indicador, serie, mg, tend, mm, sd):
 
     # Como el parámetro "indicador" se recibe con el nombre descriptivo corto
     # se debe convertir a su nombre original
@@ -876,10 +886,47 @@ def tab_ST_on_option_change(df, provincia, departamento, sector, ambito, indicad
         return None
     
     # Se genera el gráfico para el primer indicador
-    graph = tab_EDA_create_evolution_graph(filtered, ind_orig, serie=True, med_glob=True,
-                                           tend=True, med_mov=True, sd_mov=True, tipo_mov=4)
+    mmov =  0 < mm < 4
+    tipo = mm + 1
+    graph = tab_EDA_create_evolution_graph(filtered, ind_orig, serie, mg, tend, mmov, sd, tipo)
 
-    return graph
+    return filtered, graph
+
+def tab_ST_on_option_change(df, provincia, departamento, sector, ambito, indicador, serie, mg, tend, mm, sd):
+
+    # Como el parámetro "indicador" se recibe con el nombre descriptivo corto
+    # se debe convertir a su nombre original
+    ind_orig = next((k for k, v in dict_ncortos.items() if v == indicador), indicador)
+
+    # Se filtra el dataset de matrícula
+    filtered = get_filtered_subset(df, provincia, departamento, sector, ambito, KEY_COLUMNS, True, min_reg=MIN_REG)
+    
+    if filtered.empty:
+        return None
+    
+    # Se genera el gráfico para el primer indicador
+    mmov =  0 < mm < 4
+    tipo = mm + 1
+    graph = tab_EDA_create_evolution_graph(filtered, ind_orig, serie, mg, tend, mmov, sd, tipo)
+
+    return filtered, graph
+
+def tab_ST_on_graph_change(filtered1, filtered2, filtered3, ind1, ind2, ind3,
+                         serie, mg, tend, mm, sd):
+    
+    # Como loa parámetroa "ind1", "ind2", "ind3", se reciben con el nombre descriptivo corto
+    # se deben convertir a su nombre original
+    ind_orig1 = next((k for k, v in dict_ncortos.items() if v == ind1), ind1)
+    ind_orig2 = next((k for k, v in dict_ncortos.items() if v == ind2), ind2)
+    ind_orig3 = next((k for k, v in dict_ncortos.items() if v == ind3), ind3)
+
+    mmov =  0 < mm < 4
+    tipo = mm + 1
+    graph1 = tab_EDA_create_evolution_graph(filtered1, ind_orig1, serie, mg, tend, mmov, sd, tipo)
+    graph2 = tab_EDA_create_evolution_graph(filtered2, ind_orig2, serie, mg, tend, mmov, sd, tipo)
+    graph3 = tab_EDA_create_evolution_graph(filtered3, ind_orig3, serie, mg, tend, mmov, sd, tipo)
+
+    return graph1, graph2, graph3
 
 # endregion FUNCIONES PARA LA PESTAÑA "SERIES TEMPORALES"
 
@@ -949,10 +996,14 @@ portada_video = f'''
 with gr.Blocks(title="Análisis Educativo") as app:
     gr.HTML(f"<style>{custom_css}</style>")
     
-    # Almacenamiento para el dataset elegido
+    # Almacenamiento para el dataset elegido, en pestaña EDA
     dataset_state = gr.State(pd.DataFrame())
-    # Almacenamiento para el dataset elegido y filtrado por campos clave
+    # Almacenamiento para el dataset elegido y filtrado por campos clave, en pestaña EDA
     dataset_filter_state = gr.State(pd.DataFrame())
+    # Almacenamiento para los tres datasets filtrados, en pestaña ST
+    dataset_filter_state_1 = gr.State(pd.DataFrame())
+    dataset_filter_state_2 = gr.State(pd.DataFrame())
+    dataset_filter_state_3 = gr.State(pd.DataFrame())
     
 
     gr.Row(elem_classes="header-tab")
@@ -1078,7 +1129,8 @@ with gr.Blocks(title="Análisis Educativo") as app:
                             data_dataset, stats_table, output_table,
                             output_plot_box, output_plot_evolution,
                             output_plot_histogram, output_plot_normal_dist,
-                            indicador, btn_anterior, btn_siguiente, btn_mostrar]
+                            indicador, btn_anterior, btn_siguiente, btn_mostrar,
+                            chk_serie, chk_mg, chk_tend, chk_mm, chk_sd]
             )
             
             provincia.change(
@@ -1089,7 +1141,8 @@ with gr.Blocks(title="Análisis Educativo") as app:
                             data_dataset, stats_table, output_table,
                             output_plot_box, output_plot_evolution,
                             output_plot_histogram, output_plot_normal_dist,
-                            indicador, btn_anterior, btn_siguiente, btn_mostrar]
+                            indicador, btn_anterior, btn_siguiente, btn_mostrar,
+                            chk_serie, chk_mg, chk_tend, chk_mm, chk_sd]
             )
             
             departamento.change(
@@ -1100,7 +1153,8 @@ with gr.Blocks(title="Análisis Educativo") as app:
                             data_dataset, stats_table, output_table,
                             output_plot_box, output_plot_evolution,
                             output_plot_histogram, output_plot_normal_dist,
-                            indicador, btn_anterior, btn_siguiente, btn_mostrar]
+                            indicador, btn_anterior, btn_siguiente, btn_mostrar,
+                            chk_serie, chk_mg, chk_tend, chk_mm, chk_sd]
             )
 
             sector.change(
@@ -1112,7 +1166,8 @@ with gr.Blocks(title="Análisis Educativo") as app:
                             data_dataset, stats_table, output_table,
                             output_plot_box, output_plot_evolution,
                             output_plot_histogram, output_plot_normal_dist,
-                            indicador, btn_anterior, btn_siguiente, btn_mostrar]
+                            indicador, btn_anterior, btn_siguiente, btn_mostrar,
+                            chk_serie, chk_mg, chk_tend, chk_mm, chk_sd]
             )
             
             ambito.change(
@@ -1124,7 +1179,8 @@ with gr.Blocks(title="Análisis Educativo") as app:
                             data_dataset, stats_table, output_table,
                             output_plot_box, output_plot_evolution,
                             output_plot_histogram, output_plot_normal_dist,
-                            indicador, btn_anterior, btn_siguiente, btn_mostrar]
+                            indicador, btn_anterior, btn_siguiente, btn_mostrar,
+                            chk_serie, chk_mg, chk_tend, chk_mm, chk_sd]
             )
 
             btn_mostrar.click(
@@ -1136,7 +1192,8 @@ with gr.Blocks(title="Análisis Educativo") as app:
                             data_dataset, stats_table, output_table,
                             output_plot_box, output_plot_evolution,
                             output_plot_histogram, output_plot_normal_dist,
-                            indicador, btn_anterior, btn_siguiente, btn_mostrar]
+                            indicador, btn_anterior, btn_siguiente, btn_mostrar,
+                            chk_serie, chk_mg, chk_tend, chk_mm, chk_sd]
             )
 
             indicador.change(
@@ -1205,7 +1262,8 @@ with gr.Blocks(title="Análisis Educativo") as app:
                             data_dataset, stats_table, output_table,
                             output_plot_box, output_plot_evolution,
                             output_plot_histogram, output_plot_normal_dist,
-                            indicador, btn_anterior, btn_siguiente, btn_mostrar]
+                            indicador, btn_anterior, btn_siguiente, btn_mostrar,
+                            chk_serie, chk_mg, chk_tend, chk_mm, chk_sd]
             )
 
             tab_EDA.select(
@@ -1216,7 +1274,8 @@ with gr.Blocks(title="Análisis Educativo") as app:
                             data_dataset, stats_table, output_table,
                             output_plot_box, output_plot_evolution,
                             output_plot_histogram, output_plot_normal_dist,
-                            indicador, btn_anterior, btn_siguiente, btn_mostrar]
+                            indicador, btn_anterior, btn_siguiente, btn_mostrar,
+                            chk_serie, chk_mg, chk_tend, chk_mm, chk_sd]
             )
         
 
@@ -1237,12 +1296,13 @@ with gr.Blocks(title="Análisis Educativo") as app:
                     with gr.Row(elem_classes="custom-tab"):
                         with gr.Column():
                             gr.HTML("Opciones de Gráficos", elem_classes="title-group")
+                            graph_serie = gr.Checkbox(label="Serie", value=True, elem_classes="custom-checkbox")
                             graph_mg = gr.Checkbox(label="Media Global", value=True, elem_classes="custom-checkbox")
                             graph_tend = gr.Checkbox(label="Tendencia", value=True, elem_classes="custom-checkbox")
                             graph_mm = gr.Radio(label="Media Móvil", choices=["No", "k = 2 atrás",
                                                             "k = 3 atrás", "k = 3 centrado"],
-                                                            value="k = 3 centrado", elem_classes="custom-radio")
-                            graph_sd = gr.Checkbox(label="SD Móvil", value=False, elem_classes="custom-checkbox")
+                                                            value="k = 3 centrado", type="index", elem_classes="custom-radio")
+                            graph_sd = gr.Checkbox(label="SD Móvil", value=True, elem_classes="custom-checkbox")
 
                 with gr.Column(scale=20):
 
@@ -1322,108 +1382,160 @@ with gr.Blocks(title="Análisis Educativo") as app:
 
             mat.change(
                 fn=tab_ST_on_mat_change,
-                inputs=[mat],
+                inputs=[mat, graph_serie, graph_mg, graph_tend, graph_mm, graph_sd],
                 outputs=[dataset_state, prov1, dep1, sec1, amb1, var1, tend1,
                          prov2, dep2, sec2, amb2, var2, tend2,
-                         prov3, dep3, sec3, amb3, var3, tend3]
+                         prov3, dep3, sec3, amb3, var3, tend3,
+                         dataset_filter_state_1, dataset_filter_state_2, dataset_filter_state_3]
             )
             
             prov1.change(
                 fn=tab_ST_on_prov_change,
-                inputs=[dataset_state, prov1, sec1, amb1, var1],
-                outputs=[dep1, tend1]
+                inputs=[dataset_state, prov1, sec1, amb1, 
+                        var1, graph_serie, graph_mg, graph_tend, graph_mm, graph_sd],
+                outputs=[dep1, dataset_filter_state_1, tend1]
             )
 
             prov2.change(
                 fn=tab_ST_on_prov_change,
-                inputs=[dataset_state, prov2, sec2, amb2, var2],
-                outputs=[dep2, tend2]
+                inputs=[dataset_state, prov2, sec2, amb2, var2, 
+                        graph_serie, graph_mg, graph_tend, graph_mm, graph_sd],
+                outputs=[dep2, dataset_filter_state_2, tend2]
             )
             
             prov3.change(
                 fn=tab_ST_on_prov_change,
-                inputs=[dataset_state, prov3, sec3, amb3, var3],
-                outputs=[dep3, tend3]
+                inputs=[dataset_state, prov3, sec3, amb3, var3, 
+                        graph_serie, graph_mg, graph_tend, graph_mm, graph_sd],
+                outputs=[dep3, dataset_filter_state_3, tend3]
             )
             
             dep1.change(
                 fn=tab_ST_on_dep_change,
-                inputs=[dataset_state, prov1, dep1, sec1, amb1, var1],
-                outputs=[tend1]
+                inputs=[dataset_state, prov1, dep1, sec1, amb1, var1, 
+                        graph_serie, graph_mg, graph_tend, graph_mm, graph_sd],
+                outputs=[dataset_filter_state_1, tend1]
             )
 
             dep2.change(
                 fn=tab_ST_on_dep_change,
-                inputs = [dataset_state, prov2, dep2, sec2, amb2, var2],
-                outputs=[tend2]
+                inputs = [dataset_state, prov2, dep2, sec2, amb2, var2, 
+                          graph_serie, graph_mg, graph_tend, graph_mm, graph_sd],
+                outputs=[dataset_filter_state_2, tend2]
             )
 
             dep3.change(
                 fn=tab_ST_on_dep_change,
-                inputs = [dataset_state, prov3, dep3, sec3, amb3, var3],
-                outputs=[tend3]
+                inputs = [dataset_state, prov3, dep3, sec3, amb3, var3, 
+                          graph_serie, graph_mg, graph_tend, graph_mm, graph_sd],
+                outputs=[dataset_filter_state_3, tend3]
             )
 
             sec1.change(
                 fn=tab_ST_on_option_change,
-                inputs = [dataset_state, prov1, dep1, sec1, amb1, var1],
-                outputs=[tend1]
+                inputs = [dataset_state, prov1, dep1, sec1, amb1, var1, 
+                          graph_serie, graph_mg, graph_tend, graph_mm, graph_sd],
+                outputs=[dataset_filter_state_1, tend1]
             )
             
             sec2.change(
                 fn=tab_ST_on_option_change,
-                inputs = [dataset_state, prov2, dep2, sec2, amb2, var2],
-                outputs=[tend2]
+                inputs = [dataset_state, prov2, dep2, sec2, amb2, var2, 
+                          graph_serie, graph_mg, graph_tend, graph_mm, graph_sd],
+                outputs=[dataset_filter_state_2, tend2]
             )
 
             sec3.change(
                 fn=tab_ST_on_option_change,
-                inputs = [dataset_state, prov3, dep3, sec3, amb3, var3],
-                outputs=[tend3]
+                inputs = [dataset_state, prov3, dep3, sec3, amb3, var3, 
+                          graph_serie, graph_mg, graph_tend, graph_mm, graph_sd],
+                outputs=[dataset_filter_state_3, tend3]
             )
 
             amb1.change(
                 fn=tab_ST_on_option_change,
-                inputs = [dataset_state, prov1, dep1, sec1, amb1, var1],
-                outputs=[tend1]
+                inputs = [dataset_state, prov1, dep1, sec1, amb1, var1, 
+                          graph_serie, graph_mg, graph_tend, graph_mm, graph_sd],
+                outputs=[dataset_filter_state_1, tend1]
             )
             
             amb2.change(
                 fn=tab_ST_on_option_change,
-                inputs = [dataset_state, prov2, dep2, sec2, amb2, var2],
-                outputs=[tend2]
+                inputs = [dataset_state, prov2, dep2, sec2, amb2, var2, 
+                          graph_serie, graph_mg, graph_tend, graph_mm, graph_sd],
+                outputs=[dataset_filter_state_2, tend2]
             )
 
             amb3.change(
                 fn=tab_ST_on_option_change,
-                inputs = [dataset_state, prov3, dep3, sec3, amb3, var3],
-                outputs=[tend3]
+                inputs = [dataset_state, prov3, dep3, sec3, amb3, var3, 
+                          graph_serie, graph_mg, graph_tend, graph_mm, graph_sd],
+                outputs=[dataset_filter_state_3, tend3]
             )
 
             var1.change(
                 fn=tab_ST_on_option_change,
-                inputs = [dataset_state, prov1, dep1, sec1, amb1, var1],
-                outputs=[tend1]
+                inputs = [dataset_state, prov1, dep1, sec1, amb1, var1, 
+                          graph_serie, graph_mg, graph_tend, graph_mm, graph_sd],
+                outputs=[dataset_filter_state_1, tend1]
             )
             
             var2.change(
                 fn=tab_ST_on_option_change,
-                inputs = [dataset_state, prov2, dep2, sec2, amb2, var2],
-                outputs=[tend2]
+                inputs = [dataset_state, prov2, dep2, sec2, amb2, var2, 
+                          graph_serie, graph_mg, graph_tend, graph_mm, graph_sd],
+                outputs=[dataset_filter_state_2, tend2]
             )
 
             var3.change(
                 fn=tab_ST_on_option_change,
-                inputs = [dataset_state, prov3, dep3, sec3, amb3, var3],
-                outputs=[tend3]
+                inputs = [dataset_state, prov3, dep3, sec3, amb3, var3, 
+                          graph_serie, graph_mg, graph_tend, graph_mm, graph_sd],
+                outputs=[dataset_filter_state_3, tend3]
+            )
+
+            graph_serie.change(
+                fn=tab_ST_on_graph_change,
+                inputs=[dataset_filter_state_1, dataset_filter_state_2, dataset_filter_state_3,
+                        var1, var2, var3, graph_serie, graph_mg, graph_tend, graph_mm, graph_sd],
+                outputs=[tend1, tend2, tend3]
+            )
+
+            graph_mg.change(
+                fn=tab_ST_on_graph_change,
+                inputs=[dataset_filter_state_1, dataset_filter_state_2, dataset_filter_state_3,
+                        var1, var2, var3, graph_serie, graph_mg, graph_tend, graph_mm, graph_sd],
+                outputs=[tend1, tend2, tend3]
+            )
+            
+            graph_tend.change(
+                fn=tab_ST_on_graph_change,
+                inputs=[dataset_filter_state_1, dataset_filter_state_2, dataset_filter_state_3,
+                        var1, var2, var3, graph_serie, graph_mg, graph_tend, graph_mm, graph_sd],
+                outputs=[tend1, tend2, tend3]
+            )
+
+            graph_mm.change(
+                fn=tab_ST_on_graph_change,
+                inputs=[dataset_filter_state_1, dataset_filter_state_2, dataset_filter_state_3,
+                        var1, var2, var3, graph_serie, graph_mg, graph_tend, graph_mm, graph_sd],
+                outputs=[tend1, tend2, tend3]
+            )
+
+            graph_sd.change(
+                fn=tab_ST_on_graph_change,
+                inputs=[dataset_filter_state_1, dataset_filter_state_2, dataset_filter_state_3,
+                        var1, var2, var3, graph_serie, graph_mg, graph_tend, graph_mm, graph_sd],
+                outputs=[tend1, tend2, tend3]
             )
 
             tab_ST.select(
                 fn=tab_ST_on_mat_change,
-                inputs=[mat],
+                inputs=[mat, graph_serie, graph_mg, graph_tend, graph_mm, graph_sd],
                 outputs=[dataset_state, prov1, dep1, sec1, amb1, var1, tend1,
                          prov2, dep2, sec2, amb2, var2, tend2,
-                         prov3, dep3, sec3, amb3, var3, tend3]
+                         prov3, dep3, sec3, amb3, var3, tend3,
+                         dataset_filter_state_1, dataset_filter_state_2, dataset_filter_state_3]
             )
 
 
