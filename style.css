@@ -409,6 +409,30 @@
     transform: translateY(2px);
     box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.1) !important;
 }
+.custom-button3 {
+    /* Para el estado pasivo */
+    background-color: var(--button-bg-color) !important;
+    color: var(--text-color) !important;
+    border: none !important;
+    box-shadow: var(--shadow-soft) !important;
+    border-radius: 10px !important;
+    font-weight: bold !important;
+    font-size: var(--font-title3) !important;
+    color: var(--text-color) !important;
+    text-align: center !important;
+    transition: all 0.2s ease !important;
+    margin-bottom: 10px !important;
+}
+.custom-button3:hover {
+    /* Para el estado encima */
+    background-color: var(--button-hover-bg-color) !important;
+    transform: translateY(-1px);
+}
+.custom-button3:active {
+    /* Para el estado activo (click) */
+    transform: translateY(2px);
+    box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.1) !important;
+}
 
 
 
