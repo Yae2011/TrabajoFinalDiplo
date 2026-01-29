@@ -6,8 +6,8 @@ import base64
 import matplotlib.pyplot as plt
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
-import statsmodels.api as sm
 from statsmodels.tsa.seasonal import STL
+from statsmodels.tsa.stattools import acf
 import seaborn as sns
 
 
@@ -914,7 +914,7 @@ def tab_EDA_on_checkbox(dataset_type, provincia, departamento, sector, ambito, a
 
 # region FUNCIONES PARA LA PESTAÑA "SERIES TEMPORALES"
 
-def tab_ST_on_mat_change(dataset_type, serie, mg, tend, mm, sd):
+def tab_ST_on_mat_change(dataset_type):
     df, provincias = load_data(dataset_type)
 
     if df.empty:
@@ -927,9 +927,13 @@ def tab_ST_on_mat_change(dataset_type, serie, mg, tend, mm, sd):
                 gr.update(choices=[], value=None), gr.Plot(visible=False), \
                 gr.update(choices=[], value=None), gr.update(choices=[], value=None), \
                 gr.update(value="Ambos"), gr.update(value="Ambos"), \
-                gr.update(choices=[], value=None), gr.Plot(visible=False), msg, msg, msg, \
+                gr.update(choices=[], value=None), gr.Plot(visible=False), \
+                msg, msg, msg, \
                 gr.Plot(visible=False), gr.Plot(visible=False), gr.Plot(visible=False), \
-                gr.update(visible=False), gr.update(visible=False), gr.update(visible=False)
+                gr.update(visible=False), gr.update(visible=False), gr.update(visible=False), \
+                msg, msg, msg, \
+                gr.Plot(visible=False), gr.Plot(visible=False), gr.Plot(visible=False), \
+                gr.update(visible=False), gr.update(visible=False), gr.update(visible=False)                
     
     # Se arma el listado ordenado de provincias y se guarda la primera provincia
     provincias_sorted = sorted([str(p) for p in provincias])
@@ -990,7 +994,11 @@ def tab_ST_on_mat_change(dataset_type, serie, mg, tend, mm, sd):
                 gr.update(choices=["Urbano", "Rural", "Ambos"], value="Ambos"), \
                 gr.update(choices=indicadores, value=indicador_first), \
                 gr.Plot(visible=False), \
-                filtered, filtered, filtered, msg, msg, msg, \
+                filtered, filtered, filtered, \
+                msg, msg, msg, \
+                gr.Plot(visible=False), gr.Plot(visible=False), gr.Plot(visible=False), \
+                gr.update(visible=False), gr.update(visible=False), gr.update(visible=False), \
+                msg, msg, msg, \
                 gr.Plot(visible=False), gr.Plot(visible=False), gr.Plot(visible=False), \
                 gr.update(visible=False), gr.update(visible=False), gr.update(visible=False)
             
@@ -1023,34 +1031,11 @@ def tab_ST_on_prov_change(df, provincia, sector, ambito, indicador):
            f"SECTOR: {sector.upper()} - ÁMBITO: {ambito.upper()}<br>"
            f"INDICADOR: {dict_nlargos[ind_orig].upper()}"
            "</b>")
-    return gr.update(choices=dptos_sorted, value=dpto_first), filtered, \
-        gr.Plot(visible=False), msg, gr.Plot(visible=False), gr.update(visible=False)
+    return gr.update(choices=dptos_sorted, value=dpto_first), filtered, gr.Plot(visible=False), \
+            msg, gr.Plot(visible=False), gr.update(visible=False), \
+            msg, gr.Plot(visible=False), gr.update(visible=False)
 
-def tab_ST_on_dep_change(df, provincia, departamento, sector, ambito, indicador, serie, mg, tend, mm, sd):
-
-    # Como el parámetro "indicador" se recibe con el nombre descriptivo corto
-    # se debe convertir a su nombre original
-    ind_orig = next((k for k, v in dict_ncortos.items() if v == indicador), indicador)
-
-    # Se filtra el dataset de matrícula
-    filtered = get_filtered_subset(df, provincia, departamento, sector, ambito, KEY_COLUMNS, True, min_reg=MIN_REG)
-    
-    if filtered.empty:
-        return None, gr.Plot(visible=False), None, gr.Plot(visible=False), gr.update(visible=False)
-    
-    # Se genera el gráfico para el primer indicador
-    # mmov =  0 < mm < 4
-    # tipo = mm + 1
-    # graph = tab_EDA_create_evolution_graph(filtered, ind_orig, serie, mg, tend, mmov, sd, tipo)
-
-    msg = ("<b>"
-           f"PROVINCIA: {provincia.upper()}<br>DEPARTAMENTO: {departamento.upper()}<br>"
-           f"SECTOR: {sector.upper()} - ÁMBITO: {ambito.upper()}<br>"
-           f"INDICADOR: {dict_nlargos[ind_orig].upper()}"
-           "</b>")
-    return filtered, gr.Plot(visible=False), msg, gr.Plot(visible=False), gr.update(visible=False)
-
-def tab_ST_on_option_change(df, provincia, departamento, sector, ambito, indicador, serie, mg, tend, mm, sd):
+def tab_ST_on_dep_change(df, provincia, departamento, sector, ambito, indicador):
 
     # Como el parámetro "indicador" se recibe con el nombre descriptivo corto
     # se debe convertir a su nombre original
@@ -1072,7 +1057,35 @@ def tab_ST_on_option_change(df, provincia, departamento, sector, ambito, indicad
            f"SECTOR: {sector.upper()} - ÁMBITO: {ambito.upper()}<br>"
            f"INDICADOR: {dict_nlargos[ind_orig].upper()}"
            "</b>")
-    return filtered, gr.Plot(visible=False), msg, gr.Plot(visible=False), gr.update(visible=False)
+    return filtered, gr.Plot(visible=False), \
+            msg, gr.Plot(visible=False), gr.update(visible=False), \
+            msg, gr.Plot(visible=False), gr.update(visible=False)
+
+def tab_ST_on_option_change(df, provincia, departamento, sector, ambito, indicador):
+
+    # Como el parámetro "indicador" se recibe con el nombre descriptivo corto
+    # se debe convertir a su nombre original
+    ind_orig = next((k for k, v in dict_ncortos.items() if v == indicador), indicador)
+
+    # Se filtra el dataset de matrícula
+    filtered = get_filtered_subset(df, provincia, departamento, sector, ambito, KEY_COLUMNS, True, min_reg=MIN_REG)
+    
+    if filtered.empty:
+        return None, gr.Plot(visible=False), None, gr.Plot(visible=False), gr.update(visible=False)
+    
+    # Se genera el gráfico para el primer indicador
+    # mmov =  0 < mm < 4
+    # tipo = mm + 1
+    # graph = tab_EDA_create_evolution_graph(filtered, ind_orig, serie, mg, tend, mmov, sd, tipo)
+
+    msg = ("<b>"
+           f"PROVINCIA: {provincia.upper()}<br>DEPARTAMENTO: {departamento.upper()}<br>"
+           f"SECTOR: {sector.upper()} - ÁMBITO: {ambito.upper()}<br>"
+           f"INDICADOR: {dict_nlargos[ind_orig].upper()}"
+           "</b>")
+    return filtered, gr.Plot(visible=False), \
+            msg, gr.Plot(visible=False), gr.update(visible=False), \
+            msg, gr.Plot(visible=False), gr.update(visible=False)
 
 def tab_ST_on_graph_change(filtered1, filtered2, filtered3, ind1, ind2, ind3,
                          serie, mg, tend, mm, sd):
@@ -1163,15 +1176,9 @@ def tab_ST_stl_decomp(df, indicador):
                          marker_color='red'), row=4, col=1)
     
     fig.update_layout(
-        height=900,              # Ajuste de altura para reducir scroll excesivo
-        autosize=True,           # Permite que el gráfico responda al contenedor
-        margin=dict(
-            l=10,                # Margen izquierdo mínimo
-            r=10,                # Margen derecho mínimo
-            t=50,                # Margen superior para el título
-            b=10,                # Margen inferior mínimo
-            pad=0                # Padding entre dibujo y ejes
-        ),
+        height=800,
+        autosize=True, # Para que el gráfico responda al contenedor
+        margin=dict(l=10, r=10, t=50, b=10, pad=0),
         # title_text=f"<b>{titulo}</b>",
         # title_font=dict(size=14, color='black', family='Arial'),
         showlegend=False,
@@ -1226,6 +1233,81 @@ def tab_ST_stl_decomp_all(df1, df2, df3, var1, var2, var3):
     fig1, desc1 = tab_ST_stl_decomp(df1, var1)
     fig2, desc2 = tab_ST_stl_decomp(df2, var2)
     fig3, desc3 = tab_ST_stl_decomp(df3, var3)
+
+    return gr.update(value = fig1, visible = True), \
+            gr.update(value = desc1, visible = True), \
+            gr.update(value = fig2, visible = True), \
+            gr.update(value = desc2, visible = True), \
+            gr.update(value = fig3, visible = True), \
+            gr.update(value = desc3, visible = True)
+
+def tab_ST_autocorr(df, indicador):
+    """
+    Calcula función de autocorrelación, genera un gráfico interactivo y analiza la ciclicidad.
+    - df: dataset filtrado con columnas con nombres originales ['periodo', indicadores]
+    - indicador: nombre corto del indicador
+    """
+    # Se convierte el nombre corto del  "indicador" a su nombre original
+    ind_orig = next((k for k, v in dict_ncortos.items() if v == indicador), indicador)
+    df = df.sort_values('periodo').reset_index(drop=True)
+    serie = df[ind_orig]
+
+    n_obs = len(df)
+    lags = 7 # Desfases (lags); para 14 datos, lags=7 para mantener potencia estadística
+    valores_acf = acf(serie, nlags=lags)
+    
+    # Identificación del lag más significativo; se excluye lag=0 que siempre es 1
+    lag_max = np.argmax(valores_acf[1:]) + 1
+    val_max = valores_acf[lag_max]
+    
+    fig = go.Figure()
+    fig.add_trace(go.Bar(
+        x=list(range(lags + 1)),
+        y=valores_acf,
+        # name='Autocorrelación'
+    ))
+    
+    # Intervalos de confianza (aproximación 95%)
+    conf_interval = 1.96 / np.sqrt(n_obs)
+    fig.add_hline(y=conf_interval, line_dash="dash", line_color="orange", annotation_text="IC 95%")
+    fig.add_hline(y=-conf_interval, line_dash="dash", line_color="orange", annotation_text="IC 95%")
+    
+    fig.update_xaxes(
+        tickmode='linear', 
+        tick0=0, 
+        dtick=1, 
+        # range=[0, 7],
+        tickfont=dict(size=12, color='black', family='Arial Black'),
+        tickformat='d',
+    )
+    fig.update_yaxes(
+        tickfont=dict(size=12, color='black', family='Arial Black'),
+    )
+    fig.update_layout(
+        # title=f"{dict_nlargos[ind_orig].upper()}",
+        # height=400,
+        autosize=True, # Para que el gráfico responda al contenedor
+        margin=dict(l=10, r=10, t=50, b=10, pad=0),
+        xaxis_title="Desplazamiento (Años)",
+        # yaxis_title="Coeficiente de Correlación",
+        template="plotly_white"
+    )
+
+    # Reporte estadístico
+    es_significativo = "es estadísticamente significativo" if abs(val_max) > conf_interval else "no es estadísticamente significativo"
+    reporte = (
+        f"<b>Coeficiente de Correlación más alto: {val_max:.4f}</b> en el desplazamiento de {lag_max} años. "
+        f"Existe una probabilidad alta de que los patrones se repitan cada <b>{lag_max} años</b>. "
+        f"Este valor {es_significativo} bajo un intervalo de confianza del 95%."
+        )
+    
+    return fig, reporte
+
+def tab_ST_autocorr_all(df1, df2, df3, var1, var2, var3):
+
+    fig1, desc1 = tab_ST_autocorr(df1, var1)
+    fig2, desc2 = tab_ST_autocorr(df2, var2)
+    fig3, desc3 = tab_ST_autocorr(df3, var3)
 
     return gr.update(value = fig1, visible = True), \
             gr.update(value = desc1, visible = True), \
@@ -1721,134 +1803,193 @@ with gr.Blocks(title="Análisis Educativo") as app:
                             STL_info3 = gr.HTML("Interpretación", visible=False)
 
 
+            with gr.Row():
+                with gr.Column(elem_classes="custom-tab-2", scale=20):    
+                    gr.HTML("&nbsp;&nbsp;3. AUTOCORRELACIÓN DE LAS SERIES", 
+                            elem_classes="subtitle-text")
+                with gr.Column(min_width=150):
+                    autocor_button = gr.Button("Calcular", variant="primary", visible=True, 
+                                               elem_classes="custom-button3")
+
+            with gr.Row(elem_classes="custom-tab"):
+                with gr.Column():
+                    with gr.Row():
+                        desc1a = gr.HTML("Autocorrelación de la Serie 1")
+                    with gr.Row():
+                        with gr.Column():                        
+                            auto_graph1 = gr.Plot(show_label=False, visible=False)
+                            auto_info1 = gr.HTML("Interpretación", visible=False)
+
+                with gr.Column():
+                    with gr.Row():
+                        desc2a = gr.HTML("Autocorrelación de la Serie 2")
+                    with gr.Row():
+                        with gr.Column():
+                            auto_graph2 = gr.Plot(show_label=False, visible=False)
+                            auto_info2 = gr.HTML("Interpretación", visible=False)
+
+                with gr.Column():
+                    with gr.Row():
+                        desc3a = gr.HTML("Autocornrelació de la Serie 3")
+                    with gr.Row():
+                        with gr.Column():
+                            auto_graph3 = gr.Plot(show_label=False, visible=False)
+                            auto_info3 = gr.HTML("Interpretación", visible=False)
+
+
+
+
+
 
 
 
 
             with gr.Row(elem_classes="custom-tab-2"):    
-                gr.HTML("&nbsp;&nbsp;3. TEST DE DICKEY-FÜLLER AUMENTADO (ADF)", elem_classes="subtitle-text")
+                gr.HTML("&nbsp;&nbsp;4. TEST DE DICKEY-FÜLLER AUMENTADO (ADF)", elem_classes="subtitle-text")
             
             with gr.Row(elem_classes="custom-tab-2"):    
-                gr.HTML("&nbsp;&nbsp;4. SELECCIÓN DEL MODELO Y VALORES DE SUS HIPERPARÁMETROS APLICANDO UN ALGORITMO GENÉTICO", elem_classes="subtitle-text")  
+                gr.HTML("&nbsp;&nbsp;5. SELECCIÓN DEL MODELO Y VALORES DE SUS HIPERPARÁMETROS APLICANDO UN ALGORITMO GENÉTICO", elem_classes="subtitle-text")  
             
             with gr.Row(elem_classes="custom-tab-2"):    
-                gr.HTML("&nbsp;&nbsp;5. PREDICCIÓN DE LAS SERIES", elem_classes="subtitle-text")
+                gr.HTML("&nbsp;&nbsp;6. PREDICCIÓN DE LAS SERIES", elem_classes="subtitle-text")
            
             with gr.Row(elem_classes="custom-tab-2"):    
-                gr.HTML("&nbsp;&nbsp;6. TRANSFORMADA DE FOURIER PARA LAS SERIES TEMPORALES A COMPARAR", elem_classes="subtitle-text")              
+                gr.HTML("&nbsp;&nbsp;7. TRANSFORMADA DE FOURIER PARA LAS SERIES TEMPORALES A COMPARAR", elem_classes="subtitle-text")              
 
 
             mat.change(
                 fn=tab_ST_on_mat_change,
-                inputs=[mat, graph_serie, graph_mg, graph_tend, graph_mm, graph_sd],
+                inputs=[mat],
                 outputs=[dataset_state, prov1, dep1, sec1, amb1, var1, tend1,
                          prov2, dep2, sec2, amb2, var2, tend2,
                          prov3, dep3, sec3, amb3, var3, tend3,
                          dataset_filter_state_1, dataset_filter_state_2, dataset_filter_state_3,
-                         desc1, desc2, desc3, STL_graph1, STL_graph2, STL_graph3,
-                         STL_info1, STL_info2, STL_info3]
+                         desc1, desc2, desc3,
+                         STL_graph1, STL_graph2, STL_graph3,
+                         STL_info1, STL_info2, STL_info3,
+                         desc1a, desc2a, desc3a,
+                         auto_graph1, auto_graph2, auto_graph3,
+                         auto_info1, auto_info2, auto_info3]
             )
             
             prov1.change(
                 fn=tab_ST_on_prov_change,
                 inputs=[dataset_state, prov1, sec1, amb1, var1],
-                outputs=[dep1, dataset_filter_state_1, tend1, desc1, STL_graph1, STL_info1]
+                outputs=[dep1, dataset_filter_state_1, tend1,
+                         desc1, STL_graph1, STL_info1,
+                         desc1a, auto_graph1, auto_info1]
             )
 
             prov2.change(
                 fn=tab_ST_on_prov_change,
                 inputs=[dataset_state, prov2, sec2, amb2, var2],
-                outputs=[dep2, dataset_filter_state_2, tend2, desc2, STL_graph2, STL_info2]
+                outputs=[dep2, dataset_filter_state_2, tend2, 
+                         desc2, STL_graph2, STL_info2,
+                         desc2a, auto_graph2, auto_info2]
             )
             
             prov3.change(
                 fn=tab_ST_on_prov_change,
                 inputs=[dataset_state, prov3, sec3, amb3, var3],
-                outputs=[dep3, dataset_filter_state_3, tend3, desc3, STL_graph3, STL_info3]
+                outputs=[dep3, dataset_filter_state_3, tend3, 
+                         desc3, STL_graph3, STL_info3,
+                         desc3a, auto_graph3, auto_info3]
             )
             
             dep1.change(
                 fn=tab_ST_on_dep_change,
-                inputs=[dataset_state, prov1, dep1, sec1, amb1, var1, 
-                        graph_serie, graph_mg, graph_tend, graph_mm, graph_sd],
-                outputs=[dataset_filter_state_1, tend1, desc1, STL_graph1, STL_info1]
+                inputs=[dataset_state, prov1, dep1, sec1, amb1, var1],
+                outputs=[dataset_filter_state_1, tend1, 
+                         desc1, STL_graph1, STL_info1,
+                         desc1a, auto_graph1, auto_info1]
             )
 
             dep2.change(
                 fn=tab_ST_on_dep_change,
-                inputs = [dataset_state, prov2, dep2, sec2, amb2, var2, 
-                          graph_serie, graph_mg, graph_tend, graph_mm, graph_sd],
-                outputs=[dataset_filter_state_2, tend2, desc2, STL_graph2, STL_info2]
+                inputs = [dataset_state, prov2, dep2, sec2, amb2, var2],
+                outputs=[dataset_filter_state_2, tend2,
+                         desc2, STL_graph2, STL_info2,
+                         desc2a, auto_graph2, auto_info2]
             )
 
             dep3.change(
                 fn=tab_ST_on_dep_change,
-                inputs = [dataset_state, prov3, dep3, sec3, amb3, var3, 
-                          graph_serie, graph_mg, graph_tend, graph_mm, graph_sd],
-                outputs=[dataset_filter_state_3, tend3, desc3, STL_graph3, STL_info3]
+                inputs = [dataset_state, prov3, dep3, sec3, amb3, var3],
+                outputs=[dataset_filter_state_3, tend3, 
+                         desc3, STL_graph3, STL_info3,
+                         desc3a, auto_graph3, auto_info3]
             )
 
             sec1.change(
                 fn=tab_ST_on_option_change,
-                inputs = [dataset_state, prov1, dep1, sec1, amb1, var1, 
-                          graph_serie, graph_mg, graph_tend, graph_mm, graph_sd],
-                outputs=[dataset_filter_state_1, tend1, desc1, STL_graph1, STL_info1]
+                inputs = [dataset_state, prov1, dep1, sec1, amb1, var1],
+                outputs=[dataset_filter_state_1, tend1, 
+                         desc1, STL_graph1, STL_info1,
+                         desc1a, auto_graph1, auto_info1]
             )
             
             sec2.change(
                 fn=tab_ST_on_option_change,
-                inputs = [dataset_state, prov2, dep2, sec2, amb2, var2, 
-                          graph_serie, graph_mg, graph_tend, graph_mm, graph_sd],
-                outputs=[dataset_filter_state_2, tend2, desc2, STL_graph2, STL_info2]
+                inputs = [dataset_state, prov2, dep2, sec2, amb2, var2],
+                outputs=[dataset_filter_state_2, tend2, 
+                         desc2, STL_graph2, STL_info2,
+                         desc2a, auto_graph2, auto_info2]
             )
 
             sec3.change(
                 fn=tab_ST_on_option_change,
-                inputs = [dataset_state, prov3, dep3, sec3, amb3, var3, 
-                          graph_serie, graph_mg, graph_tend, graph_mm, graph_sd],
-                outputs=[dataset_filter_state_3, tend3, desc3, STL_graph3, STL_info3]
+                inputs = [dataset_state, prov3, dep3, sec3, amb3, var3],
+                outputs=[dataset_filter_state_3, tend3, 
+                         desc3, STL_graph3, STL_info3,
+                         desc3a, auto_graph3, auto_info3]
             )
 
             amb1.change(
                 fn=tab_ST_on_option_change,
-                inputs = [dataset_state, prov1, dep1, sec1, amb1, var1, 
-                          graph_serie, graph_mg, graph_tend, graph_mm, graph_sd],
-                outputs=[dataset_filter_state_1, tend1, desc1, STL_graph1, STL_info1]
+                inputs = [dataset_state, prov1, dep1, sec1, amb1, var1],
+                outputs=[dataset_filter_state_1, tend1, 
+                         desc1, STL_graph1, STL_info1,
+                         desc1a, auto_graph1, auto_info1]
             )
             
             amb2.change(
                 fn=tab_ST_on_option_change,
-                inputs = [dataset_state, prov2, dep2, sec2, amb2, var2, 
-                          graph_serie, graph_mg, graph_tend, graph_mm, graph_sd],
-                outputs=[dataset_filter_state_2, tend2, desc2, STL_graph2, STL_info2]
+                inputs = [dataset_state, prov2, dep2, sec2, amb2, var2],
+                outputs=[dataset_filter_state_2, tend2, 
+                         desc2, STL_graph2, STL_info2,
+                         desc2a, auto_graph2, auto_info2]
             )
 
             amb3.change(
                 fn=tab_ST_on_option_change,
-                inputs = [dataset_state, prov3, dep3, sec3, amb3, var3, 
-                          graph_serie, graph_mg, graph_tend, graph_mm, graph_sd],
-                outputs=[dataset_filter_state_3, tend3, desc3, STL_graph3, STL_info3]
+                inputs = [dataset_state, prov3, dep3, sec3, amb3, var3],
+                outputs=[dataset_filter_state_3, tend3, 
+                         desc3, STL_graph3, STL_info3,
+                         desc3a, auto_graph3, auto_info3]
             )
 
             var1.change(
                 fn=tab_ST_on_option_change,
-                inputs = [dataset_state, prov1, dep1, sec1, amb1, var1, 
-                          graph_serie, graph_mg, graph_tend, graph_mm, graph_sd],
-                outputs=[dataset_filter_state_1, tend1, desc1, STL_graph1, STL_info1]
+                inputs = [dataset_state, prov1, dep1, sec1, amb1, var1],
+                outputs=[dataset_filter_state_1, tend1, 
+                         desc1, STL_graph1, STL_info1,
+                         desc1a, auto_graph1, auto_info1]
             )
             
             var2.change(
                 fn=tab_ST_on_option_change,
-                inputs = [dataset_state, prov2, dep2, sec2, amb2, var2, 
-                          graph_serie, graph_mg, graph_tend, graph_mm, graph_sd],
-                outputs=[dataset_filter_state_2, tend2, desc2, STL_graph2, STL_info2]
+                inputs = [dataset_state, prov2, dep2, sec2, amb2, var2],
+                outputs=[dataset_filter_state_2, tend2, 
+                         desc2, STL_graph2, STL_info2,
+                         desc2a, auto_graph2, auto_info2]
             )
 
             var3.change(
                 fn=tab_ST_on_option_change,
-                inputs = [dataset_state, prov3, dep3, sec3, amb3, var3, 
-                          graph_serie, graph_mg, graph_tend, graph_mm, graph_sd],
-                outputs=[dataset_filter_state_3, tend3, desc3, STL_graph3, STL_info3]
+                inputs = [dataset_state, prov3, dep3, sec3, amb3, var3],
+                outputs=[dataset_filter_state_3, tend3, 
+                         desc3, STL_graph3, STL_info3,
+                         desc3a, auto_graph3, auto_info3]
             )
 
             graph_serie.change(
@@ -1888,13 +2029,17 @@ with gr.Blocks(title="Análisis Educativo") as app:
 
             tab_ST.select(
                 fn=tab_ST_on_mat_change,
-                inputs=[mat, graph_serie, graph_mg, graph_tend, graph_mm, graph_sd],
+                inputs=[mat],
                 outputs=[dataset_state, prov1, dep1, sec1, amb1, var1, tend1,
                          prov2, dep2, sec2, amb2, var2, tend2,
                          prov3, dep3, sec3, amb3, var3, tend3,
                          dataset_filter_state_1, dataset_filter_state_2, dataset_filter_state_3,
-                         desc1, desc2, desc3, STL_graph1, STL_graph2,STL_graph3,
-                         STL_info1, STL_info2, STL_info3]
+                         desc1, desc2, desc3,
+                         STL_graph1, STL_graph2, STL_graph3,
+                         STL_info1, STL_info2, STL_info3,
+                         desc1a, desc2a, desc3a,
+                         auto_graph1, auto_graph2, auto_graph3,
+                         auto_info1, auto_info2, auto_info3]
             )
 
             graph_button.click(
@@ -1909,6 +2054,13 @@ with gr.Blocks(title="Análisis Educativo") as app:
                 inputs=[dataset_filter_state_1, dataset_filter_state_2, dataset_filter_state_3,
                         var1, var2, var3],
                 outputs=[STL_graph1, STL_info1, STL_graph2, STL_info2, STL_graph3, STL_info3]
+            )
+
+            autocor_button.click(
+                fn=tab_ST_autocorr_all,
+                inputs=[dataset_filter_state_1, dataset_filter_state_2, dataset_filter_state_3,
+                        var1, var2, var3],
+                outputs=[auto_graph1, auto_info1, auto_graph2, auto_info2, auto_graph3, auto_info3]
             )
 
 
