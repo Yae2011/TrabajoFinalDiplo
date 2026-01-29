@@ -5,7 +5,9 @@ import os
 import base64
 import matplotlib.pyplot as plt
 import plotly.graph_objects as go
+from plotly.subplots import make_subplots
 import statsmodels.api as sm
+from statsmodels.tsa.seasonal import STL
 import seaborn as sns
 
 
@@ -283,7 +285,8 @@ def tab_EDA_create_boxplot_graph(df, interactivo):
     return fig
 
 def tab_EDA_create_evolution_graph(df, indicador, serie=True, med_glob=True, tend=True, 
-                                   med_mov=False, sd_mov=False, tipo_mov=4, interactivo=False):
+                                   med_mov=False, sd_mov=False, tipo_mov=4, interactivo=False,
+                                   h_estatico=5, h_interactivo=350):
     """
     - df: dataset filtrado con columnas con nombres originales ['periodo', indicador]
     - indicador: nombre original de columna de matrícula
@@ -294,6 +297,8 @@ def tab_EDA_create_evolution_graph(df, indicador, serie=True, med_glob=True, ten
     - sd_mov: muestra la SD móvil
     - tipo_mov: ventana para media y SD móviles (2: k=2; 3: k=3 hacia atrás; 4: k=3 centrado; otro: k=2)
     - interactivo: True para Plotly (Web), False para Matplotlib (Estático)
+    h_estatico: altura relativa para el gráfico estático en Matplotlib
+    h_interactivo: altura en pixeles para el gráfico interactivo con Plotly
     """
     
     # 1. Validación y Preparación de Datos
@@ -372,7 +377,7 @@ def tab_EDA_create_evolution_graph(df, indicador, serie=True, med_glob=True, ten
             hovermode="x unified",
                         # Dimensiones del gráfico tratando de que se aproximen al figsize=(10, 4)
             # width=1000, 
-            height=500,
+            height=h_interactivo,
             xaxis=dict(
                 tickmode='linear',
                 tick0=2011, dtick=1, range=[2010.5, 2024.5],
@@ -398,7 +403,7 @@ def tab_EDA_create_evolution_graph(df, indicador, serie=True, med_glob=True, ten
     # --- OPCIÓN 2: GRÁFICO ESTÁTICO (MATPLOTLIB) CON LIBERACIÓN DE MEMORIA ---
     else:
         # Creamos la figura explícitamente
-        fig, ax = plt.subplots(figsize=(10, 5))
+        fig, ax = plt.subplots(figsize=(12, h_estatico))
         
         try:
             if serie:
@@ -913,15 +918,18 @@ def tab_ST_on_mat_change(dataset_type, serie, mg, tend, mm, sd):
     df, provincias = load_data(dataset_type)
 
     if df.empty:
+        msg = "Sin datos"
         return df, gr.update(choices=[], value=None), gr.update(choices=[], value=None), \
                 gr.update(value="Ambos"), gr.update(value="Ambos"), \
-                gr.update(choices=[], value=None), None, \
+                gr.update(choices=[], value=None), gr.Plot(visible=False), \
                 gr.update(choices=[], value=None), gr.update(choices=[], value=None), \
                 gr.update(value="Ambos"), gr.update(value="Ambos"), \
-                gr.update(choices=[], value=None), None, \
+                gr.update(choices=[], value=None), gr.Plot(visible=False), \
                 gr.update(choices=[], value=None), gr.update(choices=[], value=None), \
                 gr.update(value="Ambos"), gr.update(value="Ambos"), \
-                gr.update(choices=[], value=None), None
+                gr.update(choices=[], value=None), gr.Plot(visible=False), msg, msg, msg, \
+                gr.Plot(visible=False), gr.Plot(visible=False), gr.Plot(visible=False), \
+                gr.update(visible=False), gr.update(visible=False), gr.update(visible=False)
     
     # Se arma el listado ordenado de provincias y se guarda la primera provincia
     provincias_sorted = sorted([str(p) for p in provincias])
@@ -950,32 +958,43 @@ def tab_ST_on_mat_change(dataset_type, serie, mg, tend, mm, sd):
                                    KEY_COLUMNS, True, min_reg=MIN_REG)
 
     # Se genera el gráfico para el primer indicador
-    mmov =  0 < mm < 4
-    tipo = mm + 1
-    graph = tab_EDA_create_evolution_graph(filtered, indicadores_originales[0], serie, mg,
-                                           tend, mmov, sd, tipo)
+    # mmov =  0 < mm < 4
+    # tipo = mm + 1
+    # graph = tab_EDA_create_evolution_graph(filtered, indicadores_originales[0], serie, mg,
+    #                                       tend, mmov, sd, tipo)
 
     # Al actualizar el dataset, se muestra la primera provincia, el primer departamento,
     # sector = "Ambos", ambiente="Ambos", el primer indicador y el gráfico correspodiente.
-    # Se hace para las tres series temporales 
+    # Se hace para las tres series temporales
+    msg = ("<b>"
+           f"PROVINCIA: {prov_first.upper()}<br>"
+           f"DEPARTAMENTO: {dpto_first.upper()}<br>"
+           f"SECTOR: {sector.upper()} - ÁMBITO: {ambito.upper()}<br>"
+           f"INDICADOR: {dict_nlargos[indicadores_originales[0]].upper()}"
+           "</b>")
     return df, gr.update(choices=provincias_sorted, value=prov_first), \
-            gr.update(choices=dptos_sorted, value=dpto_first), \
-            gr.update(choices=["Estatal", "Privado", "Ambos"], value="Ambos"), \
-            gr.update(choices=["Urbano", "Rural", "Ambos"], value="Ambos"), \
-            gr.update(choices=indicadores, value=indicador_first), graph, \
-            gr.update(choices=provincias_sorted, value=prov_first), \
-            gr.update(choices=dptos_sorted, value=dpto_first), \
-            gr.update(choices=["Estatal", "Privado", "Ambos"], value="Ambos"), \
-            gr.update(choices=["Urbano", "Rural", "Ambos"], value="Ambos"), \
-            gr.update(choices=indicadores, value=indicador_first), graph, \
-            gr.update(choices=provincias_sorted, value=prov_first), \
-            gr.update(choices=dptos_sorted, value=dpto_first), \
-            gr.update(choices=["Estatal", "Privado", "Ambos"], value="Ambos"), \
-            gr.update(choices=["Urbano", "Rural", "Ambos"], value="Ambos"), \
-            gr.update(choices=indicadores, value=indicador_first), graph, \
-            filtered, filtered, filtered
+                gr.update(choices=dptos_sorted, value=dpto_first), \
+                gr.update(choices=["Estatal", "Privado", "Ambos"], value="Ambos"), \
+                gr.update(choices=["Urbano", "Rural", "Ambos"], value="Ambos"), \
+                gr.update(choices=indicadores, value=indicador_first), \
+                gr.Plot(visible=False), \
+                gr.update(choices=provincias_sorted, value=prov_first), \
+                gr.update(choices=dptos_sorted, value=dpto_first), \
+                gr.update(choices=["Estatal", "Privado", "Ambos"], value="Ambos"), \
+                gr.update(choices=["Urbano", "Rural", "Ambos"], value="Ambos"), \
+                gr.update(choices=indicadores, value=indicador_first), \
+                gr.Plot(visible=False), \
+                gr.update(choices=provincias_sorted, value=prov_first), \
+                gr.update(choices=dptos_sorted, value=dpto_first), \
+                gr.update(choices=["Estatal", "Privado", "Ambos"], value="Ambos"), \
+                gr.update(choices=["Urbano", "Rural", "Ambos"], value="Ambos"), \
+                gr.update(choices=indicadores, value=indicador_first), \
+                gr.Plot(visible=False), \
+                filtered, filtered, filtered, msg, msg, msg, \
+                gr.Plot(visible=False), gr.Plot(visible=False), gr.Plot(visible=False), \
+                gr.update(visible=False), gr.update(visible=False), gr.update(visible=False)
             
-def tab_ST_on_prov_change(df, provincia, sector, ambito, indicador, serie, mg, tend, mm, sd):
+def tab_ST_on_prov_change(df, provincia, sector, ambito, indicador):
     
     # Se arma el listado ordenado de departamentos de la provincia
     # y se guarda el primer departamento de la lista
@@ -992,14 +1011,20 @@ def tab_ST_on_prov_change(df, provincia, sector, ambito, indicador, serie, mg, t
                                    KEY_COLUMNS, True, min_reg=MIN_REG)
     
     if filtered.empty:
-        return None, None, None
+        return None, None, gr.Plot(visible=False), None, gr.Plot(visible=False), gr.update(visible=False)
     
     # Se genera el gráfico para el primer indicador
-    mmov =  0 < mm < 4
-    tipo = mm + 1
-    graph = tab_EDA_create_evolution_graph(filtered, ind_orig, serie, mg, tend, mmov, sd, tipo)
+    # mmov =  0 < mm < 4
+    # tipo = mm + 1
+    # graph = tab_EDA_create_evolution_graph(filtered, ind_orig, serie, mg, tend, mmov, sd, tipo)
 
-    return  gr.update(choices=dptos_sorted, value=dpto_first), filtered, graph
+    msg = ("<b>"
+           f"PROVINCIA: {provincia.upper()}<br>DEPARTAMENTO: {dpto_first.upper()}<br>"
+           f"SECTOR: {sector.upper()} - ÁMBITO: {ambito.upper()}<br>"
+           f"INDICADOR: {dict_nlargos[ind_orig].upper()}"
+           "</b>")
+    return gr.update(choices=dptos_sorted, value=dpto_first), filtered, \
+        gr.Plot(visible=False), msg, gr.Plot(visible=False), gr.update(visible=False)
 
 def tab_ST_on_dep_change(df, provincia, departamento, sector, ambito, indicador, serie, mg, tend, mm, sd):
 
@@ -1011,14 +1036,19 @@ def tab_ST_on_dep_change(df, provincia, departamento, sector, ambito, indicador,
     filtered = get_filtered_subset(df, provincia, departamento, sector, ambito, KEY_COLUMNS, True, min_reg=MIN_REG)
     
     if filtered.empty:
-        return None
+        return None, gr.Plot(visible=False), None, gr.Plot(visible=False), gr.update(visible=False)
     
     # Se genera el gráfico para el primer indicador
-    mmov =  0 < mm < 4
-    tipo = mm + 1
-    graph = tab_EDA_create_evolution_graph(filtered, ind_orig, serie, mg, tend, mmov, sd, tipo)
+    # mmov =  0 < mm < 4
+    # tipo = mm + 1
+    # graph = tab_EDA_create_evolution_graph(filtered, ind_orig, serie, mg, tend, mmov, sd, tipo)
 
-    return filtered, graph
+    msg = ("<b>"
+           f"PROVINCIA: {provincia.upper()}<br>DEPARTAMENTO: {departamento.upper()}<br>"
+           f"SECTOR: {sector.upper()} - ÁMBITO: {ambito.upper()}<br>"
+           f"INDICADOR: {dict_nlargos[ind_orig].upper()}"
+           "</b>")
+    return filtered, gr.Plot(visible=False), msg, gr.Plot(visible=False), gr.update(visible=False)
 
 def tab_ST_on_option_change(df, provincia, departamento, sector, ambito, indicador, serie, mg, tend, mm, sd):
 
@@ -1030,18 +1060,27 @@ def tab_ST_on_option_change(df, provincia, departamento, sector, ambito, indicad
     filtered = get_filtered_subset(df, provincia, departamento, sector, ambito, KEY_COLUMNS, True, min_reg=MIN_REG)
     
     if filtered.empty:
-        return None
+        return None, gr.Plot(visible=False), None, gr.Plot(visible=False), gr.update(visible=False)
     
     # Se genera el gráfico para el primer indicador
-    mmov =  0 < mm < 4
-    tipo = mm + 1
-    graph = tab_EDA_create_evolution_graph(filtered, ind_orig, serie, mg, tend, mmov, sd, tipo)
+    # mmov =  0 < mm < 4
+    # tipo = mm + 1
+    # graph = tab_EDA_create_evolution_graph(filtered, ind_orig, serie, mg, tend, mmov, sd, tipo)
 
-    return filtered, graph
+    msg = ("<b>"
+           f"PROVINCIA: {provincia.upper()}<br>DEPARTAMENTO: {departamento.upper()}<br>"
+           f"SECTOR: {sector.upper()} - ÁMBITO: {ambito.upper()}<br>"
+           f"INDICADOR: {dict_nlargos[ind_orig].upper()}"
+           "</b>")
+    return filtered, gr.Plot(visible=False), msg, gr.Plot(visible=False), gr.update(visible=False)
 
 def tab_ST_on_graph_change(filtered1, filtered2, filtered3, ind1, ind2, ind3,
                          serie, mg, tend, mm, sd):
-    
+    # Función que genera tres gráficos de tendencia invocando a la
+    # función tab_EDA_create_evolution_graph:
+    # df1, df2, df3: datasets filtrados con nombres originales de columnas
+    # ind1, ind2, ind3: indicadores actuales con nombres descriptivos cortos
+
     # Como loa parámetroa "ind1", "ind2", "ind3", se reciben con el nombre descriptivo corto
     # se deben convertir a su nombre original
     ind_orig1 = next((k for k, v in dict_ncortos.items() if v == ind1), ind1)
@@ -1050,11 +1089,150 @@ def tab_ST_on_graph_change(filtered1, filtered2, filtered3, ind1, ind2, ind3,
 
     mmov =  0 < mm < 4
     tipo = mm + 1
-    graph1 = tab_EDA_create_evolution_graph(filtered1, ind_orig1, serie, mg, tend, mmov, sd, tipo)
-    graph2 = tab_EDA_create_evolution_graph(filtered2, ind_orig2, serie, mg, tend, mmov, sd, tipo)
-    graph3 = tab_EDA_create_evolution_graph(filtered3, ind_orig3, serie, mg, tend, mmov, sd, tipo)
+    graph1 = tab_EDA_create_evolution_graph(filtered1, ind_orig1, serie, mg, tend, mmov, sd, 
+                                            tipo, interactivo=False, h_estatico=4.13)
+    graph2 = tab_EDA_create_evolution_graph(filtered2, ind_orig2, serie, mg, tend, mmov, sd, 
+                                            tipo, interactivo=False, h_estatico=4.13)
+    graph3 = tab_EDA_create_evolution_graph(filtered3, ind_orig3, serie, mg, tend, mmov, sd, 
+                                            tipo, interactivo=False, h_estatico=4.13)
 
-    return graph1, graph2, graph3
+    return gr.Plot(value=graph1, visible=True), gr.Plot(value=graph2, visible=True), \
+            gr.Plot(value=graph3, visible=True)
+
+def tab_ST_stl_decomp(df, indicador):
+    """
+    Se aplica la descomposición STL (Seasonal-Trend decomposition using LOESS) 
+    debido a que se trabaja con una serie corta de datos (n = 14), donde no resulta 
+    conveniente utilizar modelos clásicos de medias móviles ni modelos predictivos complejos 
+    como ARIMA/SARIMA. Este enfoque se destaca por tres ventajas clave:
+    * Robustez ante anomalías: STL ignora valores atípicos mediante un ajuste robusto, 
+      evitando que eventos excepcionales desvíen la tendencia real.
+    * Integridad de la serie: a diferencia de las medias móviles, no existe pérdida de datos 
+      en los extremos; STL calcula la tendencia y los residuos para el periodo completo 
+      mediante LOESS (regresiones locales ponderadas en ventanas móviles).
+    * Flexibilidad local: STL no asume un crecimiento lineal, lo que le permite adaptarse a 
+      cambios de dirección en la trayectoria de los datos.
+    Además, permite ajustar la ventana de suavizado para capturar variaciones cíclicas multianuales, 
+    superando la limitación de la falta de estacionalidad mensual en datos anuales.
+
+    Parámetros de la función:
+    - df: dataset filtrado con columnas con nombres originales ['periodo', indicadores]
+    - indicador: nombre corto del indicador
+    """
+    
+    # Se convierte el nombre corto del  "indicador" a su nombre original
+    ind_orig = next((k for k, v in dict_ncortos.items() if v == indicador), indicador)
+
+    df = df.sort_values('periodo').reset_index(drop=True)
+    serie = df[ind_orig]
+    
+    # Se entrena el modelo STL. En datos anuales con N=14, el 'period' suele fijarse en un ciclo 
+    # hipotético o se usa period=2 (para capturar la variabilidad bianual mínima).
+    # Robust indica que el modelo debe ignorar las anomalías o años atípicos.
+    res = STL(serie, period=2, robust=True).fit()
+    
+    df['tendencia'] = res.trend
+    df['estacional'] = res.seasonal
+    df['residuo'] = res.resid
+    
+    # Gráfico interactivo
+    fig = make_subplots(
+            rows=4, cols=1, 
+            shared_xaxes=False, # Cambiado a False para mostrar años en cada fila
+            vertical_spacing=0.07, # Aumentamos un poco el espacio para que no se encimen los títulos
+            subplot_titles=(
+                f"<b>SERIE ORIGINAL</b>", 
+                f"<b>TENDENCIA (SUAVIZADO LOESS)</b>", 
+                f"<b>COMPONENTE ESTACIONAL/CÍCLICO</b>", 
+                f"<b>RESIDUOS (RUIDO)</b>"
+            )
+        )
+    
+    titulo = f"DESCOMPOSICIÓN STL DE LA MATRÍCULA: {dict_nlargos[ind_orig].upper()}"
+    # Datos originales
+    fig.add_trace(go.Scatter(x=df['periodo'], y=serie, name="Original", 
+                             line=dict(color='black')), row=1, col=1)
+    # Tendencia
+    fig.add_trace(go.Scatter(x=df['periodo'], y=df['tendencia'], name="Tendencia", 
+                             line=dict(color='blue')), row=2, col=1)
+    # Ciclos
+    fig.add_trace(go.Scatter(x=df['periodo'], y=df['estacional'], name="Estacional", 
+                             line=dict(color='green')), row=3, col=1)
+    # Residuos
+    fig.add_trace(go.Bar(x=df['periodo'], y=df['residuo'], name="Residuos", 
+                         marker_color='red'), row=4, col=1)
+    
+    fig.update_layout(
+        height=900,              # Ajuste de altura para reducir scroll excesivo
+        autosize=True,           # Permite que el gráfico responda al contenedor
+        margin=dict(
+            l=10,                # Margen izquierdo mínimo
+            r=10,                # Margen derecho mínimo
+            t=50,                # Margen superior para el título
+            b=10,                # Margen inferior mínimo
+            pad=0                # Padding entre dibujo y ejes
+        ),
+        # title_text=f"<b>{titulo}</b>",
+        # title_font=dict(size=14, color='black', family='Arial'),
+        showlegend=False,
+        template="plotly_white"
+    )
+    fig.update_annotations(font=dict(size=12, color='black', family='Arial Black'))
+    fig.update_xaxes(
+        tickmode='linear', 
+        tick0=2011, 
+        dtick=1, 
+        range=[2010.5, 2024.5],
+        tickfont=dict(size=8, color='black', family='Arial Black'),
+        tickformat='d',
+        showticklabels=True # Fuerza la visibilidad en todos los subgráficos
+    )
+    fig.update_yaxes(
+        tickfont=dict(size=8, color='black', family='Arial Black'),
+    )
+
+    # Métricas
+    variabilidad_residuo = (df['residuo'].std() / serie.mean()) * 100
+    puntos_atipicos = df[np.abs(df['residuo']) > 2 * df['residuo'].std()]
+    
+    # Interpretación sencilla de la tendencia
+    cambio_total = res.trend.iloc[-1] - res.trend.iloc[0]
+    umbral_estabilidad = 0.01  # 1% de variación como "Estabilidad"
+    if abs(cambio_total) < umbral_estabilidad * res.trend.mean():
+        interpretacion_tendencia = "estabilidad (sin tendencia significativa)"
+    else:
+        interpretacion_tendencia = "crecimiento" if cambio_total > 0 else "decrecimiento"
+
+    # Interpretación de la Variabilidad No Explicada (Ruido)
+    if variabilidad_residuo < 5:
+        desc_ruido = "baja. El modelo explica casi la totalidad de los datos; los factores externos son mínimos."
+    elif variabilidad_residuo < 15:
+        desc_ruido = "moderada. Existen fluctuaciones aleatorias o eventos puntuales que afectan la matrícula."
+    else:
+        desc_ruido = "alta. La serie es altamente impredecible; hay una fuerte influencia de variables no capturadas por la tendencia."
+
+    reporte = (f"<b>Variabilidad No Explicada (Ruido): </b>"
+                f"{variabilidad_residuo:.2f}% respecto a la media. La variabilidad es {desc_ruido}<br>"
+                f"<b>Tendencia: </b>"
+                f"La serie presenta {interpretacion_tendencia} de la matrícula.<br>"
+                f"<b>Años con Desviaciones Significativas: </b>"
+                f"{puntos_atipicos['periodo'].tolist() if not puntos_atipicos.empty else 'Ninguno'}<br>"
+                )
+    
+    return fig, reporte
+
+def tab_ST_stl_decomp_all(df1, df2, df3, var1, var2, var3):
+
+    fig1, desc1 = tab_ST_stl_decomp(df1, var1)
+    fig2, desc2 = tab_ST_stl_decomp(df2, var2)
+    fig3, desc3 = tab_ST_stl_decomp(df3, var3)
+
+    return gr.update(value = fig1, visible = True), \
+            gr.update(value = desc1, visible = True), \
+            gr.update(value = fig2, visible = True), \
+            gr.update(value = desc2, visible = True), \
+            gr.update(value = fig3, visible = True), \
+            gr.update(value = desc3, visible = True)
 
 # endregion FUNCIONES PARA LA PESTAÑA "SERIES TEMPORALES"
 
@@ -1421,10 +1599,15 @@ with gr.Blocks(title="Análisis Educativo") as app:
         ###### PESTAÑA SERIES TEMPORALES
         with gr.Tab("Series Temporales") as tab_ST:
             with gr.Row(elem_classes="title-tab"):
-                gr.HTML("&nbsp;&nbsp;COMPARACIÓN DE SERIES TEMPORALES APLICANDO LA TRANSFORMADA RÁPIDA DE FOURIER", elem_classes="title-text")
+                gr.HTML("&nbsp;&nbsp;COMPARACIÓN DE SERIES TEMPORALES", elem_classes="title-text")
             
-            with gr.Row(elem_classes="custom-tab-2"):    
-                gr.HTML("&nbsp;&nbsp;1. SELECCIÓN DE LAS SERIES TEMPORALES A COMPARAR", elem_classes="subtitle-text")
+            with gr.Row():
+                with gr.Column(elem_classes="custom-tab-2", scale=20):    
+                    gr.HTML("&nbsp;&nbsp;1. SELECCIÓN DE LAS SERIES TEMPORALES A COMPARAR", 
+                            elem_classes="subtitle-text")
+                with gr.Column(min_width=150):
+                    graph_button = gr.Button("Graficar", variant="primary", visible=True, 
+                                               elem_classes="custom-button3")
             
             with gr.Row():
                 with gr.Column(min_width=180):
@@ -1462,7 +1645,7 @@ with gr.Blocks(title="Análisis Educativo") as app:
                                 gr.HTML("Indicador")
                                 var1 = gr.Dropdown(label="", choices=[], elem_classes="custom-dropdown-small")
                         with gr.Column(scale=20):
-                            tend1 = gr.Plot(show_label=False)
+                            tend1 = gr.Plot(show_label=False, visible=False)
 
                     with gr.Row(elem_classes="custom-tab"):
                         with gr.Column(min_width=250):
@@ -1482,7 +1665,7 @@ with gr.Blocks(title="Análisis Educativo") as app:
                                 gr.HTML("Indicador")
                                 var2 = gr.Dropdown(label="", choices=[], elem_classes="custom-dropdown-small")
                         with gr.Column(scale=20):
-                            tend2 = gr.Plot(show_label=False)
+                            tend2 = gr.Plot(show_label=False, visible=False)
 
                     with gr.Row(elem_classes="custom-tab"):
                         with gr.Column(min_width=250):
@@ -1502,22 +1685,46 @@ with gr.Blocks(title="Análisis Educativo") as app:
                                 gr.HTML("Indicador")
                                 var3 = gr.Dropdown(label="", choices=[], elem_classes="custom-dropdown-small")
                         with gr.Column(scale=20):
-                            tend3 = gr.Plot(show_label=False)
+                            tend3 = gr.Plot(show_label=False, visible=False)
 
             with gr.Row():
-                with gr.Column(elem_classes="custom-tab-2"):    
-                    gr.HTML("&nbsp;&nbsp;2. AUTOCORRELACIÓN DE LAS SERIES SELECCIONADAS", elem_classes="subtitle-text")
-                with gr.Column():
-                    autocor_button = gr.Button("Calcular", variant="primary", visible=True, elem_classes="custom-button3")
+                with gr.Column(elem_classes="custom-tab-2", scale=20):    
+                    gr.HTML("&nbsp;&nbsp;2. DESCOMPOSICIÓN DE LAS SERIES - MÉTODO STL (SEASONAL-TREND DECOMPOSITION USING LOESS) PARA SERIES CORTAS", 
+                            elem_classes="subtitle-text")
+                with gr.Column(min_width=150):
+                    stats_button = gr.Button("Calcular", variant="primary", visible=True, 
+                                               elem_classes="custom-button3")
+            
             with gr.Row(elem_classes="custom-tab"):
-                    with gr.Column(min_width=250):
-                        autoprov1 = gr.HTML("Provincia:")
-                        autodep1 = gr.HTML("Departamento: ")
-                        autosec1 = gr.HTML("Sector: ")
-                        autoamb1 = gr.HTML("Ámbito: ")
-                        autoind1 = gr.HTML("Indicador: ")
-                    with gr.Column():
-                        autocor1 = gr.Plot(show_label=False)
+                with gr.Column():
+                    with gr.Row():
+                        desc1 = gr.HTML("Descomposición de la Serie 1")
+                    with gr.Row():
+                        with gr.Column():                        
+                            STL_graph1 = gr.Plot(show_label=False, visible=False)
+                            STL_info1 = gr.HTML("Interpretación", visible=False)
+
+                with gr.Column():
+                    with gr.Row():
+                        desc2 = gr.HTML("Descomposición de la Serie 2")
+                    with gr.Row():
+                        with gr.Column():
+                            STL_graph2 = gr.Plot(show_label=False, visible=False)
+                            STL_info2 = gr.HTML("Interpretación", visible=False)
+
+                with gr.Column():
+                    with gr.Row():
+                        desc3 = gr.HTML("Descomposición de la Serie 3")
+                    with gr.Row():
+                        with gr.Column():
+                            STL_graph3 = gr.Plot(show_label=False, visible=False)
+                            STL_info3 = gr.HTML("Interpretación", visible=False)
+
+
+
+
+
+
             with gr.Row(elem_classes="custom-tab-2"):    
                 gr.HTML("&nbsp;&nbsp;3. TEST DE DICKEY-FÜLLER AUMENTADO (ADF)", elem_classes="subtitle-text")
             
@@ -1537,112 +1744,111 @@ with gr.Blocks(title="Análisis Educativo") as app:
                 outputs=[dataset_state, prov1, dep1, sec1, amb1, var1, tend1,
                          prov2, dep2, sec2, amb2, var2, tend2,
                          prov3, dep3, sec3, amb3, var3, tend3,
-                         dataset_filter_state_1, dataset_filter_state_2, dataset_filter_state_3]
+                         dataset_filter_state_1, dataset_filter_state_2, dataset_filter_state_3,
+                         desc1, desc2, desc3, STL_graph1, STL_graph2, STL_graph3,
+                         STL_info1, STL_info2, STL_info3]
             )
             
             prov1.change(
                 fn=tab_ST_on_prov_change,
-                inputs=[dataset_state, prov1, sec1, amb1, 
-                        var1, graph_serie, graph_mg, graph_tend, graph_mm, graph_sd],
-                outputs=[dep1, dataset_filter_state_1, tend1]
+                inputs=[dataset_state, prov1, sec1, amb1, var1],
+                outputs=[dep1, dataset_filter_state_1, tend1, desc1, STL_graph1, STL_info1]
             )
 
             prov2.change(
                 fn=tab_ST_on_prov_change,
-                inputs=[dataset_state, prov2, sec2, amb2, var2, 
-                        graph_serie, graph_mg, graph_tend, graph_mm, graph_sd],
-                outputs=[dep2, dataset_filter_state_2, tend2]
+                inputs=[dataset_state, prov2, sec2, amb2, var2],
+                outputs=[dep2, dataset_filter_state_2, tend2, desc2, STL_graph2, STL_info2]
             )
             
             prov3.change(
                 fn=tab_ST_on_prov_change,
-                inputs=[dataset_state, prov3, sec3, amb3, var3, 
-                        graph_serie, graph_mg, graph_tend, graph_mm, graph_sd],
-                outputs=[dep3, dataset_filter_state_3, tend3]
+                inputs=[dataset_state, prov3, sec3, amb3, var3],
+                outputs=[dep3, dataset_filter_state_3, tend3, desc3, STL_graph3, STL_info3]
             )
             
             dep1.change(
                 fn=tab_ST_on_dep_change,
                 inputs=[dataset_state, prov1, dep1, sec1, amb1, var1, 
                         graph_serie, graph_mg, graph_tend, graph_mm, graph_sd],
-                outputs=[dataset_filter_state_1, tend1]
+                outputs=[dataset_filter_state_1, tend1, desc1, STL_graph1, STL_info1]
             )
 
             dep2.change(
                 fn=tab_ST_on_dep_change,
                 inputs = [dataset_state, prov2, dep2, sec2, amb2, var2, 
                           graph_serie, graph_mg, graph_tend, graph_mm, graph_sd],
-                outputs=[dataset_filter_state_2, tend2]
+                outputs=[dataset_filter_state_2, tend2, desc2, STL_graph2, STL_info2]
             )
 
             dep3.change(
                 fn=tab_ST_on_dep_change,
                 inputs = [dataset_state, prov3, dep3, sec3, amb3, var3, 
                           graph_serie, graph_mg, graph_tend, graph_mm, graph_sd],
-                outputs=[dataset_filter_state_3, tend3]
+                outputs=[dataset_filter_state_3, tend3, desc3, STL_graph3, STL_info3]
             )
 
             sec1.change(
                 fn=tab_ST_on_option_change,
                 inputs = [dataset_state, prov1, dep1, sec1, amb1, var1, 
                           graph_serie, graph_mg, graph_tend, graph_mm, graph_sd],
-                outputs=[dataset_filter_state_1, tend1]
+                outputs=[dataset_filter_state_1, tend1, desc1, STL_graph1, STL_info1]
             )
             
             sec2.change(
                 fn=tab_ST_on_option_change,
                 inputs = [dataset_state, prov2, dep2, sec2, amb2, var2, 
                           graph_serie, graph_mg, graph_tend, graph_mm, graph_sd],
-                outputs=[dataset_filter_state_2, tend2]
+                outputs=[dataset_filter_state_2, tend2, desc2, STL_graph2, STL_info2]
             )
 
             sec3.change(
                 fn=tab_ST_on_option_change,
                 inputs = [dataset_state, prov3, dep3, sec3, amb3, var3, 
                           graph_serie, graph_mg, graph_tend, graph_mm, graph_sd],
-                outputs=[dataset_filter_state_3, tend3]
+                outputs=[dataset_filter_state_3, tend3, desc3, STL_graph3, STL_info3]
             )
 
             amb1.change(
                 fn=tab_ST_on_option_change,
                 inputs = [dataset_state, prov1, dep1, sec1, amb1, var1, 
                           graph_serie, graph_mg, graph_tend, graph_mm, graph_sd],
-                outputs=[dataset_filter_state_1, tend1]
+                outputs=[dataset_filter_state_1, tend1, desc1, STL_graph1, STL_info1]
             )
             
             amb2.change(
                 fn=tab_ST_on_option_change,
                 inputs = [dataset_state, prov2, dep2, sec2, amb2, var2, 
                           graph_serie, graph_mg, graph_tend, graph_mm, graph_sd],
-                outputs=[dataset_filter_state_2, tend2]
+                outputs=[dataset_filter_state_2, tend2, desc2, STL_graph2, STL_info2]
             )
 
             amb3.change(
                 fn=tab_ST_on_option_change,
                 inputs = [dataset_state, prov3, dep3, sec3, amb3, var3, 
                           graph_serie, graph_mg, graph_tend, graph_mm, graph_sd],
-                outputs=[dataset_filter_state_3, tend3]
+                outputs=[dataset_filter_state_3, tend3, desc3, STL_graph3, STL_info3]
             )
 
             var1.change(
                 fn=tab_ST_on_option_change,
                 inputs = [dataset_state, prov1, dep1, sec1, amb1, var1, 
                           graph_serie, graph_mg, graph_tend, graph_mm, graph_sd],
-                outputs=[dataset_filter_state_1, tend1]
+                outputs=[dataset_filter_state_1, tend1, desc1, STL_graph1, STL_info1]
             )
             
             var2.change(
                 fn=tab_ST_on_option_change,
                 inputs = [dataset_state, prov2, dep2, sec2, amb2, var2, 
                           graph_serie, graph_mg, graph_tend, graph_mm, graph_sd],
-                outputs=[dataset_filter_state_2, tend2]
+                outputs=[dataset_filter_state_2, tend2, desc2, STL_graph2, STL_info2]
             )
 
             var3.change(
                 fn=tab_ST_on_option_change,
                 inputs = [dataset_state, prov3, dep3, sec3, amb3, var3, 
                           graph_serie, graph_mg, graph_tend, graph_mm, graph_sd],
-                outputs=[dataset_filter_state_3, tend3]
+                outputs=[dataset_filter_state_3, tend3, desc3, STL_graph3, STL_info3]
             )
 
             graph_serie.change(
@@ -1686,8 +1892,25 @@ with gr.Blocks(title="Análisis Educativo") as app:
                 outputs=[dataset_state, prov1, dep1, sec1, amb1, var1, tend1,
                          prov2, dep2, sec2, amb2, var2, tend2,
                          prov3, dep3, sec3, amb3, var3, tend3,
-                         dataset_filter_state_1, dataset_filter_state_2, dataset_filter_state_3]
+                         dataset_filter_state_1, dataset_filter_state_2, dataset_filter_state_3,
+                         desc1, desc2, desc3, STL_graph1, STL_graph2,STL_graph3,
+                         STL_info1, STL_info2, STL_info3]
             )
+
+            graph_button.click(
+                fn=tab_ST_on_graph_change,
+                inputs=[dataset_filter_state_1, dataset_filter_state_2, dataset_filter_state_3,
+                        var1, var2, var3, graph_serie, graph_mg, graph_tend, graph_mm, graph_sd],
+                outputs=[tend1, tend2, tend3]
+            )
+
+            stats_button.click(
+                fn=tab_ST_stl_decomp_all,
+                inputs=[dataset_filter_state_1, dataset_filter_state_2, dataset_filter_state_3,
+                        var1, var2, var3],
+                outputs=[STL_graph1, STL_info1, STL_graph2, STL_info2, STL_graph3, STL_info3]
+            )
+
 
 
         ###### PESTAÑA BOSQUES ALEATORIOS

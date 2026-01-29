@@ -421,7 +421,9 @@
     color: var(--text-color) !important;
     text-align: center !important;
     transition: all 0.2s ease !important;
+    margin-top: 30px !important;
     margin-bottom: 10px !important;
+    height: 35px !important;
 }
 .custom-button3:hover {
     /* Para el estado encima */
@@ -483,3 +485,11 @@ table th,
     min-width: 0 !important; /* Anula el mínimo de 320px de Gradio */
 }
 
+
+
+/* ### FORZAR LAS DIMENSIONES DE LOS GRÁFICOS 
+   -------------------------------------------------- */
+.custom-graph {
+    height: 200px !important; 
+    overflow-y: auto;
+}
