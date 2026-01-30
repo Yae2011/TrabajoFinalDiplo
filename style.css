@@ -16,6 +16,7 @@
     --font-title3: 14px;
     --font-title4: 12px;
     --font-subtitle1: 18px;
+    --font-subtitle2: 16px;
     --font-items: 12px;
     --font-items-small: 12px;
     --font-data: 12px;
@@ -455,6 +456,19 @@
     font-weight: bold !important;
     font-size: var(--font-title3) !important;
     margin-bottom: 0px !important;
+}
+
+
+
+/* ### TEXTO PARA CAMPO INFORMATIVO INTERMEDIO  
+------------------------------------------------ */
+.info-display-3 {
+    font-weight: bold !important;
+    font-size: var(--font-subtitle2) !important;
+    margin-bottom: 0px !important;
+    background-color: var(--input-bg-color) !important;
+    border-radius: 10px !important;
+    padding: 5px !important;
 }
 
 

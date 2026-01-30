@@ -6,8 +6,9 @@ import base64
 import matplotlib.pyplot as plt
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
-from statsmodels.tsa.seasonal import STL
-from statsmodels.tsa.stattools import acf
+from statsmodels.tsa.seasonal import STL # Modelo Seasonal-Trend con LOESS para descomposición de series cortas
+from statsmodels.tsa.stattools import acf # Función de Autocorrelación
+from statsmodels.tsa.stattools import adfuller # Test de Dickey-Fuller Aumentado
 import seaborn as sns
 
 
@@ -933,7 +934,10 @@ def tab_ST_on_mat_change(dataset_type):
                 gr.update(visible=False), gr.update(visible=False), gr.update(visible=False), \
                 msg, msg, msg, \
                 gr.Plot(visible=False), gr.Plot(visible=False), gr.Plot(visible=False), \
-                gr.update(visible=False), gr.update(visible=False), gr.update(visible=False)                
+                gr.update(visible=False), gr.update(visible=False), gr.update(visible=False), \
+                msg, msg, msg, \
+                gr.update(visible=False), gr.update(visible=False), gr.update(visible=False)
+                               
     
     # Se arma el listado ordenado de provincias y se guarda la primera provincia
     provincias_sorted = sorted([str(p) for p in provincias])
@@ -1000,6 +1004,8 @@ def tab_ST_on_mat_change(dataset_type):
                 gr.update(visible=False), gr.update(visible=False), gr.update(visible=False), \
                 msg, msg, msg, \
                 gr.Plot(visible=False), gr.Plot(visible=False), gr.Plot(visible=False), \
+                gr.update(visible=False), gr.update(visible=False), gr.update(visible=False), \
+                msg, msg, msg, \
                 gr.update(visible=False), gr.update(visible=False), gr.update(visible=False)
             
 def tab_ST_on_prov_change(df, provincia, sector, ambito, indicador):
@@ -1033,7 +1039,8 @@ def tab_ST_on_prov_change(df, provincia, sector, ambito, indicador):
            "</b>")
     return gr.update(choices=dptos_sorted, value=dpto_first), filtered, gr.Plot(visible=False), \
             msg, gr.Plot(visible=False), gr.update(visible=False), \
-            msg, gr.Plot(visible=False), gr.update(visible=False)
+            msg, gr.Plot(visible=False), gr.update(visible=False), \
+            msg, gr.update(visible=False)
 
 def tab_ST_on_dep_change(df, provincia, departamento, sector, ambito, indicador):
 
@@ -1059,7 +1066,8 @@ def tab_ST_on_dep_change(df, provincia, departamento, sector, ambito, indicador)
            "</b>")
     return filtered, gr.Plot(visible=False), \
             msg, gr.Plot(visible=False), gr.update(visible=False), \
-            msg, gr.Plot(visible=False), gr.update(visible=False)
+            msg, gr.Plot(visible=False), gr.update(visible=False), \
+            msg, gr.update(visible=False)
 
 def tab_ST_on_option_change(df, provincia, departamento, sector, ambito, indicador):
 
@@ -1085,7 +1093,8 @@ def tab_ST_on_option_change(df, provincia, departamento, sector, ambito, indicad
            "</b>")
     return filtered, gr.Plot(visible=False), \
             msg, gr.Plot(visible=False), gr.update(visible=False), \
-            msg, gr.Plot(visible=False), gr.update(visible=False)
+            msg, gr.Plot(visible=False), gr.update(visible=False), \
+            msg, gr.update(visible=False)
 
 def tab_ST_on_graph_change(filtered1, filtered2, filtered3, ind1, ind2, ind3,
                          serie, mg, tend, mm, sd):
@@ -1250,7 +1259,7 @@ def tab_ST_autocorr(df, indicador):
     # Se convierte el nombre corto del  "indicador" a su nombre original
     ind_orig = next((k for k, v in dict_ncortos.items() if v == indicador), indicador)
     df = df.sort_values('periodo').reset_index(drop=True)
-    serie = df[ind_orig]
+    serie = df[ind_orig].dropna()
 
     n_obs = len(df)
     lags = 7 # Desfases (lags); para 14 datos, lags=7 para mantener potencia estadística
@@ -1314,6 +1323,101 @@ def tab_ST_autocorr_all(df1, df2, df3, var1, var2, var3):
             gr.update(value = fig2, visible = True), \
             gr.update(value = desc2, visible = True), \
             gr.update(value = fig3, visible = True), \
+            gr.update(value = desc3, visible = True)
+
+def tab_ST_ADF(df, indicador):
+    """
+    Aplica el Test de Dickey-Fuller Aumentado (ADF).
+    - df: DataFrame con los datos originales.
+    - indicador: Nombre corto del indicador.
+    """
+    
+    # Recuperación del nombre original y preparación de la serie
+    ind_orig = next((k for k, v in dict_ncortos.items() if v == indicador), indicador)
+    df = df.sort_values('periodo').reset_index(drop=True)
+    serie = df[ind_orig].dropna()
+    n_obs = len(serie)
+
+    # Se verifica si todos los valores son iguales (incluye ceros)
+    if np.all(serie == serie.iloc[0]):
+        return """
+        <div style="padding:15px; border:2px solid #ffa000; background-color:#fff9c4; border-radius:8px;">
+            <strong style="color:#f57c00;"> Error en el Análisis:</strong><br>
+            La serie temporal es constante (todos los valores son iguales). 
+            La varianza es 0, lo que impide calcular el estadístico ADF. 
+            Una serie constante se considera determinista y no requiere pruebas de raíz unitaria.
+        </div>
+        """
+    
+    # Test ADF con autolag='AIC' (Criterio de Información de Akaike), lo que es recomendado
+    # en análisis de series temporales muy cortas. El AIC penaliza la inclusión de demasiados
+    # retardos (lags), evitando el sobreajuste, algo crítico para pocas observaciones.
+    res = adfuller(serie, autolag='AIC')
+    
+    test_stat = res[0]      # Estadístico del test
+    p_value = res[1]        # Valor p
+    lags_used = res[2]      # Rezagos seleccionados
+    crit_values = res[4]    # Valores críticos al 1%, 5% y 10%
+
+    # Lógica de interpretación
+    # H0: La serie tiene raíz unitaria (no es estacionaria)
+    # H1: La serie es estacionaria
+    es_estacionaria = p_value < 0.05
+    color_status = "#1a73e8" if es_estacionaria else "#d93025"
+    conclusion_msg = "ESTACIONARIA" if es_estacionaria else "NO ESTACIONARIA"
+
+    # Construcción de la salida HTML
+    html_output = f"""
+    <div style="font-family: 'Segoe UI', Arial, sans-serif; padding: 20px; border: 1px solid #e0e0e0; border-radius: 8px; background-color: #ffffff;">
+        <table style="width: 100%; border-collapse: collapse; margin: 20px 0;">
+            <tbody>
+                <tr>
+                    <td style="border: 1px solid #ddd; padding: 10px; font-size: 14px !important; font-weight: bold !important;">Estadístico de la Prueba</td>
+                    <td style="border: 1px solid #ddd; padding: 10px; text-align: center; font-size: 14px !important; font-weight: bold !important;">{test_stat:.4f}</td>
+                </tr>
+                <tr>
+                    <td style="border: 1px solid #ddd; padding: 10px;  font-size: 14px !important; font-weight: bold !important;">P-Valor (Nivel de significancia)</td>
+                    <td style="border: 1px solid #ddd; padding: 10px; text-align: center; font-size: 14px !important; font-weight: bold !important;">{p_value:.4f}</td>
+                </tr>
+                <tr>
+                    <td style="border: 1px solid #ddd; padding: 10px; font-size: 14px !important; font-weight: bold !important;">Rezagos utilizados (AIC)</td>
+                    <td style="border: 1px solid #ddd; padding: 10px; text-align: center; font-size: 14px !important; font-weight: bold !important;">{lags_used}</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <div style="background-color: #f1f3f4; padding: 15px; border-radius: 5px; margin-bottom: 20px;">
+            <h4 style="margin: 0 0 10px 0; color: #5f6368;">Valores Críticos:</h4>
+            <code style="display: block; white-space: pre;">1% (Confianza 99%): {crit_values['1%']:.4f}</code>
+            <code style="display: block; white-space: pre;">5% (Confianza 95%): {crit_values['5%']:.4f}</code>
+            <code style="display: block; white-space: pre;">10% (Confianza 90%): {crit_values['10%']:.4f}</code>
+        </div>
+
+        <div style="padding: 15px; border-left: 5px solid {color_status}; background-color: {color_status}10; margin-bottom: 20px;">
+            <strong style="color: {color_status}; font-size: 1.2em;">Conclusión: {conclusion_msg}</strong>
+            <p style="margin: 5px 0 0 0; color: #3c4043;">
+                A un nivel de confianza del 95%, el p-valor de {p_value:.4f} indica que 
+                {'se rechaza' if es_estacionaria else 'no se puede rechazar'} la hipótesis nula de raíz unitaria.
+            </p>
+        </div>
+
+        <p style="font-size: 0.9em; color: #70757a; font-style: italic; line-height: 1.4;">
+            <strong>Nota de fiabilidad:</strong> Al tratarse de una muestra de <strong>{n_obs} datos</strong>, 
+            el test ADF puede presentar una potencia estadística limitada. Los resultados deben considerarse 
+            como <strong>orientadores y no definitivos</strong>. En series de corta duración, factores estacionales 
+            o valores atípicos pueden sesgar la detección de estacionariedad.
+        </p>
+    </div>
+    """
+    return html_output
+
+def tab_ST_ADF_all(df1, df2, df3, var1, var2, var3):
+    desc1 = tab_ST_ADF(df1, var1)
+    desc2 = tab_ST_ADF(df2, var2)
+    desc3 = tab_ST_ADF(df3, var3)
+
+    return gr.update(value = desc1, visible = True), \
+            gr.update(value = desc2, visible = True), \
             gr.update(value = desc3, visible = True)
 
 # endregion FUNCIONES PARA LA PESTAÑA "SERIES TEMPORALES"
@@ -1683,6 +1787,9 @@ with gr.Blocks(title="Análisis Educativo") as app:
             with gr.Row(elem_classes="title-tab"):
                 gr.HTML("&nbsp;&nbsp;COMPARACIÓN DE SERIES TEMPORALES", elem_classes="title-text")
             
+
+
+            ### SECCIÓN 1: SELECCIÓN DE LAS TRES SERIES TEMPORALES A COMPARAR
             with gr.Row():
                 with gr.Column(elem_classes="custom-tab-2", scale=20):    
                     gr.HTML("&nbsp;&nbsp;1. SELECCIÓN DE LAS SERIES TEMPORALES A COMPARAR", 
@@ -1769,6 +1876,9 @@ with gr.Blocks(title="Análisis Educativo") as app:
                         with gr.Column(scale=20):
                             tend3 = gr.Plot(show_label=False, visible=False)
 
+
+
+            ### SECCIÓN 2: DESCOMPOSICIÓN DE LAS TRES SERIES TEMPORALES APLICANDO EL MÉTODO STL
             with gr.Row():
                 with gr.Column(elem_classes="custom-tab-2", scale=20):    
                     gr.HTML("&nbsp;&nbsp;2. DESCOMPOSICIÓN DE LAS SERIES - MÉTODO STL (SEASONAL-TREND DECOMPOSITION USING LOESS) PARA SERIES CORTAS", 
@@ -1780,7 +1890,7 @@ with gr.Blocks(title="Análisis Educativo") as app:
             with gr.Row(elem_classes="custom-tab"):
                 with gr.Column():
                     with gr.Row():
-                        desc1 = gr.HTML("Descomposición de la Serie 1")
+                        desc1 = gr.HTML("Descomposición de la Serie 1", elem_classes="info-display-3")
                     with gr.Row():
                         with gr.Column():                        
                             STL_graph1 = gr.Plot(show_label=False, visible=False)
@@ -1788,7 +1898,7 @@ with gr.Blocks(title="Análisis Educativo") as app:
 
                 with gr.Column():
                     with gr.Row():
-                        desc2 = gr.HTML("Descomposición de la Serie 2")
+                        desc2 = gr.HTML("Descomposición de la Serie 2", elem_classes="info-display-3")
                     with gr.Row():
                         with gr.Column():
                             STL_graph2 = gr.Plot(show_label=False, visible=False)
@@ -1796,13 +1906,15 @@ with gr.Blocks(title="Análisis Educativo") as app:
 
                 with gr.Column():
                     with gr.Row():
-                        desc3 = gr.HTML("Descomposición de la Serie 3")
+                        desc3 = gr.HTML("Descomposición de la Serie 3", elem_classes="info-display-3")
                     with gr.Row():
                         with gr.Column():
                             STL_graph3 = gr.Plot(show_label=False, visible=False)
                             STL_info3 = gr.HTML("Interpretación", visible=False)
 
 
+
+            ### SECCIÓN 3: CÁLCULO DE AUTOCORRELACIONES DE LAS TRES SERIES TEMPORALES
             with gr.Row():
                 with gr.Column(elem_classes="custom-tab-2", scale=20):    
                     gr.HTML("&nbsp;&nbsp;3. AUTOCORRELACIÓN DE LAS SERIES", 
@@ -1814,7 +1926,7 @@ with gr.Blocks(title="Análisis Educativo") as app:
             with gr.Row(elem_classes="custom-tab"):
                 with gr.Column():
                     with gr.Row():
-                        desc1a = gr.HTML("Autocorrelación de la Serie 1")
+                        desc1a = gr.HTML("Autocorrelación de la Serie 1", elem_classes="info-display-3")
                     with gr.Row():
                         with gr.Column():                        
                             auto_graph1 = gr.Plot(show_label=False, visible=False)
@@ -1822,7 +1934,7 @@ with gr.Blocks(title="Análisis Educativo") as app:
 
                 with gr.Column():
                     with gr.Row():
-                        desc2a = gr.HTML("Autocorrelación de la Serie 2")
+                        desc2a = gr.HTML("Autocorrelación de la Serie 2", elem_classes="info-display-3")
                     with gr.Row():
                         with gr.Column():
                             auto_graph2 = gr.Plot(show_label=False, visible=False)
@@ -1830,7 +1942,7 @@ with gr.Blocks(title="Análisis Educativo") as app:
 
                 with gr.Column():
                     with gr.Row():
-                        desc3a = gr.HTML("Autocornrelació de la Serie 3")
+                        desc3a = gr.HTML("Autocornrelació de la Serie 3", elem_classes="info-display-3")
                     with gr.Row():
                         with gr.Column():
                             auto_graph3 = gr.Plot(show_label=False, visible=False)
@@ -1838,15 +1950,41 @@ with gr.Blocks(title="Análisis Educativo") as app:
 
 
 
+            ### CÁLCULO DEL TEST ADF PARA ESTACIONARIEDAD DE LAS TRES SERIES TEMPORALES
+            with gr.Row():
+                with gr.Column(elem_classes="custom-tab-2", scale=20):    
+                    gr.HTML("&nbsp;&nbsp;3. PRUEBA DE DICKEY-FÜLLER AUMENTADA PARA VERIFICAR ESTACIONARIEDAD", 
+                            elem_classes="subtitle-text")
+                with gr.Column(min_width=150):
+                    ADF_button = gr.Button("Calcular", variant="primary", visible=True, 
+                                               elem_classes="custom-button3")
+
+            with gr.Row(elem_classes="custom-tab"):
+                with gr.Column():
+                    with gr.Row():
+                        desc1ADF = gr.HTML("Prueba ADF para la Serie 1", elem_classes="info-display-3")
+                    with gr.Row():
+                        with gr.Column():                        
+                            ADF_info1 = gr.HTML("Interpretación", visible=False)
+
+                with gr.Column():
+                    with gr.Row():
+                        desc2ADF = gr.HTML("Prueba ADF para la Serie 2", elem_classes="info-display-3")
+                    with gr.Row():
+                        with gr.Column():
+                            ADF_info2 = gr.HTML("Interpretación", visible=False)
+
+                with gr.Column():
+                    with gr.Row():
+                        desc3ADF = gr.HTML("Prueba ADF para la Serie 3", elem_classes="info-display-3")
+                    with gr.Row():
+                        with gr.Column():
+                            ADF_info3 = gr.HTML("Interpretación", visible=False)
 
 
 
 
 
-
-            with gr.Row(elem_classes="custom-tab-2"):    
-                gr.HTML("&nbsp;&nbsp;4. TEST DE DICKEY-FÜLLER AUMENTADO (ADF)", elem_classes="subtitle-text")
-            
             with gr.Row(elem_classes="custom-tab-2"):    
                 gr.HTML("&nbsp;&nbsp;5. SELECCIÓN DEL MODELO Y VALORES DE SUS HIPERPARÁMETROS APLICANDO UN ALGORITMO GENÉTICO", elem_classes="subtitle-text")  
             
@@ -1855,6 +1993,8 @@ with gr.Blocks(title="Análisis Educativo") as app:
            
             with gr.Row(elem_classes="custom-tab-2"):    
                 gr.HTML("&nbsp;&nbsp;7. TRANSFORMADA DE FOURIER PARA LAS SERIES TEMPORALES A COMPARAR", elem_classes="subtitle-text")              
+
+
 
 
             mat.change(
@@ -1869,7 +2009,9 @@ with gr.Blocks(title="Análisis Educativo") as app:
                          STL_info1, STL_info2, STL_info3,
                          desc1a, desc2a, desc3a,
                          auto_graph1, auto_graph2, auto_graph3,
-                         auto_info1, auto_info2, auto_info3]
+                         auto_info1, auto_info2, auto_info3,
+                         desc1ADF, desc2ADF, desc3ADF,
+                         ADF_info1, ADF_info2, ADF_info3]
             )
             
             prov1.change(
@@ -1877,7 +2019,8 @@ with gr.Blocks(title="Análisis Educativo") as app:
                 inputs=[dataset_state, prov1, sec1, amb1, var1],
                 outputs=[dep1, dataset_filter_state_1, tend1,
                          desc1, STL_graph1, STL_info1,
-                         desc1a, auto_graph1, auto_info1]
+                         desc1a, auto_graph1, auto_info1,
+                         desc1ADF, ADF_info1]
             )
 
             prov2.change(
@@ -1885,7 +2028,8 @@ with gr.Blocks(title="Análisis Educativo") as app:
                 inputs=[dataset_state, prov2, sec2, amb2, var2],
                 outputs=[dep2, dataset_filter_state_2, tend2, 
                          desc2, STL_graph2, STL_info2,
-                         desc2a, auto_graph2, auto_info2]
+                         desc2a, auto_graph2, auto_info2,
+                         desc2ADF, ADF_info2]
             )
             
             prov3.change(
@@ -1893,7 +2037,8 @@ with gr.Blocks(title="Análisis Educativo") as app:
                 inputs=[dataset_state, prov3, sec3, amb3, var3],
                 outputs=[dep3, dataset_filter_state_3, tend3, 
                          desc3, STL_graph3, STL_info3,
-                         desc3a, auto_graph3, auto_info3]
+                         desc3a, auto_graph3, auto_info3,
+                         desc3ADF, ADF_info3]
             )
             
             dep1.change(
@@ -1901,7 +2046,8 @@ with gr.Blocks(title="Análisis Educativo") as app:
                 inputs=[dataset_state, prov1, dep1, sec1, amb1, var1],
                 outputs=[dataset_filter_state_1, tend1, 
                          desc1, STL_graph1, STL_info1,
-                         desc1a, auto_graph1, auto_info1]
+                         desc1a, auto_graph1, auto_info1,
+                         desc1ADF, ADF_info1]
             )
 
             dep2.change(
@@ -1909,7 +2055,8 @@ with gr.Blocks(title="Análisis Educativo") as app:
                 inputs = [dataset_state, prov2, dep2, sec2, amb2, var2],
                 outputs=[dataset_filter_state_2, tend2,
                          desc2, STL_graph2, STL_info2,
-                         desc2a, auto_graph2, auto_info2]
+                         desc2a, auto_graph2, auto_info2,
+                         desc2ADF, ADF_info2]
             )
 
             dep3.change(
@@ -1917,7 +2064,8 @@ with gr.Blocks(title="Análisis Educativo") as app:
                 inputs = [dataset_state, prov3, dep3, sec3, amb3, var3],
                 outputs=[dataset_filter_state_3, tend3, 
                          desc3, STL_graph3, STL_info3,
-                         desc3a, auto_graph3, auto_info3]
+                         desc3a, auto_graph3, auto_info3,
+                         desc3ADF, ADF_info3]
             )
 
             sec1.change(
@@ -1925,7 +2073,8 @@ with gr.Blocks(title="Análisis Educativo") as app:
                 inputs = [dataset_state, prov1, dep1, sec1, amb1, var1],
                 outputs=[dataset_filter_state_1, tend1, 
                          desc1, STL_graph1, STL_info1,
-                         desc1a, auto_graph1, auto_info1]
+                         desc1a, auto_graph1, auto_info1,
+                         desc1ADF, ADF_info1]
             )
             
             sec2.change(
@@ -1933,7 +2082,8 @@ with gr.Blocks(title="Análisis Educativo") as app:
                 inputs = [dataset_state, prov2, dep2, sec2, amb2, var2],
                 outputs=[dataset_filter_state_2, tend2, 
                          desc2, STL_graph2, STL_info2,
-                         desc2a, auto_graph2, auto_info2]
+                         desc2a, auto_graph2, auto_info2,
+                         desc2ADF, ADF_info2]
             )
 
             sec3.change(
@@ -1941,7 +2091,8 @@ with gr.Blocks(title="Análisis Educativo") as app:
                 inputs = [dataset_state, prov3, dep3, sec3, amb3, var3],
                 outputs=[dataset_filter_state_3, tend3, 
                          desc3, STL_graph3, STL_info3,
-                         desc3a, auto_graph3, auto_info3]
+                         desc3a, auto_graph3, auto_info3,
+                         desc3ADF, ADF_info3]
             )
 
             amb1.change(
@@ -1949,7 +2100,8 @@ with gr.Blocks(title="Análisis Educativo") as app:
                 inputs = [dataset_state, prov1, dep1, sec1, amb1, var1],
                 outputs=[dataset_filter_state_1, tend1, 
                          desc1, STL_graph1, STL_info1,
-                         desc1a, auto_graph1, auto_info1]
+                         desc1a, auto_graph1, auto_info1,
+                         desc1ADF, ADF_info1]
             )
             
             amb2.change(
@@ -1957,7 +2109,8 @@ with gr.Blocks(title="Análisis Educativo") as app:
                 inputs = [dataset_state, prov2, dep2, sec2, amb2, var2],
                 outputs=[dataset_filter_state_2, tend2, 
                          desc2, STL_graph2, STL_info2,
-                         desc2a, auto_graph2, auto_info2]
+                         desc2a, auto_graph2, auto_info2,
+                         desc2ADF, ADF_info2]
             )
 
             amb3.change(
@@ -1965,7 +2118,8 @@ with gr.Blocks(title="Análisis Educativo") as app:
                 inputs = [dataset_state, prov3, dep3, sec3, amb3, var3],
                 outputs=[dataset_filter_state_3, tend3, 
                          desc3, STL_graph3, STL_info3,
-                         desc3a, auto_graph3, auto_info3]
+                         desc3a, auto_graph3, auto_info3,
+                         desc3ADF, ADF_info3]
             )
 
             var1.change(
@@ -1973,7 +2127,8 @@ with gr.Blocks(title="Análisis Educativo") as app:
                 inputs = [dataset_state, prov1, dep1, sec1, amb1, var1],
                 outputs=[dataset_filter_state_1, tend1, 
                          desc1, STL_graph1, STL_info1,
-                         desc1a, auto_graph1, auto_info1]
+                         desc1a, auto_graph1, auto_info1,
+                         desc1ADF, ADF_info1]
             )
             
             var2.change(
@@ -1981,7 +2136,8 @@ with gr.Blocks(title="Análisis Educativo") as app:
                 inputs = [dataset_state, prov2, dep2, sec2, amb2, var2],
                 outputs=[dataset_filter_state_2, tend2, 
                          desc2, STL_graph2, STL_info2,
-                         desc2a, auto_graph2, auto_info2]
+                         desc2a, auto_graph2, auto_info2,
+                         desc2ADF, ADF_info2]
             )
 
             var3.change(
@@ -1989,7 +2145,8 @@ with gr.Blocks(title="Análisis Educativo") as app:
                 inputs = [dataset_state, prov3, dep3, sec3, amb3, var3],
                 outputs=[dataset_filter_state_3, tend3, 
                          desc3, STL_graph3, STL_info3,
-                         desc3a, auto_graph3, auto_info3]
+                         desc3a, auto_graph3, auto_info3,
+                         desc3ADF, ADF_info3]
             )
 
             graph_serie.change(
@@ -2039,7 +2196,9 @@ with gr.Blocks(title="Análisis Educativo") as app:
                          STL_info1, STL_info2, STL_info3,
                          desc1a, desc2a, desc3a,
                          auto_graph1, auto_graph2, auto_graph3,
-                         auto_info1, auto_info2, auto_info3]
+                         auto_info1, auto_info2, auto_info3,
+                         desc1ADF, desc2ADF, desc3ADF,
+                         ADF_info1, ADF_info2, ADF_info3]
             )
 
             graph_button.click(
@@ -2061,6 +2220,13 @@ with gr.Blocks(title="Análisis Educativo") as app:
                 inputs=[dataset_filter_state_1, dataset_filter_state_2, dataset_filter_state_3,
                         var1, var2, var3],
                 outputs=[auto_graph1, auto_info1, auto_graph2, auto_info2, auto_graph3, auto_info3]
+            )
+
+            ADF_button.click(
+                fn=tab_ST_ADF_all,
+                inputs=[dataset_filter_state_1, dataset_filter_state_2, dataset_filter_state_3,
+                        var1, var2, var3],
+                outputs=[ADF_info1, ADF_info2, ADF_info3]
             )
 
 
