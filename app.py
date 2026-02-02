@@ -7,7 +7,7 @@ import matplotlib.pyplot as plt
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 from statsmodels.tsa.seasonal import STL # Modelo Seasonal-Trend con LOESS para descomposición de series cortas
-from statsmodels.tsa.stattools import acf # Función de Autocorrelación
+from statsmodels.tsa.stattools import acf, pacf # Funciones de Autocorrelación y de Autocorrelación Parcial
 from statsmodels.tsa.stattools import adfuller # Test de Dickey-Fuller Aumentado
 import seaborn as sns
 
@@ -920,23 +920,32 @@ def tab_ST_on_mat_change(dataset_type):
 
     if df.empty:
         msg = "Sin datos"
-        return df, gr.update(choices=[], value=None), gr.update(choices=[], value=None), \
-                gr.update(value="Ambos"), gr.update(value="Ambos"), \
-                gr.update(choices=[], value=None), gr.Plot(visible=False), \
-                gr.update(choices=[], value=None), gr.update(choices=[], value=None), \
-                gr.update(value="Ambos"), gr.update(value="Ambos"), \
-                gr.update(choices=[], value=None), gr.Plot(visible=False), \
-                gr.update(choices=[], value=None), gr.update(choices=[], value=None), \
-                gr.update(value="Ambos"), gr.update(value="Ambos"), \
-                gr.update(choices=[], value=None), gr.Plot(visible=False), \
-                msg, msg, msg, \
-                gr.Plot(visible=False), gr.Plot(visible=False), gr.Plot(visible=False), \
-                gr.update(visible=False), gr.update(visible=False), gr.update(visible=False), \
-                msg, msg, msg, \
-                gr.Plot(visible=False), gr.Plot(visible=False), gr.Plot(visible=False), \
-                gr.update(visible=False), gr.update(visible=False), gr.update(visible=False), \
-                msg, msg, msg, \
+        return (df, gr.update(choices=[], value=None), gr.update(choices=[], value=None),
+                gr.update(value="Ambos"), gr.update(value="Ambos"),
+                gr.update(choices=[], value=None), gr.Plot(visible=False),
+                gr.update(choices=[], value=None), gr.update(choices=[], value=None),
+                gr.update(value="Ambos"), gr.update(value="Ambos"),
+                gr.update(choices=[], value=None), gr.Plot(visible=False),
+                gr.update(choices=[], value=None), gr.update(choices=[], value=None),
+                gr.update(value="Ambos"), gr.update(value="Ambos"),
+                gr.update(choices=[], value=None), gr.Plot(visible=False),
+                None, None, None,
+                msg, msg, msg, # Sección Descomposición de las Series
+                gr.Plot(visible=False), gr.Plot(visible=False), gr.Plot(visible=False),
+                gr.update(visible=False), gr.update(visible=False), gr.update(visible=False),
+                msg, msg, msg, # Sección Diferenciación de las Series y Prueba ADF
+                gr.update(visible=True, value=0),
+                gr.update(visible=True, value=0),
+                gr.update(visible=True, value=0),
+                gr.update(visible=False), gr.update(visible=False), gr.update(visible=False),
+                gr.update(visible=False), gr.update(visible=False), gr.update(visible=False),
+                msg, msg, msg, # Sección ACF y PACF
+                gr.Plot(visible=False), gr.Plot(visible=False), gr.Plot(visible=False),
+                gr.update(visible=False), gr.update(visible=False), gr.update(visible=False),
+                gr.Plot(visible=False), gr.Plot(visible=False), gr.Plot(visible=False),
                 gr.update(visible=False), gr.update(visible=False), gr.update(visible=False)
+                )
+
                                
     
     # Se arma el listado ordenado de provincias y se guarda la primera provincia
@@ -980,33 +989,40 @@ def tab_ST_on_mat_change(dataset_type):
            f"SECTOR: {sector.upper()} - ÁMBITO: {ambito.upper()}<br>"
            f"INDICADOR: {dict_nlargos[indicadores_originales[0]].upper()}"
            "</b>")
-    return df, gr.update(choices=provincias_sorted, value=prov_first), \
-                gr.update(choices=dptos_sorted, value=dpto_first), \
-                gr.update(choices=["Estatal", "Privado", "Ambos"], value="Ambos"), \
-                gr.update(choices=["Urbano", "Rural", "Ambos"], value="Ambos"), \
-                gr.update(choices=indicadores, value=indicador_first), \
-                gr.Plot(visible=False), \
-                gr.update(choices=provincias_sorted, value=prov_first), \
-                gr.update(choices=dptos_sorted, value=dpto_first), \
-                gr.update(choices=["Estatal", "Privado", "Ambos"], value="Ambos"), \
-                gr.update(choices=["Urbano", "Rural", "Ambos"], value="Ambos"), \
-                gr.update(choices=indicadores, value=indicador_first), \
-                gr.Plot(visible=False), \
-                gr.update(choices=provincias_sorted, value=prov_first), \
-                gr.update(choices=dptos_sorted, value=dpto_first), \
-                gr.update(choices=["Estatal", "Privado", "Ambos"], value="Ambos"), \
-                gr.update(choices=["Urbano", "Rural", "Ambos"], value="Ambos"), \
-                gr.update(choices=indicadores, value=indicador_first), \
-                gr.Plot(visible=False), \
-                filtered, filtered, filtered, \
-                msg, msg, msg, \
-                gr.Plot(visible=False), gr.Plot(visible=False), gr.Plot(visible=False), \
-                gr.update(visible=False), gr.update(visible=False), gr.update(visible=False), \
-                msg, msg, msg, \
-                gr.Plot(visible=False), gr.Plot(visible=False), gr.Plot(visible=False), \
-                gr.update(visible=False), gr.update(visible=False), gr.update(visible=False), \
-                msg, msg, msg, \
-                gr.update(visible=False), gr.update(visible=False), gr.update(visible=False)
+    return (df, gr.update(choices=provincias_sorted, value=prov_first),
+            gr.update(choices=dptos_sorted, value=dpto_first),
+            gr.update(choices=["Estatal", "Privado", "Ambos"], value="Ambos"),
+            gr.update(choices=["Urbano", "Rural", "Ambos"], value="Ambos"),
+            gr.update(choices=indicadores, value=indicador_first),
+            gr.Plot(visible=False),
+            gr.update(choices=provincias_sorted, value=prov_first),
+            gr.update(choices=dptos_sorted, value=dpto_first),
+            gr.update(choices=["Estatal", "Privado", "Ambos"], value="Ambos"),
+            gr.update(choices=["Urbano", "Rural", "Ambos"], value="Ambos"),
+            gr.update(choices=indicadores, value=indicador_first),
+            gr.Plot(visible=False),
+            gr.update(choices=provincias_sorted, value=prov_first),
+            gr.update(choices=dptos_sorted, value=dpto_first),
+            gr.update(choices=["Estatal", "Privado", "Ambos"], value="Ambos"),
+            gr.update(choices=["Urbano", "Rural", "Ambos"], value="Ambos"),
+            gr.update(choices=indicadores, value=indicador_first),
+            gr.Plot(visible=False),
+            filtered, filtered, filtered,
+            msg, msg, msg, # Sección Descomposición de las Series
+            gr.Plot(visible=False), gr.Plot(visible=False), gr.Plot(visible=False),
+            gr.update(visible=False), gr.update(visible=False), gr.update(visible=False),
+            msg, msg, msg, # Sección Diferenciación de las Series y Prueba ADF
+            gr.update(visible=True, value=0),
+            gr.update(visible=True, value=0),
+            gr.update(visible=True, value=0),
+            gr.update(visible=False), gr.update(visible=False), gr.update(visible=False),
+            gr.update(visible=False), gr.update(visible=False), gr.update(visible=False),
+            msg, msg, msg, # Sección ACF y PACF
+            gr.Plot(visible=False), gr.Plot(visible=False), gr.Plot(visible=False),
+            gr.update(visible=False), gr.update(visible=False), gr.update(visible=False),
+            gr.Plot(visible=False), gr.Plot(visible=False), gr.Plot(visible=False),
+            gr.update(visible=False), gr.update(visible=False), gr.update(visible=False)
+            )
             
 def tab_ST_on_prov_change(df, provincia, sector, ambito, indicador):
     
@@ -1025,7 +1041,14 @@ def tab_ST_on_prov_change(df, provincia, sector, ambito, indicador):
                                    KEY_COLUMNS, True, min_reg=MIN_REG)
     
     if filtered.empty:
-        return None, None, gr.Plot(visible=False), None, gr.Plot(visible=False), gr.update(visible=False)
+        return (None, None, 
+                gr.Plot(visible=False), # Gráfico de tendencia
+                None, gr.Plot(visible=False), gr.update(visible=False), # Sección de Componentes
+                None, gr.Plot(visible=False), gr.update(visible=False), # Sección de Autocorrelación (ACF)
+                gr.Plot(visible=False), gr.update(visible=False), # Sección de Autocorrelación (PACF)
+                None, gr.update(value=0, visible=True), # Sección de Diferenciación y Prueba ADF
+                gr.Plot(visible=False), gr.update(visible=False) # Sección de Diferenciación y Prueba ADF
+                )
     
     # Se genera el gráfico para el primer indicador
     # mmov =  0 < mm < 4
@@ -1037,10 +1060,14 @@ def tab_ST_on_prov_change(df, provincia, sector, ambito, indicador):
            f"SECTOR: {sector.upper()} - ÁMBITO: {ambito.upper()}<br>"
            f"INDICADOR: {dict_nlargos[ind_orig].upper()}"
            "</b>")
-    return gr.update(choices=dptos_sorted, value=dpto_first), filtered, gr.Plot(visible=False), \
-            msg, gr.Plot(visible=False), gr.update(visible=False), \
-            msg, gr.Plot(visible=False), gr.update(visible=False), \
-            msg, gr.update(visible=False)
+    return (gr.update(choices=dptos_sorted, value=dpto_first), filtered, \
+            gr.Plot(visible=False), # Gráfico de tendencia
+            msg, gr.Plot(visible=False), gr.update(visible=False), # Sección de Componentes
+            msg, gr.Plot(visible=False), gr.update(visible=False), # Sección de Autocorrelación (ACF)
+            gr.Plot(visible=False), gr.update(visible=False), # Sección de Autocorrelación (PACF)
+            msg, gr.update(value=0, visible=True), # Sección de Diferenciación y Prueba ADF
+            gr.Plot(visible=False), gr.update(visible=False) # Sección de Diferenciación y Prueba ADF
+            )
 
 def tab_ST_on_dep_change(df, provincia, departamento, sector, ambito, indicador):
 
@@ -1052,7 +1079,14 @@ def tab_ST_on_dep_change(df, provincia, departamento, sector, ambito, indicador)
     filtered = get_filtered_subset(df, provincia, departamento, sector, ambito, KEY_COLUMNS, True, min_reg=MIN_REG)
     
     if filtered.empty:
-        return None, gr.Plot(visible=False), None, gr.Plot(visible=False), gr.update(visible=False)
+        return (None, 
+                gr.Plot(visible=False), # Gráfico de tendencia
+                None, gr.Plot(visible=False), gr.update(visible=False), # Sección de Componentes
+                None, gr.Plot(visible=False), gr.update(visible=False), # Sección de Autocorrelación (ACF)
+                gr.Plot(visible=False), gr.update(visible=False), # Sección de Autocorrelación (PACF)
+                None, gr.update(value=0, visible=True), # Sección de Diferenciación y Prueba ADF
+                gr.Plot(visible=False), gr.update(visible=False) # Sección de Diferenciación y Prueba ADF
+                )
     
     # Se genera el gráfico para el primer indicador
     # mmov =  0 < mm < 4
@@ -1064,10 +1098,14 @@ def tab_ST_on_dep_change(df, provincia, departamento, sector, ambito, indicador)
            f"SECTOR: {sector.upper()} - ÁMBITO: {ambito.upper()}<br>"
            f"INDICADOR: {dict_nlargos[ind_orig].upper()}"
            "</b>")
-    return filtered, gr.Plot(visible=False), \
-            msg, gr.Plot(visible=False), gr.update(visible=False), \
-            msg, gr.Plot(visible=False), gr.update(visible=False), \
-            msg, gr.update(visible=False)
+    return (filtered,
+            gr.Plot(visible=False), # Gráfico de tendencia
+            msg, gr.Plot(visible=False), gr.update(visible=False), # Sección de Componentes
+            msg, gr.Plot(visible=False), gr.update(visible=False), # Sección de Autocorrelación (ACF)
+            gr.Plot(visible=False), gr.update(visible=False), # Sección de Autocorrelación (PACF)
+            msg, gr.update(value=0, visible=True), # Sección de Diferenciación y Prueba ADF
+            gr.Plot(visible=False), gr.update(visible=False) # Sección de Diferenciación y Prueba ADF
+            )
 
 def tab_ST_on_option_change(df, provincia, departamento, sector, ambito, indicador):
 
@@ -1079,7 +1117,14 @@ def tab_ST_on_option_change(df, provincia, departamento, sector, ambito, indicad
     filtered = get_filtered_subset(df, provincia, departamento, sector, ambito, KEY_COLUMNS, True, min_reg=MIN_REG)
     
     if filtered.empty:
-        return None, gr.Plot(visible=False), None, gr.Plot(visible=False), gr.update(visible=False)
+        return (None, 
+                gr.Plot(visible=False), # Gráfico de tendencia
+                None, gr.Plot(visible=False), gr.update(visible=False), # Sección de Componentes
+                None, gr.Plot(visible=False), gr.update(visible=False), # Sección de Autocorrelación (ACF)
+                gr.Plot(visible=False), gr.update(visible=False), # Sección de Autocorrelación (PACF)
+                None, gr.update(value=0, visible=True), # Sección de Diferenciación y Prueba ADF
+                gr.Plot(visible=False), gr.update(visible=False) # Sección de Diferenciación y Prueba ADF
+                )
     
     # Se genera el gráfico para el primer indicador
     # mmov =  0 < mm < 4
@@ -1091,10 +1136,14 @@ def tab_ST_on_option_change(df, provincia, departamento, sector, ambito, indicad
            f"SECTOR: {sector.upper()} - ÁMBITO: {ambito.upper()}<br>"
            f"INDICADOR: {dict_nlargos[ind_orig].upper()}"
            "</b>")
-    return filtered, gr.Plot(visible=False), \
-            msg, gr.Plot(visible=False), gr.update(visible=False), \
-            msg, gr.Plot(visible=False), gr.update(visible=False), \
-            msg, gr.update(visible=False)
+    return (filtered,
+            gr.Plot(visible=False), # Gráfico de tendencia
+            msg, gr.Plot(visible=False), gr.update(visible=False), # Sección de Componentes
+            msg, gr.Plot(visible=False), gr.update(visible=False), # Sección de Autocorrelación (ACF)
+            gr.Plot(visible=False), gr.update(visible=False), # Sección de Autocorrelación (PACF)
+            msg, gr.update(value=0, visible=True), # Sección de Diferenciación y Prueba ADF
+            gr.Plot(visible=False), gr.update(visible=False) # Sección de Diferenciación y Prueba ADF
+            )
 
 def tab_ST_on_graph_change(filtered1, filtered2, filtered3, ind1, ind2, ind3,
                          serie, mg, tend, mm, sd):
@@ -1250,11 +1299,12 @@ def tab_ST_stl_decomp_all(df1, df2, df3, var1, var2, var3):
             gr.update(value = fig3, visible = True), \
             gr.update(value = desc3, visible = True)
 
-def tab_ST_autocorr(df, indicador):
+def tab_ST_ACF(df, indicador):
     """
-    Calcula función de autocorrelación, genera un gráfico interactivo y analiza la ciclicidad.
+    Calcula la función de autocorrelación (ACF), genera un gráfico interactivo y analiza la ciclicidad.
     - df: dataset filtrado con columnas con nombres originales ['periodo', indicadores]
     - indicador: nombre corto del indicador
+    IMPORTANTE: la serie debe ser estacionaria!!!
     """
     # Se convierte el nombre corto del  "indicador" a su nombre original
     ind_orig = next((k for k, v in dict_ncortos.items() if v == indicador), indicador)
@@ -1269,6 +1319,7 @@ def tab_ST_autocorr(df, indicador):
     lag_max = np.argmax(valores_acf[1:]) + 1
     val_max = valores_acf[lag_max]
     
+    # Construcción del gráfico interactivo
     fig = go.Figure()
     fig.add_trace(go.Bar(
         x=list(range(lags + 1)),
@@ -1294,7 +1345,8 @@ def tab_ST_autocorr(df, indicador):
     )
     fig.update_layout(
         # title=f"{dict_nlargos[ind_orig].upper()}",
-        # height=400,
+        title="Función de Autocorrelación (ACF)",
+        height=400,
         autosize=True, # Para que el gráfico responda al contenedor
         margin=dict(l=10, r=10, t=50, b=10, pad=0),
         xaxis_title="Desplazamiento (Años)",
@@ -1307,23 +1359,104 @@ def tab_ST_autocorr(df, indicador):
     reporte = (
         f"<b>Coeficiente de Correlación más alto: {val_max:.4f}</b> en el desplazamiento de {lag_max} años. "
         f"Existe una probabilidad alta de que los patrones se repitan cada <b>{lag_max} años</b>. "
-        f"Este valor {es_significativo} bajo un intervalo de confianza del 95%."
+        f"Este valor {es_significativo} bajo un intervalo de confianza del 95%.<br><br><br>"
         )
     
     return fig, reporte
 
-def tab_ST_autocorr_all(df1, df2, df3, var1, var2, var3):
+def tab_ST_PACF(df, indicador):
+    """
+    Calcula la función de autocorrelación parcial (PACF), genera un gráfico interactivo
+    y analiza la influencia directa de los retardos.
+    - df: dataset filtrado con columnas con nombres originales ['periodo', indicadores]
+    - indicador: nombre corto del indicador
+    IMPORTANTE: la serie debe ser estacionaria!!!
+    """
+    # Preparación de datos (idéntica a la función anterior)
+    ind_orig = next((k for k, v in dict_ncortos.items() if v == indicador), indicador)
+    df = df.sort_values('periodo').reset_index(drop=True)
+    serie = df[ind_orig].dropna()
 
-    fig1, desc1 = tab_ST_autocorr(df1, var1)
-    fig2, desc2 = tab_ST_autocorr(df2, var2)
-    fig3, desc3 = tab_ST_autocorr(df3, var3)
+    n_obs = len(df)
+    lags = 6  # Para asegurar estabilidad en PACF con n=14
+    
+    # Cálculo de PACF usando el método de Yule-Walker para muestras pequeñas
+    # nlags debe ser menor a n_obs/2
+    valores_pacf = pacf(serie, nlags=lags, method='ywm')
+    
+    # Identificación del lag más significativo (excluyendo lag 0)
+    lag_max = np.argmax(np.abs(valores_pacf[1:])) + 1
+    val_max = valores_pacf[lag_max]
+    
+    # Construcción del gráfico interactivo
+    fig = go.Figure()
+    fig.add_trace(go.Bar(
+        x=list(range(lags + 1)),
+        y=valores_pacf,
+        marker_color='orange',
+        name='PACF'
+    ))
+    
+    # Intervalos de confianza (Aproximación de Bartlett/Quenouille para PACF)
+    conf_interval = 1.96 / np.sqrt(n_obs)
+    fig.add_hline(y=conf_interval, line_dash="dash", line_color="black", annotation_text="IC 95%")
+    fig.add_hline(y=-conf_interval, line_dash="dash", line_color="black", annotation_text="IC 95%")
+    
+    fig.update_xaxes(
+        tickmode='linear', 
+        tick0=0, 
+        dtick=1, 
+        tickfont=dict(size=12, color='black', family='Arial Black'),
+        tickformat='d',
+    )
+    fig.update_yaxes(
+        tickfont=dict(size=12, color='black', family='Arial Black'),
+    )
+    fig.update_layout(
+        height=400,
+        autosize=True,
+        margin=dict(l=10, r=10, t=50, b=10, pad=0),
+        template="plotly_white",
+        title="Función de Autocorrelación Parcial (PACF)",
+        xaxis_title="Desplazamiento (Años)",
+    )
+    
+    # Reporte estadístico para PACF
+    es_significativo = "es significativo" if abs(val_max) > conf_interval else "no es significativo"
+    reporte = (
+        f"<b>PACF más alta: {val_max:.4f}</b> en el lag de {lag_max} año(s). "
+        f"Esto indica que el valor actual tiene una relación directa con lo ocurrido hace {lag_max} año(s), "
+        f"eliminando efectos intermedios. Este valor {es_significativo} (IC 95%)."
+    )
+    
+    return fig, reporte
 
-    return gr.update(value = fig1, visible = True), \
-            gr.update(value = desc1, visible = True), \
-            gr.update(value = fig2, visible = True), \
-            gr.update(value = desc2, visible = True), \
-            gr.update(value = fig3, visible = True), \
-            gr.update(value = desc3, visible = True)
+def tab_ST_ACF_PACF_all(df1, df2, df3, var1, var2, var3):
+
+    ### IMPORTANTE: las series var1, var2 y var3 deben ser estacionarias
+    ### para que la función de autocorrelación y la función de autocorrelación parcial
+    ### tengan relevancia estadística.
+
+    fig1a, desc1a = tab_ST_ACF(df1, var1)
+    fig2a, desc2a = tab_ST_ACF(df2, var2)
+    fig3a, desc3a = tab_ST_ACF(df3, var3)
+
+    fig1b, desc1b = tab_ST_PACF(df1, var1)
+    fig2b, desc2b = tab_ST_PACF(df2, var2)
+    fig3b, desc3b = tab_ST_PACF(df3, var3)
+
+    return gr.update(value = fig1a, visible = True), \
+            gr.update(value = desc1a, visible = True), \
+            gr.update(value = fig2a, visible = True), \
+            gr.update(value = desc2a, visible = True), \
+            gr.update(value = fig3a, visible = True), \
+            gr.update(value = desc3a, visible = True), \
+            gr.update(value = fig1b, visible = True), \
+            gr.update(value = desc1b, visible = True), \
+            gr.update(value = fig2b, visible = True), \
+            gr.update(value = desc2b, visible = True), \
+            gr.update(value = fig3b, visible = True), \
+            gr.update(value = desc3b, visible = True)
 
 def tab_ST_ADF(df, indicador):
     """
@@ -1420,6 +1553,171 @@ def tab_ST_ADF_all(df1, df2, df3, var1, var2, var3):
             gr.update(value = desc2, visible = True), \
             gr.update(value = desc3, visible = True)
 
+def tab_ST_diff_ADF(df, indicador, grado, graficar=True, diferenciar=True, aplicar_adf=True):
+    """
+    Realiza la diferenciación/integración de una serie y opcionalmente aplica el test ADF.
+    - df: dataset original con columnas ['periodo', ind_orig]
+    - indicador: nombre corto del indicador
+    - grado: nivel de diferenciación/integración
+    - graficar: True para generar el gráfico Plotly
+    - diferenciar: True para diferenciar, False para integrar
+    - aplicar_adf: True para ejecutar el test de Dickey-Fuller Aumentado
+    """
+
+    # Recuperación del nombre original mediante el diccionario global
+    ind_orig = next((k for k, v in dict_ncortos.items() if v == indicador), indicador)
+    
+    # Preparación de datos
+    df_result = df.sort_values('periodo').copy()
+    series_pasos = []
+    nombres_pasos = []
+    
+    # Serie inicial (Grado 0)
+    current_serie = df_result[ind_orig].copy()
+    series_pasos.append(current_serie.values)
+    nombres_pasos.append("Serie Original")
+    
+    # Proceso de transformación (diferenciación o integración)
+    for i in range(1, grado + 1):
+        if diferenciar:
+            current_serie = current_serie.diff()
+            label = f"Dif. Grado {i}"
+        else:
+            current_serie = current_serie.cumsum()
+            label = f"Int. Grado {i}"
+        series_pasos.append(current_serie.values)
+        nombres_pasos.append(label)
+    
+    # Actualización del DataFrame con el resultado final (se eliminan NaNs para el DF de salida)
+    df_result[ind_orig] = current_serie
+
+    # Generación del Gráfico
+    fig = None
+    if graficar:
+        fig = go.Figure()
+        
+        for idx, serie_val in enumerate(series_pasos):
+            # Se agregan todos los trazos al mismo objeto Figure
+            fig.add_trace(
+                go.Scatter(
+                    x=df_result['periodo'], 
+                    y=serie_val, 
+                    mode='lines+markers', 
+                    name=nombres_pasos[idx],
+                    visible=True  # Todas las series visibles simultáneamente
+                )
+            )
+        
+        # Configuración estética y títulos
+        op_name = "Diferenciación" if diferenciar else "Integración"
+        fig.update_layout(
+            # title=f"Análisis de {op_name}: {indicador} (Pasos 0 a {grado})",
+            # xaxis_title="Años",
+            # yaxis_title="Valor / Diferencia",
+            template="plotly_white",
+            showlegend=True,
+            legend=dict(
+                orientation="h", 
+                yanchor="bottom", 
+                y=1.02, 
+                xanchor="right", 
+                x=1
+            ),
+            hovermode="x unified", # Muestra todos los valores al pasar el mouse por el eje X
+            height=300,
+            autosize=True, # Para que el gráfico responda al contenedor
+            margin=dict(l=10, r=10, t=50, b=10, pad=0),
+        )
+        fig.update_xaxes(
+            tickmode='linear', 
+            tick0=2011, 
+            dtick=1, 
+            range=[2010.5, 2024.5],
+            tickfont=dict(size=8, color='black', family='Arial Black'),
+            tickformat='d',
+            # showticklabels=True # Fuerza la visibilidad en todos los subgráficos
+        )
+        fig.update_yaxes(
+            tickfont=dict(size=8, color='black', family='Arial Black'),
+    )
+
+    # Aplicación de Test ADF (sobre la serie final transformada) ---
+    html_output = None
+    if aplicar_adf:
+        serie_test = current_serie.dropna()
+        n_obs = len(serie_test)
+        
+        # Verificación de serie constante
+        if n_obs > 1 and np.all(serie_test == serie_test.iloc[0]):
+            html_output = """
+            <div style="padding:15px; border:2px solid #ffa000; background-color:#fff9c4; border-radius:8px;">
+                <strong style="color:#f57c00;"> Error en el Análisis:</strong><br>
+                La serie temporal es constante. La varianza es 0, lo que impide calcular el estadístico ADF.
+            </div>
+            """
+        elif n_obs > 4: # Mínimo de observaciones para una prueba con lags
+            res = adfuller(serie_test, autolag='AIC')
+            test_stat, p_value, lags_used, crit_values = res[0], res[1], res[2], res[4]
+            
+            es_estacionaria = p_value < 0.05
+            color_status = "green" if es_estacionaria else "#d93025"
+            conclusion_msg = "ESTACIONARIA" if es_estacionaria else "NO ESTACIONARIA"
+
+            html_output = f"""
+            <div style="font-family: 'Segoe UI', Arial, sans-serif; padding: 20px; border: 1px solid #e0e0e0; border-radius: 8px; background-color: #ffffff;">
+                <table style="width: 100%; border-collapse: collapse; margin: 20px 0;">
+                    <tbody>
+                        <tr>
+                            <td style="border: 1px solid #ddd; padding: 10px; font-size: 16px !important; font-weight: bold;">Estadístico de la Prueba</td>
+                            <td style="border: 1px solid #ddd; padding: 10px; text-align: center; font-size: 16px !important; font-weight: bold;">{test_stat:.4f}</td>
+                        </tr>
+                        <tr>
+                            <td style="border: 1px solid #ddd; padding: 10px; font-size: 16px !important; font-weight: bold;">P-Valor (Nivel de significancia)</td>
+                            <td style="border: 1px solid #ddd; padding: 10px; text-align: center; font-size: 16px !important; font-weight: bold;">{p_value:.4f}</td>
+                        </tr>
+                        <tr>
+                            <td style="border: 1px solid #ddd; padding: 10px; font-size: 16px !important; font-weight: bold;">Rezagos utilizados (AIC)</td>
+                            <td style="border: 1px solid #ddd; padding: 10px; text-align: center; font-size: 16px !important; font-weight: bold;">{lags_used}</td>
+                        </tr>
+                    </tbody>
+                </table>
+                <div style="background-color: #f1f3f4; padding: 15px; border-radius: 5px; margin-bottom: 20px;">
+                    <h4 style="margin: 0 0 10px 0; color: #5f6368;">Valores Críticos:</h4>
+                    <code>1% (Confianza 99%): {crit_values['1%']:.4f}</code><br>
+                    <code>5% (Confianza 95%): {crit_values['5%']:.4f}</code><br>
+                    <code>10% (Confianza 90%): {crit_values['10%']:.4f}</code>
+                </div>
+                <div style="padding: 15px; border-left: 5px solid {color_status}; background-color: {color_status}10; margin-bottom: 20px;">
+                    <strong style="color: {color_status}; font-size: 18px !important;">Conclusión: {conclusion_msg}</strong>
+                    <p style="margin: 5px 0 0 0; color: #3c4043; font-size: 14px !important;">
+                        A un nivel de confianza del 95%, el p-valor de {p_value:.4f} indica que 
+                        {'se rechaza' if es_estacionaria else 'no se puede rechazar'} la hipótesis nula de raíz unitaria.
+                    </p>
+                </div>
+            </div>
+            """
+        else:
+            html_output = "<div>Datos insuficientes para realizar el test ADF.</div>"
+
+    # Retorno de los tres elementos para la interfaz
+    return df_result, \
+            (gr.update(value=fig, visible=True) if fig else gr.update(visible=False)), \
+            (gr.update(value=html_output, visible=True) if aplicar_adf else gr.update(visible=False))
+
+def tab_ST_diff_ADF_all(df1, df2, df3, var1, var2, var3, level1, level2, level3):
+    
+    dfdiff1, fig1, desc1 = tab_ST_diff_ADF(df1, var1, level1, 
+                                           graficar=True, diferenciar=True, aplicar_adf=True)
+    dfdiff2, fig2, desc2 = tab_ST_diff_ADF(df2, var2, level2, 
+                                           graficar=True, diferenciar=True, aplicar_adf=True)
+    dfdiff3, fig3, desc3 = tab_ST_diff_ADF(df3, var3, level3, 
+                                           graficar=True, diferenciar=True, aplicar_adf=True)
+
+    return dfdiff1, fig1, desc1, level1, dfdiff2, fig2, desc2, level2, dfdiff3, fig3, desc3, level3
+
+def tab_ST_on_level_change():
+    return gr.Plot(visible=False), gr.update(visible=False)
+
 # endregion FUNCIONES PARA LA PESTAÑA "SERIES TEMPORALES"
 
 
@@ -1496,7 +1794,14 @@ with gr.Blocks(title="Análisis Educativo") as app:
     dataset_filter_state_1 = gr.State(pd.DataFrame())
     dataset_filter_state_2 = gr.State(pd.DataFrame())
     dataset_filter_state_3 = gr.State(pd.DataFrame())
-    
+    # Almacenamiento para los tres datasets diferenciados, en pestaña ST
+    dataset_diff_state_1 = gr.State(pd.DataFrame())
+    dataset_diff_state_2 = gr.State(pd.DataFrame())
+    dataset_diff_state_3 = gr.State(pd.DataFrame())
+    # Para guardar el grado de diferenciación
+    level_diff_state_1 = gr.State(value=0)
+    level_diff_state_2 = gr.State(value=0)
+    level_diff_state_3 = gr.State(value=0)
 
     gr.Row(elem_classes="header-tab")
     
@@ -1569,7 +1874,7 @@ with gr.Blocks(title="Análisis Educativo") as app:
                     with gr.Row(elem_classes="custom-tab"):
                         info_label = gr.HTML(value="DEBE SELECCIONARSE EL BOTÓN \"MOSTRAR DATOS\" PARA VISUALIZAR LOS RESULTADOS", elem_classes="info-display-1")
                     
-                    # Componente que contiene toda la información a mostrar y que alterna visble = True/False
+                    # Componente que contiene toda la información a mostrar y que alterna visible = True/False
                     with gr.Column(visible=False, elem_classes="special-panel") as data_dataset:
                         with gr.Row(elem_classes="custom-tab"):
                             with gr.Column():
@@ -1884,13 +2189,13 @@ with gr.Blocks(title="Análisis Educativo") as app:
                     gr.HTML("&nbsp;&nbsp;2. DESCOMPOSICIÓN DE LAS SERIES - MÉTODO STL (SEASONAL-TREND DECOMPOSITION USING LOESS) PARA SERIES CORTAS", 
                             elem_classes="subtitle-text")
                 with gr.Column(min_width=150):
-                    stats_button = gr.Button("Calcular", variant="primary", visible=True, 
+                    STL_button = gr.Button("Calcular", variant="primary", visible=True, 
                                                elem_classes="custom-button3")
             
             with gr.Row(elem_classes="custom-tab"):
                 with gr.Column():
                     with gr.Row():
-                        desc1 = gr.HTML("Descomposición de la Serie 1", elem_classes="info-display-3")
+                        STL_desc1 = gr.HTML("Descomposición de la Serie 1", elem_classes="info-display-3")
                     with gr.Row():
                         with gr.Column():                        
                             STL_graph1 = gr.Plot(show_label=False, visible=False)
@@ -1898,7 +2203,7 @@ with gr.Blocks(title="Análisis Educativo") as app:
 
                 with gr.Column():
                     with gr.Row():
-                        desc2 = gr.HTML("Descomposición de la Serie 2", elem_classes="info-display-3")
+                        STL_desc2 = gr.HTML("Descomposición de la Serie 2", elem_classes="info-display-3")
                     with gr.Row():
                         with gr.Column():
                             STL_graph2 = gr.Plot(show_label=False, visible=False)
@@ -1906,54 +2211,18 @@ with gr.Blocks(title="Análisis Educativo") as app:
 
                 with gr.Column():
                     with gr.Row():
-                        desc3 = gr.HTML("Descomposición de la Serie 3", elem_classes="info-display-3")
+                        STL_desc3 = gr.HTML("Descomposición de la Serie 3", elem_classes="info-display-3")
                     with gr.Row():
                         with gr.Column():
                             STL_graph3 = gr.Plot(show_label=False, visible=False)
                             STL_info3 = gr.HTML("Interpretación", visible=False)
 
 
-
-            ### SECCIÓN 3: CÁLCULO DE AUTOCORRELACIONES DE LAS TRES SERIES TEMPORALES
-            with gr.Row():
-                with gr.Column(elem_classes="custom-tab-2", scale=20):    
-                    gr.HTML("&nbsp;&nbsp;3. AUTOCORRELACIÓN DE LAS SERIES", 
-                            elem_classes="subtitle-text")
-                with gr.Column(min_width=150):
-                    autocor_button = gr.Button("Calcular", variant="primary", visible=True, 
-                                               elem_classes="custom-button3")
-
-            with gr.Row(elem_classes="custom-tab"):
-                with gr.Column():
-                    with gr.Row():
-                        desc1a = gr.HTML("Autocorrelación de la Serie 1", elem_classes="info-display-3")
-                    with gr.Row():
-                        with gr.Column():                        
-                            auto_graph1 = gr.Plot(show_label=False, visible=False)
-                            auto_info1 = gr.HTML("Interpretación", visible=False)
-
-                with gr.Column():
-                    with gr.Row():
-                        desc2a = gr.HTML("Autocorrelación de la Serie 2", elem_classes="info-display-3")
-                    with gr.Row():
-                        with gr.Column():
-                            auto_graph2 = gr.Plot(show_label=False, visible=False)
-                            auto_info2 = gr.HTML("Interpretación", visible=False)
-
-                with gr.Column():
-                    with gr.Row():
-                        desc3a = gr.HTML("Autocornrelació de la Serie 3", elem_classes="info-display-3")
-                    with gr.Row():
-                        with gr.Column():
-                            auto_graph3 = gr.Plot(show_label=False, visible=False)
-                            auto_info3 = gr.HTML("Interpretación", visible=False)
-
-
-
             ### CÁLCULO DEL TEST ADF PARA ESTACIONARIEDAD DE LAS TRES SERIES TEMPORALES
+            ### APLICANDO PREVIAMENTE LOS GRADOS DE DIFERENCIACIÓN INDICADOS
             with gr.Row():
                 with gr.Column(elem_classes="custom-tab-2", scale=20):    
-                    gr.HTML("&nbsp;&nbsp;3. PRUEBA DE DICKEY-FÜLLER AUMENTADA PARA VERIFICAR ESTACIONARIEDAD", 
+                    gr.HTML("&nbsp;&nbsp;3. DIFERENCIACIÓN DE LAS SERIES Y PRUEBA DE DICKEY-FÜLLER AUMENTADA (ADF) PARA VERIFICAR ESTACIONARIEDAD", 
                             elem_classes="subtitle-text")
                 with gr.Column(min_width=150):
                     ADF_button = gr.Button("Calcular", variant="primary", visible=True, 
@@ -1962,24 +2231,79 @@ with gr.Blocks(title="Análisis Educativo") as app:
             with gr.Row(elem_classes="custom-tab"):
                 with gr.Column():
                     with gr.Row():
-                        desc1ADF = gr.HTML("Prueba ADF para la Serie 1", elem_classes="info-display-3")
+                        ADF_desc1 = gr.HTML("Prueba ADF para la Serie 1", elem_classes="info-display-3")
+                    with gr.Row():
+                        leveldiff1 = gr.Radio(label="Grado de Diferenciación", choices=[0, 1, 2, 3, 4], value=0, visible=False)
+                    with gr.Row():
+                        grafdiff1 = gr.Plot(show_label=False, visible=False)
                     with gr.Row():
                         with gr.Column():                        
                             ADF_info1 = gr.HTML("Interpretación", visible=False)
 
                 with gr.Column():
                     with gr.Row():
-                        desc2ADF = gr.HTML("Prueba ADF para la Serie 2", elem_classes="info-display-3")
+                        ADF_desc2 = gr.HTML("Prueba ADF para la Serie 2", elem_classes="info-display-3")
+                    with gr.Row():
+                        leveldiff2 = gr.Radio(label="Grado de Diferenciación", choices=[0, 1, 2, 3, 4], value=0, visible=False)
+                    with gr.Row():
+                        grafdiff2 = gr.Plot(show_label=False, visible=False)                    
                     with gr.Row():
                         with gr.Column():
                             ADF_info2 = gr.HTML("Interpretación", visible=False)
 
                 with gr.Column():
                     with gr.Row():
-                        desc3ADF = gr.HTML("Prueba ADF para la Serie 3", elem_classes="info-display-3")
+                        ADF_desc3 = gr.HTML("Prueba ADF para la Serie 3", elem_classes="info-display-3")
+                    with gr.Row():
+                        leveldiff3 = gr.Radio(label="Grado de Diferenciación", choices=[0, 1, 2, 3, 4], value=0, visible=False)
+                    with gr.Row():
+                        grafdiff3 = gr.Plot(show_label=False, visible=False)
                     with gr.Row():
                         with gr.Column():
                             ADF_info3 = gr.HTML("Interpretación", visible=False)
+
+
+            ### SECCIÓN 3: CÁLCULO DE AUTOCORRELACIONES DE LAS TRES SERIES TEMPORALES
+            with gr.Row():
+                with gr.Column(elem_classes="custom-tab-2", scale=20):    
+                    gr.HTML("&nbsp;&nbsp;4. FUNCIONES DE AUTOCORRELACIÓN (ACF) Y DE AUTOCORRELACIÓN PARCIAL (PACF) DE LAS SERIES (DEBEN SER ESTACIONARIAS)", 
+                            elem_classes="subtitle-text")
+                with gr.Column(min_width=150):
+                    ACF_PACF_button = gr.Button("Calcular", variant="primary", visible=True, 
+                                               elem_classes="custom-button3")
+
+            with gr.Row(elem_classes="custom-tab"):
+                with gr.Column():
+                    with gr.Row():
+                        ACF_desc1 = gr.HTML("Autocorrelación de la Serie 1", elem_classes="info-display-3")
+                    with gr.Row():
+                        with gr.Column():                        
+                            ACF_graph1 = gr.Plot(show_label=False, visible=False)
+                            ACF_info1 = gr.HTML("Interpretación ACF", visible=False)
+                            PACF_graph1 = gr.Plot(show_label=False, visible=False)
+                            PACF_info1 = gr.HTML("Interpretación PACF", visible=False)
+
+                with gr.Column():
+                    with gr.Row():
+                        ACF_desc2 = gr.HTML("Autocorrelación de la Serie 2", elem_classes="info-display-3")
+                    with gr.Row():
+                        with gr.Column():
+                            ACF_graph2 = gr.Plot(show_label=False, visible=False)
+                            ACF_info2 = gr.HTML("Interpretación ACF", visible=False)
+                            PACF_graph2 = gr.Plot(show_label=False, visible=False)
+                            PACF_info2 = gr.HTML("Interpretación PACF", visible=False)
+
+                with gr.Column():
+                    with gr.Row():
+                        ACF_desc3 = gr.HTML("Autocornrelació de la Serie 3", elem_classes="info-display-3")
+                    with gr.Row():
+                        with gr.Column():
+                            ACF_graph3 = gr.Plot(show_label=False, visible=False)
+                            ACF_info3 = gr.HTML("Interpretación ACF", visible=False)
+                            PACF_graph3 = gr.Plot(show_label=False, visible=False)
+                            PACF_info3 = gr.HTML("Interpretación PACF", visible=False)
+
+
 
 
 
@@ -2000,153 +2324,173 @@ with gr.Blocks(title="Análisis Educativo") as app:
             mat.change(
                 fn=tab_ST_on_mat_change,
                 inputs=[mat],
-                outputs=[dataset_state, prov1, dep1, sec1, amb1, var1, tend1,
+                outputs=[dataset_state,
+                         prov1, dep1, sec1, amb1, var1, tend1,
                          prov2, dep2, sec2, amb2, var2, tend2,
                          prov3, dep3, sec3, amb3, var3, tend3,
                          dataset_filter_state_1, dataset_filter_state_2, dataset_filter_state_3,
-                         desc1, desc2, desc3,
+                         STL_desc1, STL_desc2, STL_desc3,
                          STL_graph1, STL_graph2, STL_graph3,
                          STL_info1, STL_info2, STL_info3,
-                         desc1a, desc2a, desc3a,
-                         auto_graph1, auto_graph2, auto_graph3,
-                         auto_info1, auto_info2, auto_info3,
-                         desc1ADF, desc2ADF, desc3ADF,
-                         ADF_info1, ADF_info2, ADF_info3]
+                         ADF_desc1, ADF_desc2, ADF_desc3,
+                         leveldiff1, leveldiff2, leveldiff3,
+                         grafdiff1, grafdiff2, grafdiff3,
+                         ADF_info1, ADF_info2, ADF_info3,
+                         ACF_desc1, ACF_desc2, ACF_desc3,
+                         ACF_graph1, ACF_graph2, ACF_graph3,
+                         ACF_info1, ACF_info2, ACF_info3,
+                         PACF_graph1, PACF_graph2, PACF_graph3,
+                         PACF_info1, PACF_info2, PACF_info3]
             )
             
             prov1.change(
                 fn=tab_ST_on_prov_change,
                 inputs=[dataset_state, prov1, sec1, amb1, var1],
                 outputs=[dep1, dataset_filter_state_1, tend1,
-                         desc1, STL_graph1, STL_info1,
-                         desc1a, auto_graph1, auto_info1,
-                         desc1ADF, ADF_info1]
+                         STL_desc1, STL_graph1, STL_info1,
+                         ACF_desc1, ACF_graph1, ACF_info1,
+                         PACF_graph1, PACF_info1,
+                         ADF_desc1, leveldiff1, grafdiff1, ADF_info1]
             )
 
             prov2.change(
                 fn=tab_ST_on_prov_change,
                 inputs=[dataset_state, prov2, sec2, amb2, var2],
                 outputs=[dep2, dataset_filter_state_2, tend2, 
-                         desc2, STL_graph2, STL_info2,
-                         desc2a, auto_graph2, auto_info2,
-                         desc2ADF, ADF_info2]
+                         STL_desc2, STL_graph2, STL_info2,
+                         ACF_desc2, ACF_graph2, ACF_info2,
+                         PACF_graph2, PACF_info2,
+                         ADF_desc2, leveldiff2, grafdiff2, ADF_info2]
             )
             
             prov3.change(
                 fn=tab_ST_on_prov_change,
                 inputs=[dataset_state, prov3, sec3, amb3, var3],
                 outputs=[dep3, dataset_filter_state_3, tend3, 
-                         desc3, STL_graph3, STL_info3,
-                         desc3a, auto_graph3, auto_info3,
-                         desc3ADF, ADF_info3]
+                         STL_desc3, STL_graph3, STL_info3,
+                         ACF_desc3, ACF_graph3, ACF_info3,
+                         PACF_graph3, PACF_info3,
+                         ADF_desc3, leveldiff3, grafdiff3, ADF_info3]
             )
             
             dep1.change(
                 fn=tab_ST_on_dep_change,
                 inputs=[dataset_state, prov1, dep1, sec1, amb1, var1],
                 outputs=[dataset_filter_state_1, tend1, 
-                         desc1, STL_graph1, STL_info1,
-                         desc1a, auto_graph1, auto_info1,
-                         desc1ADF, ADF_info1]
+                         STL_desc1, STL_graph1, STL_info1,
+                         ACF_desc1, ACF_graph1, ACF_info1,
+                         PACF_graph1, PACF_info1,
+                         ADF_desc1, leveldiff1, grafdiff1, ADF_info1]
             )
 
             dep2.change(
                 fn=tab_ST_on_dep_change,
                 inputs = [dataset_state, prov2, dep2, sec2, amb2, var2],
                 outputs=[dataset_filter_state_2, tend2,
-                         desc2, STL_graph2, STL_info2,
-                         desc2a, auto_graph2, auto_info2,
-                         desc2ADF, ADF_info2]
+                         STL_desc2, STL_graph2, STL_info2,
+                         ACF_desc2, ACF_graph2, ACF_info2,
+                         PACF_graph2, PACF_info2,
+                         ADF_desc2, leveldiff2, grafdiff2, ADF_info2]
             )
 
             dep3.change(
                 fn=tab_ST_on_dep_change,
                 inputs = [dataset_state, prov3, dep3, sec3, amb3, var3],
                 outputs=[dataset_filter_state_3, tend3, 
-                         desc3, STL_graph3, STL_info3,
-                         desc3a, auto_graph3, auto_info3,
-                         desc3ADF, ADF_info3]
+                         STL_desc3, STL_graph3, STL_info3,
+                         ACF_desc3, ACF_graph3, ACF_info3,
+                         PACF_graph3, PACF_info3,
+                         ADF_desc3, leveldiff3, grafdiff3, ADF_info3]
             )
 
             sec1.change(
                 fn=tab_ST_on_option_change,
                 inputs = [dataset_state, prov1, dep1, sec1, amb1, var1],
                 outputs=[dataset_filter_state_1, tend1, 
-                         desc1, STL_graph1, STL_info1,
-                         desc1a, auto_graph1, auto_info1,
-                         desc1ADF, ADF_info1]
+                         STL_desc1, STL_graph1, STL_info1,
+                         ACF_desc1, ACF_graph1, ACF_info1,
+                         PACF_graph1, PACF_info1,
+                         ADF_desc1, leveldiff1, grafdiff1, ADF_info1]
             )
             
             sec2.change(
                 fn=tab_ST_on_option_change,
                 inputs = [dataset_state, prov2, dep2, sec2, amb2, var2],
                 outputs=[dataset_filter_state_2, tend2, 
-                         desc2, STL_graph2, STL_info2,
-                         desc2a, auto_graph2, auto_info2,
-                         desc2ADF, ADF_info2]
+                         STL_desc2, STL_graph2, STL_info2,
+                         ACF_desc2, ACF_graph2, ACF_info2,
+                         PACF_graph2, PACF_info2,
+                         ADF_desc2, leveldiff2, grafdiff2, ADF_info2]
             )
 
             sec3.change(
                 fn=tab_ST_on_option_change,
                 inputs = [dataset_state, prov3, dep3, sec3, amb3, var3],
                 outputs=[dataset_filter_state_3, tend3, 
-                         desc3, STL_graph3, STL_info3,
-                         desc3a, auto_graph3, auto_info3,
-                         desc3ADF, ADF_info3]
+                         STL_desc3, STL_graph3, STL_info3,
+                         ACF_desc3, ACF_graph3, ACF_info3,
+                         PACF_graph3, PACF_info3,
+                         ADF_desc3, leveldiff3, grafdiff3, ADF_info3]
             )
 
             amb1.change(
                 fn=tab_ST_on_option_change,
                 inputs = [dataset_state, prov1, dep1, sec1, amb1, var1],
                 outputs=[dataset_filter_state_1, tend1, 
-                         desc1, STL_graph1, STL_info1,
-                         desc1a, auto_graph1, auto_info1,
-                         desc1ADF, ADF_info1]
+                         STL_desc1, STL_graph1, STL_info1,
+                         ACF_desc1, ACF_graph1, ACF_info1,
+                         PACF_graph1, PACF_info1,
+                         ADF_desc1, leveldiff1, grafdiff1, ADF_info1]
             )
             
             amb2.change(
                 fn=tab_ST_on_option_change,
                 inputs = [dataset_state, prov2, dep2, sec2, amb2, var2],
                 outputs=[dataset_filter_state_2, tend2, 
-                         desc2, STL_graph2, STL_info2,
-                         desc2a, auto_graph2, auto_info2,
-                         desc2ADF, ADF_info2]
+                         STL_desc2, STL_graph2, STL_info2,
+                         ACF_desc2, ACF_graph2, ACF_info2,
+                         PACF_graph2, PACF_info2,
+                         ADF_desc2, leveldiff2, grafdiff2, ADF_info2]
             )
 
             amb3.change(
                 fn=tab_ST_on_option_change,
                 inputs = [dataset_state, prov3, dep3, sec3, amb3, var3],
                 outputs=[dataset_filter_state_3, tend3, 
-                         desc3, STL_graph3, STL_info3,
-                         desc3a, auto_graph3, auto_info3,
-                         desc3ADF, ADF_info3]
+                         STL_desc3, STL_graph3, STL_info3,
+                         ACF_desc3, ACF_graph3, ACF_info3,
+                         PACF_graph3, PACF_info3,
+                         ADF_desc3, leveldiff3, grafdiff3, ADF_info3]
             )
 
             var1.change(
                 fn=tab_ST_on_option_change,
                 inputs = [dataset_state, prov1, dep1, sec1, amb1, var1],
                 outputs=[dataset_filter_state_1, tend1, 
-                         desc1, STL_graph1, STL_info1,
-                         desc1a, auto_graph1, auto_info1,
-                         desc1ADF, ADF_info1]
+                         STL_desc1, STL_graph1, STL_info1,
+                         ACF_desc1, ACF_graph1, ACF_info1,
+                         PACF_graph1, PACF_info1,
+                         ADF_desc1, leveldiff1, grafdiff1, ADF_info1]
             )
             
             var2.change(
                 fn=tab_ST_on_option_change,
                 inputs = [dataset_state, prov2, dep2, sec2, amb2, var2],
                 outputs=[dataset_filter_state_2, tend2, 
-                         desc2, STL_graph2, STL_info2,
-                         desc2a, auto_graph2, auto_info2,
-                         desc2ADF, ADF_info2]
+                         STL_desc2, STL_graph2, STL_info2,
+                         ACF_desc2, ACF_graph2, ACF_info2,
+                         PACF_graph2, PACF_info2,
+                         ADF_desc2, leveldiff2, grafdiff2, ADF_info2]
             )
 
             var3.change(
                 fn=tab_ST_on_option_change,
                 inputs = [dataset_state, prov3, dep3, sec3, amb3, var3],
                 outputs=[dataset_filter_state_3, tend3, 
-                         desc3, STL_graph3, STL_info3,
-                         desc3a, auto_graph3, auto_info3,
-                         desc3ADF, ADF_info3]
+                         STL_desc3, STL_graph3, STL_info3,
+                         ACF_desc3, ACF_graph3, ACF_info3,
+                         PACF_graph3, PACF_info3,
+                         ADF_desc3, leveldiff3, grafdiff3, ADF_info3]
             )
 
             graph_serie.change(
@@ -2187,18 +2531,38 @@ with gr.Blocks(title="Análisis Educativo") as app:
             tab_ST.select(
                 fn=tab_ST_on_mat_change,
                 inputs=[mat],
-                outputs=[dataset_state, prov1, dep1, sec1, amb1, var1, tend1,
+                outputs=[dataset_state,
+                         prov1, dep1, sec1, amb1, var1, tend1,
                          prov2, dep2, sec2, amb2, var2, tend2,
                          prov3, dep3, sec3, amb3, var3, tend3,
                          dataset_filter_state_1, dataset_filter_state_2, dataset_filter_state_3,
-                         desc1, desc2, desc3,
+                         STL_desc1, STL_desc2, STL_desc3,
                          STL_graph1, STL_graph2, STL_graph3,
                          STL_info1, STL_info2, STL_info3,
-                         desc1a, desc2a, desc3a,
-                         auto_graph1, auto_graph2, auto_graph3,
-                         auto_info1, auto_info2, auto_info3,
-                         desc1ADF, desc2ADF, desc3ADF,
-                         ADF_info1, ADF_info2, ADF_info3]
+                         ADF_desc1, ADF_desc2, ADF_desc3,
+                         leveldiff1, leveldiff2, leveldiff3,
+                         grafdiff1, grafdiff2, grafdiff3,
+                         ADF_info1, ADF_info2, ADF_info3,
+                         ACF_desc1, ACF_desc2, ACF_desc3,
+                         ACF_graph1, ACF_graph2, ACF_graph3,
+                         ACF_info1, ACF_info2, ACF_info3,
+                         PACF_graph1, PACF_graph2, PACF_graph3,
+                         PACF_info1, PACF_info2, PACF_info3]
+                )
+
+            leveldiff1.change(
+                fn=tab_ST_on_level_change,
+                outputs=[grafdiff1, ADF_info1]
+            )
+
+            leveldiff2.change(
+                fn=tab_ST_on_level_change,
+                outputs=[grafdiff2, ADF_info2]
+            )
+
+            leveldiff3.change(
+                fn=tab_ST_on_level_change,
+                outputs=[grafdiff3, ADF_info3]
             )
 
             graph_button.click(
@@ -2208,25 +2572,28 @@ with gr.Blocks(title="Análisis Educativo") as app:
                 outputs=[tend1, tend2, tend3]
             )
 
-            stats_button.click(
+            STL_button.click(
                 fn=tab_ST_stl_decomp_all,
                 inputs=[dataset_filter_state_1, dataset_filter_state_2, dataset_filter_state_3,
                         var1, var2, var3],
                 outputs=[STL_graph1, STL_info1, STL_graph2, STL_info2, STL_graph3, STL_info3]
             )
 
-            autocor_button.click(
-                fn=tab_ST_autocorr_all,
-                inputs=[dataset_filter_state_1, dataset_filter_state_2, dataset_filter_state_3,
+            ACF_PACF_button.click(
+                fn=tab_ST_ACF_PACF_all,
+                inputs=[dataset_diff_state_1, dataset_diff_state_2, dataset_diff_state_3,
                         var1, var2, var3],
-                outputs=[auto_graph1, auto_info1, auto_graph2, auto_info2, auto_graph3, auto_info3]
+                outputs=[ACF_graph1, ACF_info1, ACF_graph2, ACF_info2, ACF_graph3, ACF_info3,
+                         PACF_graph1, PACF_info1, PACF_graph2, PACF_info2, PACF_graph3, PACF_info3]
             )
 
             ADF_button.click(
-                fn=tab_ST_ADF_all,
+                fn=tab_ST_diff_ADF_all,
                 inputs=[dataset_filter_state_1, dataset_filter_state_2, dataset_filter_state_3,
-                        var1, var2, var3],
-                outputs=[ADF_info1, ADF_info2, ADF_info3]
+                        var1, var2, var3, leveldiff1, leveldiff2, leveldiff3],
+                outputs=[dataset_diff_state_1, grafdiff1, ADF_info1, level_diff_state_1,
+                         dataset_diff_state_2, grafdiff2, ADF_info2, level_diff_state_2,
+                         dataset_diff_state_3, grafdiff3, ADF_info3, level_diff_state_3]
             )
 
 
