@@ -419,8 +419,8 @@ with gr.Blocks(title="Análisis Educativo") as app:
             # 1. Load Data on Type Change
             tipo_matricula.change(
                 fn=on_dataset_change,
-                inputs=[tipo_matricula],
-                outputs=[dataset_state, provincia, departamento, sector, ambito, info_label, stats_table, output_table, output_plot_box, output_plot_evolution]
+                inputs = [tipo_matricula],
+                outputs = [dataset_state, provincia, departamento, sector, ambito, info_label, stats_table, output_table, output_plot_box, output_plot_evolution]
             )
             
             # 2. Update Departamentos on Provincia Change
@@ -430,15 +430,15 @@ with gr.Blocks(title="Análisis Educativo") as app:
             # 2.b Python-side update for choices
             provincia.change(
                 fn=on_provincia_change,
-                inputs=[dataset_state, provincia],
-                outputs=[departamento]
+                inputs = [dataset_state, provincia],
+                outputs = [departamento]
             )
             
             # 3. Filter and Show
             btn_mostrar.click(
                 fn=show_data,
-                inputs=[dataset_state, tipo_matricula, provincia, departamento, sector, ambito],
-                outputs=[stats_table, output_table, info_label, output_plot_box, output_plot_evolution]
+                inputs = [dataset_state, tipo_matricula, provincia, departamento, sector, ambito],
+                outputs = [stats_table, output_table, info_label, output_plot_box, output_plot_evolution]
             )
 
             # 4. Auto-Update or Clear Logic
@@ -459,18 +459,18 @@ with gr.Blocks(title="Análisis Educativo") as app:
             for comp in input_components:
                 comp.change(
                     fn=auto_update_or_clear, 
-                    inputs=[dataset_state, tipo_matricula, provincia, departamento, sector, ambito],
-                    outputs=[stats_table, output_table, info_label, output_plot_box, output_plot_evolution]
+                    inputs = [dataset_state, tipo_matricula, provincia, departamento, sector, ambito],
+                    outputs = [stats_table, output_table, info_label, output_plot_box, output_plot_evolution]
                 )
 
             # Also for dataset change (clears everything)
             # def clear_all():
             #     return None, None, pd.DataFrame(), pd.DataFrame(), "", None, None
                 
-            # tipo_matricula.change(fn=clear_all, inputs=None, outputs=[provincia, departamento, stats_table, output_table, info_label, output_plot_box, output_plot_evolution])
+            # tipo_matricula.change(fn=clear_all, inputs=None, outputs = [provincia, departamento, stats_table, output_table, info_label, output_plot_box, output_plot_evolution])
             
             # Initial Load Trigger (Optional, to load the default selection)
-            app.load(fn=on_dataset_change, inputs=[tipo_matricula], outputs=[dataset_state, provincia, departamento])
+            app.load(fn=on_dataset_change, inputs = [tipo_matricula], outputs = [dataset_state, provincia, departamento])
 
         with gr.Tab("Series Temporales"):
             with gr.Row(elem_classes="title-tab"):

@@ -5,10 +5,15 @@ import os
 import base64
 import matplotlib.pyplot as plt
 import plotly.graph_objects as go
+from io import StringIO
 from plotly.subplots import make_subplots
 from statsmodels.tsa.seasonal import STL # Modelo Seasonal-Trend con LOESS para descomposición de series cortas
 from statsmodels.tsa.stattools import acf, pacf # Funciones de Autocorrelación y de Autocorrelación Parcial
 from statsmodels.tsa.stattools import adfuller # Test de Dickey-Fuller Aumentado
+from statsmodels.tsa.arima.model import ARIMA # Modelo ARIMA
+from statsmodels.stats.diagnostic import acorr_ljungbox # Prueba Ljung-Box para verificar: residuos = ruido blanco
+import statsmodels.api as sm # Modelos estadísticos
+import scipy.stats as stats
 import seaborn as sns
 
 
@@ -23,6 +28,9 @@ FILE_MAP = {
 }
 KEY_COLUMNS = ['periodo', 'provincia', 'departamento', 'sector', 'ambito']
 MIN_REG = 14 # Cantidad mínima de registros para cada serie temporal (serie 2011-2024 = 14 registros anuales)
+NO_EXISTE = 999 # Para indicar que no se aplicó la prueba ADF o que no se calcularon grados de diferenciación en las series
+YEAR_MIN = 2011 # Primer año de la serie de datos
+YEAR_MAX = 2024 # ültimo año de la serie de datos 
 
 # Se cargan las descripciones de las variables de los datasets en un diccionario
 # para títulos de gráficos de evolución de matrícula
@@ -920,34 +928,70 @@ def tab_ST_on_mat_change(dataset_type):
 
     if df.empty:
         msg = "Sin datos"
-        return (df, gr.update(choices=[], value=None), gr.update(choices=[], value=None),
-                gr.update(value="Ambos"), gr.update(value="Ambos"),
-                gr.update(choices=[], value=None), gr.Plot(visible=False),
+        return (pd.DataFrame(), # Dataset vacío
+                ## Campos vacíos: Prov., Depto., Sec., Ámb., Indicador, Tendencia
                 gr.update(choices=[], value=None), gr.update(choices=[], value=None),
                 gr.update(value="Ambos"), gr.update(value="Ambos"),
                 gr.update(choices=[], value=None), gr.Plot(visible=False),
                 gr.update(choices=[], value=None), gr.update(choices=[], value=None),
                 gr.update(value="Ambos"), gr.update(value="Ambos"),
                 gr.update(choices=[], value=None), gr.Plot(visible=False),
-                None, None, None,
-                msg, msg, msg, # Sección Descomposición de las Series
+                gr.update(choices=[], value=None), gr.update(choices=[], value=None),
+                gr.update(value="Ambos"), gr.update(value="Ambos"),
+                gr.update(choices=[], value=None), gr.Plot(visible=False),
+                ## Datasets filtrados se devuelven vacíos
+                pd.DataFrame(), pd.DataFrame(), pd.DataFrame(),
+                ## Datasets diferenciados se devuelven vacíos
+                pd.DataFrame(), pd.DataFrame(), pd.DataFrame(),
+                ## Sección Descomposición de las Series
+                # Descripción de filtros de las tres series
+                msg, msg, msg,
+                # Gráficos de descomposición de las tres series
                 gr.Plot(visible=False), gr.Plot(visible=False), gr.Plot(visible=False),
+                # Interpretación de la descomposición de las tres series
                 gr.update(visible=False), gr.update(visible=False), gr.update(visible=False),
-                msg, msg, msg, # Sección Diferenciación de las Series y Prueba ADF
-                gr.update(visible=True, value=0),
-                gr.update(visible=True, value=0),
-                gr.update(visible=True, value=0),
+                ## Sección Diferenciación de las Series y Prueba ADF
+                # Descripción de filtros de las tres serie
+                msg, msg, msg, 
+                gr.update(visible=True, value=0), # Opciones de grado de dif. para Serie 1
+                gr.update(visible=True, value=0), # Opciones de grado de dif. para Serie 2
+                gr.update(visible=True, value=0), # Opciones de grado de dif. para Serie 3
+                gr.update(value=NO_EXISTE), # Variable 1 de estado para grado de diferenciación
+                gr.update(value=NO_EXISTE), # Variable 2 de estado para grado de diferenciación
+                gr.update(value=NO_EXISTE), # Variable 3 de estado para grado de diferenciación
+                # Gráficos de diferenciación, interpretación y resultado prueba ADF
                 gr.update(visible=False), gr.update(visible=False), gr.update(visible=False),
+                # Interpretación de la descomposición de las tres series
                 gr.update(visible=False), gr.update(visible=False), gr.update(visible=False),
-                msg, msg, msg, # Sección ACF y PACF
+                ## Sección ACF y PACF
+                # Descripción de filtros de las tres series
+                msg, msg, msg, 
+                # Funciones ACF
                 gr.Plot(visible=False), gr.Plot(visible=False), gr.Plot(visible=False),
+                # Interpretaciones ACF
                 gr.update(visible=False), gr.update(visible=False), gr.update(visible=False),
+                # Funciones PACF
                 gr.Plot(visible=False), gr.Plot(visible=False), gr.Plot(visible=False),
+                # Interpretaciones PACF
+                gr.update(visible=False), gr.update(visible=False), gr.update(visible=False),
+                ## Sección ARIMA
+                # Variables de estado 'p' y 'q' para las tres series
+                gr.update(value=NO_EXISTE), gr.update(value=NO_EXISTE), gr.update(value=NO_EXISTE),
+                gr.update(value=NO_EXISTE), gr.update(value=NO_EXISTE), gr.update(value=NO_EXISTE),
+                # Descripción de filtros de las tres series
+                msg, msg, msg,
+                # Info de parámetros
+                gr.update(visible=False), gr.update(visible=False), gr.update(visible=False),
+                # Gráficos de predicciones
+                gr.Plot(visible=False), gr.Plot(visible=False), gr.Plot(visible=False),
+                # Tablas de predicciones
+                gr.update(visible=False), gr.update(visible=False), gr.update(visible=False),
+                # Gráficos de residuos
+                gr.Plot(visible=False), gr.Plot(visible=False), gr.Plot(visible=False),
+                # Info de residuos
                 gr.update(visible=False), gr.update(visible=False), gr.update(visible=False)
                 )
 
-                               
-    
     # Se arma el listado ordenado de provincias y se guarda la primera provincia
     provincias_sorted = sorted([str(p) for p in provincias])
     prov_first = provincias_sorted[0]
@@ -974,12 +1018,6 @@ def tab_ST_on_mat_change(dataset_type):
     filtered = get_filtered_subset(df, prov_first, dpto_first, sector, ambito, 
                                    KEY_COLUMNS, True, min_reg=MIN_REG)
 
-    # Se genera el gráfico para el primer indicador
-    # mmov =  0 < mm < 4
-    # tipo = mm + 1
-    # graph = tab_EDA_create_evolution_graph(filtered, indicadores_originales[0], serie, mg,
-    #                                       tend, mmov, sd, tipo)
-
     # Al actualizar el dataset, se muestra la primera provincia, el primer departamento,
     # sector = "Ambos", ambiente="Ambos", el primer indicador y el gráfico correspodiente.
     # Se hace para las tres series temporales
@@ -989,40 +1027,80 @@ def tab_ST_on_mat_change(dataset_type):
            f"SECTOR: {sector.upper()} - ÁMBITO: {ambito.upper()}<br>"
            f"INDICADOR: {dict_nlargos[indicadores_originales[0]].upper()}"
            "</b>")
-    return (df, gr.update(choices=provincias_sorted, value=prov_first),
-            gr.update(choices=dptos_sorted, value=dpto_first),
-            gr.update(choices=["Estatal", "Privado", "Ambos"], value="Ambos"),
-            gr.update(choices=["Urbano", "Rural", "Ambos"], value="Ambos"),
-            gr.update(choices=indicadores, value=indicador_first),
-            gr.Plot(visible=False),
-            gr.update(choices=provincias_sorted, value=prov_first),
-            gr.update(choices=dptos_sorted, value=dpto_first),
-            gr.update(choices=["Estatal", "Privado", "Ambos"], value="Ambos"),
-            gr.update(choices=["Urbano", "Rural", "Ambos"], value="Ambos"),
-            gr.update(choices=indicadores, value=indicador_first),
-            gr.Plot(visible=False),
-            gr.update(choices=provincias_sorted, value=prov_first),
-            gr.update(choices=dptos_sorted, value=dpto_first),
-            gr.update(choices=["Estatal", "Privado", "Ambos"], value="Ambos"),
-            gr.update(choices=["Urbano", "Rural", "Ambos"], value="Ambos"),
-            gr.update(choices=indicadores, value=indicador_first),
-            gr.Plot(visible=False),
-            filtered, filtered, filtered,
-            msg, msg, msg, # Sección Descomposición de las Series
-            gr.Plot(visible=False), gr.Plot(visible=False), gr.Plot(visible=False),
-            gr.update(visible=False), gr.update(visible=False), gr.update(visible=False),
-            msg, msg, msg, # Sección Diferenciación de las Series y Prueba ADF
-            gr.update(visible=True, value=0),
-            gr.update(visible=True, value=0),
-            gr.update(visible=True, value=0),
-            gr.update(visible=False), gr.update(visible=False), gr.update(visible=False),
-            gr.update(visible=False), gr.update(visible=False), gr.update(visible=False),
-            msg, msg, msg, # Sección ACF y PACF
-            gr.Plot(visible=False), gr.Plot(visible=False), gr.Plot(visible=False),
-            gr.update(visible=False), gr.update(visible=False), gr.update(visible=False),
-            gr.Plot(visible=False), gr.Plot(visible=False), gr.Plot(visible=False),
-            gr.update(visible=False), gr.update(visible=False), gr.update(visible=False)
-            )
+    return (df, # Dataset cargado de la matrícula
+                ## Campos por defecto Serie 1: Prov., Depto., Sec., Ámb., Indicador, Tendencia
+                gr.update(choices=provincias_sorted, value=prov_first),
+                gr.update(choices=dptos_sorted, value=dpto_first),
+                gr.update(choices=["Estatal", "Privado", "Ambos"], value="Ambos"),
+                gr.update(choices=["Urbano", "Rural", "Ambos"], value="Ambos"),
+                gr.update(choices=indicadores, value=indicador_first),
+                gr.Plot(visible=False),
+                ## Campos por defecto Serie 2: Prov., Depto., Sec., Ámb., Indicador, Tendencia
+                gr.update(choices=provincias_sorted, value=prov_first),
+                gr.update(choices=dptos_sorted, value=dpto_first),
+                gr.update(choices=["Estatal", "Privado", "Ambos"], value="Ambos"),
+                gr.update(choices=["Urbano", "Rural", "Ambos"], value="Ambos"),
+                gr.update(choices=indicadores, value=indicador_first),
+                gr.Plot(visible=False),
+                ## Campos por defecto Serie 3: Prov., Depto., Sec., Ámb., Indicador, Tendencia
+                gr.update(choices=provincias_sorted, value=prov_first),
+                gr.update(choices=dptos_sorted, value=dpto_first),
+                gr.update(choices=["Estatal", "Privado", "Ambos"], value="Ambos"),
+                gr.update(choices=["Urbano", "Rural", "Ambos"], value="Ambos"),
+                gr.update(choices=indicadores, value=indicador_first),
+                gr.Plot(visible=False),
+                # Datasets filtrados con campos por defecto
+                filtered, filtered, filtered,
+                ## Datasets diferenciados se devuelven vacíos
+                pd.DataFrame(), pd.DataFrame(), pd.DataFrame(),
+                ## Sección Descomposición de las Series
+                # Descripción de filtros de las tres series
+                msg, msg, msg,
+                # Gráficos de descomposición de las tres series
+                gr.Plot(visible=False), gr.Plot(visible=False), gr.Plot(visible=False),
+                # Interpretación de la descomposición de las tres series
+                gr.update(visible=False), gr.update(visible=False), gr.update(visible=False),
+                ## Sección Diferenciación de las Series y Prueba ADF
+                # Descripción de filtros de las tres seriess
+                msg, msg, msg,
+                gr.update(visible=True, value=0), # Opciones de grado de dif. para Serie 1
+                gr.update(visible=True, value=0), # Opciones de grado de dif. para Serie 2
+                gr.update(visible=True, value=0), # Opciones de grado de dif. para Serie 3
+                gr.update(value=NO_EXISTE), # Variable 1 de estado para grado de diferenciación
+                gr.update(value=NO_EXISTE), # Variable 2 de estado para grado de diferenciación
+                gr.update(value=NO_EXISTE), # Variable 3 de estado para grado de diferenciación
+                # Gráficos de diferenciación de las tres series
+                gr.update(visible=False), gr.update(visible=False), gr.update(visible=False),
+                # Resultados de la prueba ADF de las tres seris
+                gr.update(visible=False), gr.update(visible=False), gr.update(visible=False),
+                ## Sección ACF y PACF
+                # Descripción de filtros de las tres series
+                msg, msg, msg,
+                # Gráficos de ACF de las tres series
+                gr.Plot(visible=False), gr.Plot(visible=False), gr.Plot(visible=False),
+                # Interpretación de la ACF de las tres series
+                gr.update(visible=False), gr.update(visible=False), gr.update(visible=False),
+                # Gráficos de PACF de las tres series
+                gr.Plot(visible=False), gr.Plot(visible=False), gr.Plot(visible=False),
+                # Interpretación de la PACF de las tres series
+                gr.update(visible=False), gr.update(visible=False), gr.update(visible=False),
+                ## Sección ARIMA
+                # Variables de estado 'p' y 'q' para las tres series
+                gr.update(value=NO_EXISTE), gr.update(value=NO_EXISTE), gr.update(value=NO_EXISTE),
+                gr.update(value=NO_EXISTE), gr.update(value=NO_EXISTE), gr.update(value=NO_EXISTE),
+                # Descripción de filtros de las tres series
+                msg, msg, msg,
+                # Info de parámetros
+                gr.update(visible=False), gr.update(visible=False), gr.update(visible=False),
+                # Gráficos de predicciones
+                gr.Plot(visible=False), gr.Plot(visible=False), gr.Plot(visible=False),
+                # Tablas de predicciones
+                gr.update(visible=False), gr.update(visible=False), gr.update(visible=False),
+                # Gráficos de residuos
+                gr.Plot(visible=False), gr.Plot(visible=False), gr.Plot(visible=False),
+                # Info de residuos
+                gr.update(visible=False), gr.update(visible=False), gr.update(visible=False)
+                )
             
 def tab_ST_on_prov_change(df, provincia, sector, ambito, indicador):
     
@@ -1041,71 +1119,88 @@ def tab_ST_on_prov_change(df, provincia, sector, ambito, indicador):
                                    KEY_COLUMNS, True, min_reg=MIN_REG)
     
     if filtered.empty:
-        return (None, None, 
-                gr.Plot(visible=False), # Gráfico de tendencia
-                None, gr.Plot(visible=False), gr.update(visible=False), # Sección de Componentes
-                None, gr.Plot(visible=False), gr.update(visible=False), # Sección de Autocorrelación (ACF)
-                gr.Plot(visible=False), gr.update(visible=False), # Sección de Autocorrelación (PACF)
-                None, gr.update(value=0, visible=True), # Sección de Diferenciación y Prueba ADF
-                gr.Plot(visible=False), gr.update(visible=False) # Sección de Diferenciación y Prueba ADF
+        return (pd.DataFrame(), pd.DataFrame(),
+                # Lista de departamentos
+                gr.update(choices=[], value=None),
+                # Gráfico de tendencia
+                gr.Plot(visible=False), 
+                ## Sección de Descomposición de la Serie
+                # Información de filtros
+                gr.update(visible=False),
+                # Gráfico de descomposición e interpretación
+                gr.Plot(visible=False), gr.update(visible=False),
+                ## Sección de Diferenciación y Prueba ADF
+                # Información de filtros
+                gr.update(visible=False),
+                # Grado de diferenciación
+                gr.update(value=0, visible=True),
+                # Gráfico de diferenciación
+                gr.Plot(visible=False),
+                # Resultado prueba ADF
+                gr.update(visible=False),
+                # Variable de estado de grados de diferenciación
+                gr.update(value=NO_EXISTE),
+                ## Sección de ACF y PACF
+                # Información de filtros
+                gr.update(visible=False),
+                # Gráfico e interpretación de ACF
+                gr.Plot(visible=False), gr.update(visible=False),
+                # Gráfico e interpretación de PACF
+                gr.Plot(visible=False), gr.update(visible=False),
+                ## Sección ARIMA
+                # Variables de estado 'p' y 'q'
+                gr.update(value=NO_EXISTE), gr.update(value=NO_EXISTE),
+                # Información de filtros y parámetros de ARIMA
+                gr.update(visible=False), gr.update(visible=False),
+                # Gráfico de predicciones y tabla de predicciones
+                gr.Plot(visible=False), gr.update(visible=False),
+                # Gráficos de residuos e info de residuos
+                gr.Plot(visible=False), gr.update(visible=False)
                 )
     
-    # Se genera el gráfico para el primer indicador
-    # mmov =  0 < mm < 4
-    # tipo = mm + 1
-    # graph = tab_EDA_create_evolution_graph(filtered, ind_orig, serie, mg, tend, mmov, sd, tipo)
-
     msg = ("<b>"
            f"PROVINCIA: {provincia.upper()}<br>DEPARTAMENTO: {dpto_first.upper()}<br>"
            f"SECTOR: {sector.upper()} - ÁMBITO: {ambito.upper()}<br>"
            f"INDICADOR: {dict_nlargos[ind_orig].upper()}"
            "</b>")
-    return (gr.update(choices=dptos_sorted, value=dpto_first), filtered, \
-            gr.Plot(visible=False), # Gráfico de tendencia
-            msg, gr.Plot(visible=False), gr.update(visible=False), # Sección de Componentes
-            msg, gr.Plot(visible=False), gr.update(visible=False), # Sección de Autocorrelación (ACF)
-            gr.Plot(visible=False), gr.update(visible=False), # Sección de Autocorrelación (PACF)
-            msg, gr.update(value=0, visible=True), # Sección de Diferenciación y Prueba ADF
-            gr.Plot(visible=False), gr.update(visible=False) # Sección de Diferenciación y Prueba ADF
-            )
-
-def tab_ST_on_dep_change(df, provincia, departamento, sector, ambito, indicador):
-
-    # Como el parámetro "indicador" se recibe con el nombre descriptivo corto
-    # se debe convertir a su nombre original
-    ind_orig = next((k for k, v in dict_ncortos.items() if v == indicador), indicador)
-
-    # Se filtra el dataset de matrícula
-    filtered = get_filtered_subset(df, provincia, departamento, sector, ambito, KEY_COLUMNS, True, min_reg=MIN_REG)
-    
-    if filtered.empty:
-        return (None, 
-                gr.Plot(visible=False), # Gráfico de tendencia
-                None, gr.Plot(visible=False), gr.update(visible=False), # Sección de Componentes
-                None, gr.Plot(visible=False), gr.update(visible=False), # Sección de Autocorrelación (ACF)
-                gr.Plot(visible=False), gr.update(visible=False), # Sección de Autocorrelación (PACF)
-                None, gr.update(value=0, visible=True), # Sección de Diferenciación y Prueba ADF
-                gr.Plot(visible=False), gr.update(visible=False) # Sección de Diferenciación y Prueba ADF
+    return (filtered, pd.DataFrame(),
+                # Lista de departamentos
+                gr.update(choices=dptos_sorted, value=dpto_first),
+                # Gráfico de tendencia
+                gr.Plot(visible=False), 
+                ## Sección de Descomposición de la Serie
+                # Información de filtros
+                msg,
+                # Gráfico de descomposición e interpretación
+                gr.Plot(visible=False), gr.update(visible=False),
+                ## Sección de Diferenciación y Prueba ADF
+                # Información de filtros
+                msg,
+                # Grado de diferenciación
+                gr.update(value=0, visible=True),
+                # Gráfico de diferenciación
+                gr.Plot(visible=False),
+                # Resultado prueba ADF
+                gr.update(visible=False),
+                # Variable de estado de grados de diferenciación
+                gr.update(value=NO_EXISTE),
+                ## Sección de ACF y PACF
+                # Información de filtros
+                msg,
+                # Gráfico e interpretación de ACF
+                gr.Plot(visible=False), gr.update(visible=False),
+                # Gráfico e interpretación de PACF
+                gr.Plot(visible=False), gr.update(visible=False),
+                ## Sección ARIMA
+                # Variables de estado 'p' y 'q'
+                gr.update(value=NO_EXISTE), gr.update(value=NO_EXISTE),
+                # Información de filtros y parámetros de ARIMA
+                msg, gr.update(visible=False),
+                # Gráfico de predicciones y tabla de predicciones
+                gr.Plot(visible=False), gr.update(visible=False),
+                # Gráficos de residuos e info de residuos
+                gr.Plot(visible=False), gr.update(visible=False)
                 )
-    
-    # Se genera el gráfico para el primer indicador
-    # mmov =  0 < mm < 4
-    # tipo = mm + 1
-    # graph = tab_EDA_create_evolution_graph(filtered, ind_orig, serie, mg, tend, mmov, sd, tipo)
-
-    msg = ("<b>"
-           f"PROVINCIA: {provincia.upper()}<br>DEPARTAMENTO: {departamento.upper()}<br>"
-           f"SECTOR: {sector.upper()} - ÁMBITO: {ambito.upper()}<br>"
-           f"INDICADOR: {dict_nlargos[ind_orig].upper()}"
-           "</b>")
-    return (filtered,
-            gr.Plot(visible=False), # Gráfico de tendencia
-            msg, gr.Plot(visible=False), gr.update(visible=False), # Sección de Componentes
-            msg, gr.Plot(visible=False), gr.update(visible=False), # Sección de Autocorrelación (ACF)
-            gr.Plot(visible=False), gr.update(visible=False), # Sección de Autocorrelación (PACF)
-            msg, gr.update(value=0, visible=True), # Sección de Diferenciación y Prueba ADF
-            gr.Plot(visible=False), gr.update(visible=False) # Sección de Diferenciación y Prueba ADF
-            )
 
 def tab_ST_on_option_change(df, provincia, departamento, sector, ambito, indicador):
 
@@ -1114,36 +1209,90 @@ def tab_ST_on_option_change(df, provincia, departamento, sector, ambito, indicad
     ind_orig = next((k for k, v in dict_ncortos.items() if v == indicador), indicador)
 
     # Se filtra el dataset de matrícula
-    filtered = get_filtered_subset(df, provincia, departamento, sector, ambito, KEY_COLUMNS, True, min_reg=MIN_REG)
+    filtered = get_filtered_subset(df, provincia, departamento, sector, ambito, 
+                                   KEY_COLUMNS, True, min_reg=MIN_REG)
     
     if filtered.empty:
-        return (None, 
-                gr.Plot(visible=False), # Gráfico de tendencia
-                None, gr.Plot(visible=False), gr.update(visible=False), # Sección de Componentes
-                None, gr.Plot(visible=False), gr.update(visible=False), # Sección de Autocorrelación (ACF)
-                gr.Plot(visible=False), gr.update(visible=False), # Sección de Autocorrelación (PACF)
-                None, gr.update(value=0, visible=True), # Sección de Diferenciación y Prueba ADF
-                gr.Plot(visible=False), gr.update(visible=False) # Sección de Diferenciación y Prueba ADF
+        return (pd.DataFrame(), pd.DataFrame(),
+                # Lista de departamentos
+                gr.update(choices=[], value=None),
+                # Gráfico de tendencia
+                gr.Plot(visible=False), 
+                ## Sección de Descomposición de la Serie
+                # Información de filtros
+                gr.update(visible=False),
+                # Gráfico de descomposición e interpretación
+                gr.Plot(visible=False), gr.update(visible=False),
+                ## Sección de Diferenciación y Prueba ADF
+                # Información de filtros
+                gr.update(visible=False),
+                # Grado de diferenciación
+                gr.update(value=0, visible=True),
+                # Gráfico de diferenciación
+                gr.Plot(visible=False),
+                # Resultado prueba ADF
+                gr.update(visible=False),
+                # Variable de estado de grados de diferenciación
+                gr.update(value=NO_EXISTE),
+                ## Sección de ACF y PACF
+                # Información de filtros
+                gr.update(visible=False),
+                # Gráfico e interpretación de ACF
+                gr.Plot(visible=False), gr.update(visible=False),
+                # Gráfico e interpretación de PACF
+                gr.Plot(visible=False), gr.update(visible=False),
+                ## Sección ARIMA
+                # Variables de estado 'p' y 'q'
+                gr.update(value=NO_EXISTE), gr.update(value=NO_EXISTE),
+                # Información de filtros y parámetros de ARIMA
+                gr.update(visible=False), gr.update(visible=False),
+                # Gráfico de predicciones y tabla de predicciones
+                gr.Plot(visible=False), gr.update(visible=False),
+                # Gráficos de residuos e info de residuos
+                gr.Plot(visible=False), gr.update(visible=False)
                 )
     
-    # Se genera el gráfico para el primer indicador
-    # mmov =  0 < mm < 4
-    # tipo = mm + 1
-    # graph = tab_EDA_create_evolution_graph(filtered, ind_orig, serie, mg, tend, mmov, sd, tipo)
-
     msg = ("<b>"
            f"PROVINCIA: {provincia.upper()}<br>DEPARTAMENTO: {departamento.upper()}<br>"
            f"SECTOR: {sector.upper()} - ÁMBITO: {ambito.upper()}<br>"
            f"INDICADOR: {dict_nlargos[ind_orig].upper()}"
            "</b>")
-    return (filtered,
-            gr.Plot(visible=False), # Gráfico de tendencia
-            msg, gr.Plot(visible=False), gr.update(visible=False), # Sección de Componentes
-            msg, gr.Plot(visible=False), gr.update(visible=False), # Sección de Autocorrelación (ACF)
-            gr.Plot(visible=False), gr.update(visible=False), # Sección de Autocorrelación (PACF)
-            msg, gr.update(value=0, visible=True), # Sección de Diferenciación y Prueba ADF
-            gr.Plot(visible=False), gr.update(visible=False) # Sección de Diferenciación y Prueba ADF
-            )
+    return (filtered, pd.DataFrame(),
+                # Gráfico de tendencia
+                gr.Plot(visible=False), 
+                ## Sección de Descomposición de la Serie
+                # Información de filtros
+                msg,
+                # Gráfico de descomposición e interpretación
+                gr.Plot(visible=False), gr.update(visible=False),
+                ## Sección de Diferenciación y Prueba ADF
+                # Información de filtros
+                msg,
+                # Grado de diferenciación
+                gr.update(value=0, visible=True),
+                # Gráfico de diferenciación
+                gr.Plot(visible=False),
+                # Resultado prueba ADF
+                gr.update(visible=False),
+                # Variable de estado de grados de diferenciación
+                gr.update(value=NO_EXISTE),
+                ## Sección de ACF y PACF
+                # Información de filtros
+                msg,
+                # Gráfico e interpretación de ACF
+                gr.Plot(visible=False), gr.update(visible=False),
+                # Gráfico e interpretación de PACF
+                gr.Plot(visible=False), gr.update(visible=False),
+                ## Sección ARIMA
+                # Variables de estado 'p' y 'q'
+                gr.update(value=NO_EXISTE), gr.update(value=NO_EXISTE),
+                # Información de filtros y parámetros de ARIMA
+                msg, gr.update(visible=False),
+                # Gráfico de predicciones y tabla de predicciones
+                gr.Plot(visible=False), gr.update(visible=False),
+                # Gráficos de residuos e info de residuos
+                gr.Plot(visible=False), gr.update(visible=False)
+                )
 
 def tab_ST_on_graph_change(filtered1, filtered2, filtered3, ind1, ind2, ind3,
                          serie, mg, tend, mm, sd):
@@ -1299,26 +1448,66 @@ def tab_ST_stl_decomp_all(df1, df2, df3, var1, var2, var3):
             gr.update(value = fig3, visible = True), \
             gr.update(value = desc3, visible = True)
 
-def tab_ST_ACF(df, indicador):
+def tab_ST_ACF(df, indicador, grado_dif):
     """
-    Calcula la función de autocorrelación (ACF), genera un gráfico interactivo y analiza la ciclicidad.
-    - df: dataset filtrado con columnas con nombres originales ['periodo', indicadores]
+    Calcula la función de autocorrelación (ACF),
+    genera un gráfico interactivo y analiza la ciclicidad.
+    - df: dataset ya diferenciado con columnas con nombres originales ['periodo', indicadores]
     - indicador: nombre corto del indicador
+    - grado_dif: grado de diferenciación (0 = no diferenciada; 1, 2, 3, 4 = grado de dif.; NO_EXISTE = sin prueba ADF)
     IMPORTANTE: la serie debe ser estacionaria!!!
     """
+
+    # Se verifica que el dataframe con la serie diferenciada ya exista
+    if df.empty:
+        reporte = ("<div style='font-size: 16px !important; color: #FF0000; font-weight: bold;'>"
+                    "La serie aún no fue diferenciada. Debe aplicarse la diferenciación (si corresponde) y "
+                    "la prueba ADF para verificar estacionariedad, para luego graficar "
+                    "la FUNCIÓN DE AUTOCORRELACIÓN.</div>"
+                    )
+        return None, reporte, NO_EXISTE
+    
+    # Se verifica que la serie sea estacionaria (NO_EXISTE = sin prueba ADF, no se verificó estacionariedad)
+    if grado_dif == NO_EXISTE:
+        reporte = ("<div style='font-size: 16px !important; color: #FF0000; font-weight: bold;'>"
+                    "La serie debe ser estacionaria para que la función de AUTOCORRELACIÓN tenga relevancia estadística. "
+                    "Debe aplicarse previamente la prueba ADF para verificar estacionariedad "
+                    "y diferenciar la serie si corresponde.</div>"
+                    )
+        return None, reporte, NO_EXISTE
+    
     # Se convierte el nombre corto del  "indicador" a su nombre original
     ind_orig = next((k for k, v in dict_ncortos.items() if v == indicador), indicador)
     df = df.sort_values('periodo').reset_index(drop=True)
     serie = df[ind_orig].dropna()
 
     n_obs = len(df)
-    lags = 7 # Desfases (lags); para 14 datos, lags=7 para mantener potencia estadística
+    # lags = 6 # Desfases (lags); para 14 datos, lags=6 para mantener potencia estadística
+    lags = int((n_obs / 2)) - 1
     valores_acf = acf(serie, nlags=lags)
-    
+    conf_interval = 1.96 / np.sqrt(n_obs)
+
+    # Se verifica que los retardos sean proporcionales al número de observaciones
+    # La restricción es nlags < n_obs / 2
+    if lags >= int(n_obs / 2) or lags < 1:
+        reporte = (f"<div style='font-size: 16px !important; color: #FF0000; font-weight: bold;'>"
+                    f"El tamaño de la serie ({n_obs} observaciones) es demasiado pequeño "
+                    f"para calcular la FUNCIÓN DE AUTOCORRELACIÓN.</div>")
+        return None, reporte, NO_EXISTE
+
     # Identificación del lag más significativo; se excluye lag=0 que siempre es 1
     lag_max = np.argmax(valores_acf[1:]) + 1
     val_max = valores_acf[lag_max]
     
+    # Identificación del valor 'q' (Parámetro ARIMA), es el último lag donde el valor absoluto supera el IC
+    lags_significativos = np.where(np.abs(valores_acf[1:]) > conf_interval)[0]
+    if len(lags_significativos) > 0:
+        # q es el último lag significativo (se suma 1 porque empezamos en index 0)
+        q_sugerido = int(lags_significativos[-1] + 1)
+    else:
+        # Valor de referencia si no hay significancia
+        q_sugerido = 0
+
     # Construcción del gráfico interactivo
     fig = go.Figure()
     fig.add_trace(go.Bar(
@@ -1359,26 +1548,58 @@ def tab_ST_ACF(df, indicador):
     reporte = (
         f"<b>Coeficiente de Correlación más alto: {val_max:.4f}</b> en el desplazamiento de {lag_max} años. "
         f"Existe una probabilidad alta de que los patrones se repitan cada <b>{lag_max} años</b>. "
-        f"Este valor {es_significativo} bajo un intervalo de confianza del 95%.<br><br><br>"
+        f"Este valor {es_significativo} bajo un intervalo de confianza del 95%.<br>"
+        f"Valor sugerido para el coeficiente <i>q</i> del modelo ARIMA: {q_sugerido}<br><br>"
+        "<i>La ACF busca el máximo valor positivo para identificar la periodicidad de la serie. "
+        "Un coeficiente alto indica el intervalo de tiempo en el que los patrones tienden a repetirse "
+        "(estacionalidad), indicando de concordancia entre el pasado y el presente.</i><br><br><br>"
         )
     
-    return fig, reporte
+    return fig, reporte, q_sugerido
 
-def tab_ST_PACF(df, indicador):
+def tab_ST_PACF(df, indicador, grado_dif):
     """
     Calcula la función de autocorrelación parcial (PACF), genera un gráfico interactivo
     y analiza la influencia directa de los retardos.
-    - df: dataset filtrado con columnas con nombres originales ['periodo', indicadores]
+    - df: dataset ya diferenciado con columnas con nombres originales ['periodo', indicadores]
     - indicador: nombre corto del indicador
+    - grado_dif: grado de diferenciación (0 = no diferenciada; 1, 2, 3, 4 = grado de dif.; NO_EXISTE = sin prueba ADF)
     IMPORTANTE: la serie debe ser estacionaria!!!
     """
+
+    # Se verifica que el dataframe con la serie diferenciada ya exista
+    if df.empty:
+        reporte = ("<div style='font-size: 16px !important; color: #FF0000; font-weight: bold;'>"
+                    "La serie aún no fue diferenciada. Debe aplicarse la diferenciación (si corresponde) y "
+                    "la prueba ADF para verificar estacionariedad, para luego graficar "
+                    "la FUNCIÓN DE AUTOCORRELACIÓN PARCIAL.</div>"
+                    )
+        return None, reporte, NO_EXISTE
+    
+    # Se verifica que la serie sea estacionaria (NO_EXISTE = sin prueba ADF, no se verificó estacionariedad)
+    if grado_dif == NO_EXISTE:
+        reporte = ("<div style='font-size: 16px !important; color: #FF0000; font-weight: bold;'>"
+                    "La serie debe ser estacionaria para que la función de AUTOCORRELACIÓN PARCIAL tenga relevancia estadística. "
+                    "Debe aplicarse previamente la prueba ADF para verificar estacionariedad "
+                    "y diferenciar la serie si corresponde.</div>"
+                    )
+        return None, reporte, NO_EXISTE
+    
     # Preparación de datos (idéntica a la función anterior)
     ind_orig = next((k for k, v in dict_ncortos.items() if v == indicador), indicador)
     df = df.sort_values('periodo').reset_index(drop=True)
     serie = df[ind_orig].dropna()
 
-    n_obs = len(df)
-    lags = 6  # Para asegurar estabilidad en PACF con n=14
+    n_obs = len(serie)
+    lags = max(1, (n_obs // 2) - 1) # Retardo mínimo igual a 1 para poder graficar
+    
+    # Se verifica que los retardos sean proporcionales al número de observaciones
+    # Statsmodels requiere que nlags < n_obs // 2
+    if lags >= (n_obs / 2) or n_obs < 4:
+        reporte = (f"<div style='font-size: 16px !important; color: #FF0000; font-weight: bold;'>"
+                    f"Muestra insuficiente: {n_obs} observaciones. "
+                    f"No se puede calcular la FUNCIÓN DE AUTOCORRELACIÓN PARCIAL.</div>")
+        return None, reporte, NO_EXISTE
     
     # Cálculo de PACF usando el método de Yule-Walker para muestras pequeñas
     # nlags debe ser menor a n_obs/2
@@ -1388,6 +1609,19 @@ def tab_ST_PACF(df, indicador):
     lag_max = np.argmax(np.abs(valores_pacf[1:])) + 1
     val_max = valores_pacf[lag_max]
     
+    # Determinación de 'p'
+    conf_interval = 1.96 / np.sqrt(n_obs)
+    
+    # Identificación de p: último lag significativo (fuera de las bandas de confianza)
+    lags_significativos = np.where(np.abs(valores_pacf[1:]) > conf_interval)[0]
+    
+    if len(lags_significativos) > 0:
+        # Se suma 1 porque el índice 0 del slice corresponde al lag 1
+        p_sugerido = int(lags_significativos[-1] + 1)
+    else:
+        # Valor de referencia si no hay autocorrelación parcial significativa
+        p_sugerido = 0
+
     # Construcción del gráfico interactivo
     fig = go.Figure()
     fig.add_trace(go.Bar(
@@ -1422,42 +1656,64 @@ def tab_ST_PACF(df, indicador):
     )
     
     # Reporte estadístico para PACF
-    es_significativo = "es significativo" if abs(val_max) > conf_interval else "no es significativo"
+    es_significativo = "es estadísticamente significativo" if abs(val_max) > conf_interval else "no es estadísticamente significativo"
     reporte = (
         f"<b>PACF más alta: {val_max:.4f}</b> en el lag de {lag_max} año(s). "
         f"Esto indica que el valor actual tiene una relación directa con lo ocurrido hace {lag_max} año(s), "
-        f"eliminando efectos intermedios. Este valor {es_significativo} (IC 95%)."
+        f"eliminando efectos intermedios. Este valor {es_significativo} (IC 95%).</b><br>"
+        f"Valor sugerido para el coeficiente <i>p</i> del modelo ARIMA: {p_sugerido}<br><br>"
+        "<i>La PACF utiliza el valor absoluto más alto para detectar la influencia directa "
+        "de un periodo previo, eliminando efectos intermedios. Se consideran tanto valores "
+        "positivos como negativos, ya que ambos definen la estructura del modelo predictivo</i><br><br>"
+        "<b>Para ambas funciones, los retardos (lags) se limitan al 50% de la muestra para evitar "
+        "correlaciones falsas. Solo los valores fuera del IC 95% son estructurales, el resto son ruido "
+        "aleatorio. En la PACF, se aplicó el método Yule-Walker para asegurar estabilidad matemática "
+        "ante la escasez de datos.</b>"
     )
-    
-    return fig, reporte
 
-def tab_ST_ACF_PACF_all(df1, df2, df3, var1, var2, var3):
+    return fig, reporte, p_sugerido
+
+def tab_ST_ACF_PACF_all(df1, df2, df3, var1, var2, var3, level1, level2, level3):
 
     ### IMPORTANTE: las series var1, var2 y var3 deben ser estacionarias
     ### para que la función de autocorrelación y la función de autocorrelación parcial
     ### tengan relevancia estadística.
 
-    fig1a, desc1a = tab_ST_ACF(df1, var1)
-    fig2a, desc2a = tab_ST_ACF(df2, var2)
-    fig3a, desc3a = tab_ST_ACF(df3, var3)
+    fig1a, desc1a, q1 = tab_ST_ACF(df1, var1, level1)
+    fig2a, desc2a, q2 = tab_ST_ACF(df2, var2, level2)
+    fig3a, desc3a, q3 = tab_ST_ACF(df3, var3, level3)
 
-    fig1b, desc1b = tab_ST_PACF(df1, var1)
-    fig2b, desc2b = tab_ST_PACF(df2, var2)
-    fig3b, desc3b = tab_ST_PACF(df3, var3)
+    fig1b, desc1b, p1 = tab_ST_PACF(df1, var1, level1)
+    fig2b, desc2b, p2 = tab_ST_PACF(df2, var2, level2)
+    fig3b, desc3b, p3 = tab_ST_PACF(df3, var3, level3)
 
-    return gr.update(value = fig1a, visible = True), \
-            gr.update(value = desc1a, visible = True), \
-            gr.update(value = fig2a, visible = True), \
-            gr.update(value = desc2a, visible = True), \
-            gr.update(value = fig3a, visible = True), \
-            gr.update(value = desc3a, visible = True), \
-            gr.update(value = fig1b, visible = True), \
-            gr.update(value = desc1b, visible = True), \
-            gr.update(value = fig2b, visible = True), \
-            gr.update(value = desc2b, visible = True), \
-            gr.update(value = fig3b, visible = True), \
-            gr.update(value = desc3b, visible = True)
+    return (# ACF de la Serie 1: gráfico, interpretación, q sugerido para ARIMA
+            gr.update(value = fig1a, visible = fig1a is not None),
+            gr.update(value = desc1a, visible = True),
+            q1,
+            # ACF de la Serie 2: gráfico, interpretación, q sugerido para ARIMA
+            gr.update(value = fig2a, visible = fig2a is not None),
+            gr.update(value = desc2a, visible = True),
+            q2,
+            # ACF de la Serie 3: gráfico, interpretación, q sugerido para ARIMA
+            gr.update(value = fig3a, visible = fig3a is not None),
+            gr.update(value = desc3a, visible = True),
+            q3,
+            # PACF de la Serie 1: gráfico, interpretación, p sugerido para ARIMA
+            gr.update(value = fig1b, visible = fig1b is not None),
+            gr.update(value = desc1b, visible = True),
+            p1,
+            # PACF de la Serie 2: gráfico, interpretación, p sugerido para ARIMA
+            gr.update(value = fig2b, visible = fig2b is not None),
+            gr.update(value = desc2b, visible = True),
+            p2,
+            # PACF de la Serie 3: gráfico, interpretación, p sugerido para ARIMA
+            gr.update(value = fig3b, visible = fig3b is not None),
+            gr.update(value = desc3b, visible = True),
+            p3
+            )
 
+'''
 def tab_ST_ADF(df, indicador):
     """
     Aplica el Test de Dickey-Fuller Aumentado (ADF).
@@ -1543,8 +1799,11 @@ def tab_ST_ADF(df, indicador):
     </div>
     """
     return html_output
+'''
 
+'''
 def tab_ST_ADF_all(df1, df2, df3, var1, var2, var3):
+    
     desc1 = tab_ST_ADF(df1, var1)
     desc2 = tab_ST_ADF(df2, var2)
     desc3 = tab_ST_ADF(df3, var3)
@@ -1552,17 +1811,21 @@ def tab_ST_ADF_all(df1, df2, df3, var1, var2, var3):
     return gr.update(value = desc1, visible = True), \
             gr.update(value = desc2, visible = True), \
             gr.update(value = desc3, visible = True)
+'''
 
 def tab_ST_diff_ADF(df, indicador, grado, graficar=True, diferenciar=True, aplicar_adf=True):
     """
     Realiza la diferenciación/integración de una serie y opcionalmente aplica el test ADF.
-    - df: dataset original con columnas ['periodo', ind_orig]
+    - df: dataset original con columnas ['periodo', indicadores_originales]
     - indicador: nombre corto del indicador
     - grado: nivel de diferenciación/integración
     - graficar: True para generar el gráfico Plotly
     - diferenciar: True para diferenciar, False para integrar
     - aplicar_adf: True para ejecutar el test de Dickey-Fuller Aumentado
     """
+
+    # Se asume antes de la prueba que la serie no es estacionaria
+    level = NO_EXISTE
 
     # Recuperación del nombre original mediante el diccionario global
     ind_orig = next((k for k, v in dict_ncortos.items() if v == indicador), indicador)
@@ -1662,7 +1925,8 @@ def tab_ST_diff_ADF(df, indicador, grado, graficar=True, diferenciar=True, aplic
             es_estacionaria = p_value < 0.05
             color_status = "green" if es_estacionaria else "#d93025"
             conclusion_msg = "ESTACIONARIA" if es_estacionaria else "NO ESTACIONARIA"
-
+            if es_estacionaria:
+                level = grado # Serie estacionaria con grado de diferenciación (0, 1, 2, 3, 4)
             html_output = f"""
             <div style="font-family: 'Segoe UI', Arial, sans-serif; padding: 20px; border: 1px solid #e0e0e0; border-radius: 8px; background-color: #ffffff;">
                 <table style="width: 100%; border-collapse: collapse; margin: 20px 0;">
@@ -1691,7 +1955,8 @@ def tab_ST_diff_ADF(df, indicador, grado, graficar=True, diferenciar=True, aplic
                     <strong style="color: {color_status}; font-size: 18px !important;">Conclusión: {conclusion_msg}</strong>
                     <p style="margin: 5px 0 0 0; color: #3c4043; font-size: 14px !important;">
                         A un nivel de confianza del 95%, el p-valor de {p_value:.4f} indica que 
-                        {'se rechaza' if es_estacionaria else 'no se puede rechazar'} la hipótesis nula de raíz unitaria.
+                        {'se rechaza' if es_estacionaria else 'no se puede rechazar'} la hipótesis nula de raíz unitaria, 
+                        con {grado} grados de diferenciación.
                     </p>
                 </div>
             </div>
@@ -1702,21 +1967,758 @@ def tab_ST_diff_ADF(df, indicador, grado, graficar=True, diferenciar=True, aplic
     # Retorno de los tres elementos para la interfaz
     return df_result, \
             (gr.update(value=fig, visible=True) if fig else gr.update(visible=False)), \
-            (gr.update(value=html_output, visible=True) if aplicar_adf else gr.update(visible=False))
+            (gr.update(value=html_output, visible=True) if aplicar_adf else gr.update(visible=False)), \
+            level
 
 def tab_ST_diff_ADF_all(df1, df2, df3, var1, var2, var3, level1, level2, level3):
-    
-    dfdiff1, fig1, desc1 = tab_ST_diff_ADF(df1, var1, level1, 
+    """
+    Realiza la diferenciación de las tres series y aplica el test ADF.
+    - df1, df2, df3: datasets filtrados con columnas ['periodo', indicadores_originales]
+    - var1, var2, var3: nombres cortos de los indicadores
+    - level1, level2, level3: niveles de diferenciación/integración
+    """
+        
+    dfdiff1, fig1, desc1, difflevel1 = tab_ST_diff_ADF(df1, var1, level1, 
                                            graficar=True, diferenciar=True, aplicar_adf=True)
-    dfdiff2, fig2, desc2 = tab_ST_diff_ADF(df2, var2, level2, 
+    dfdiff2, fig2, desc2, difflevel2 = tab_ST_diff_ADF(df2, var2, level2, 
                                            graficar=True, diferenciar=True, aplicar_adf=True)
-    dfdiff3, fig3, desc3 = tab_ST_diff_ADF(df3, var3, level3, 
+    dfdiff3, fig3, desc3, difflevel3 = tab_ST_diff_ADF(df3, var3, level3, 
                                            graficar=True, diferenciar=True, aplicar_adf=True)
 
-    return dfdiff1, fig1, desc1, level1, dfdiff2, fig2, desc2, level2, dfdiff3, fig3, desc3, level3
+    return dfdiff1, fig1, desc1, difflevel1, \
+            dfdiff2, fig2, desc2, difflevel2, \
+            dfdiff3, fig3, desc3, difflevel3
 
 def tab_ST_on_level_change():
-    return gr.Plot(visible=False), gr.update(visible=False)
+    
+    return (gr.Plot(visible=False), # Gráfico de series diferenciadas
+            gr.update(visible=False), # Estadísticos e informe de Prueba ADF
+            gr.update(value=NO_EXISTE), # Variable para grado de dif. (NO_EXISTE = no estacionaria)
+            gr.Plot(visible=False), # Gráfico de ACF
+            gr.update(visible=False), # Informe de ACF
+            gr.Plot(visible=False), # Gráfico de PACF
+            gr.update(visible=False), # Informe de PACF
+            gr.update(value=NO_EXISTE), # Variable 'p' de ARIMA
+            gr.update(value=NO_EXISTE), # Variable 'q' de ARIMA
+            gr.update(visible=False), # Informe de ARIMA
+            gr.Plot(visible=False), # Gráfico de ARIMA predicciones
+            gr.update(visible=False), # Tabla de ARIMA predicciones
+            gr.Plot(visible=False), # Gráfico de ARIMA residuos
+            gr.update(visible=False) # Informe de ARIMA residuos
+    )
+
+def tab_ST_ARIMA_all(df1, df2, df3, var1, var2, var3, p1, p2, p3, d1, d2, d3, q1, q2, q3):
+
+    '''
+    IMPORTANTE: las series var1, var2 y var3 deben ser ESTACIONARIAS
+    IMPORTANTE: todos los parámatros del modelo ARIMA(q, d, p) deben estar calculados previamente:
+    - d1, d2, d3: grados de dif. dados por el usuario hasta que la prueba ADF arroje ESTACIONARIEDAD
+    - q1, q2, q3: obtenidos en la función de autocorrelación ACF
+    - p1, p2, p3: obtenidos en la función de autocorrelación parcial PACF
+    '''
+
+    desc1, fig1a, predic1, fig1b, resid1 = tab_ST_ARIMA(df1, var1, p1, d1, q1, n = 5)
+    desc2, fig2a, predic2, fig2b, resid2 = tab_ST_ARIMA(df2, var2, p2, d2, q2, n = 5)
+    desc3, fig3a, predic3, fig3b, resid3 = tab_ST_ARIMA(df3, var3, p3, d3, q3, n = 5)
+
+    return (# ARIMA de la Serie 1: valores de (q, d, p), gráfico principal, gráficos de residuos
+            gr.update(value = desc1, visible = True),
+            gr.update(value = fig1a, visible = fig1a is not None),
+            gr.update(value = predic1, visible = True),
+            gr.update(value = fig1b, visible = fig1b is not None),
+            gr.update(value = resid1, visible = True),
+            # ARIMA de la Serie 2: valores de (q, d, p), gráfico principal, gráficos de residuos
+            gr.update(value = desc2, visible = True),
+            gr.update(value = fig2a, visible = fig2a is not None),
+            gr.update(value = predic2, visible = True),
+            gr.update(value = fig2b, visible = fig2b is not None),
+            gr.update(value = resid2, visible = True),
+            # ARIMA de la Serie 3: valores de (q, d, p), gráfico principal, gráficos de residuos
+            gr.update(value = desc3, visible = True),
+            gr.update(value = fig3a, visible = fig3a is not None),
+            gr.update(value = predic3, visible = True),
+            gr.update(value = fig3b, visible = fig3b is not None),
+            gr.update(value = resid3, visible = True),
+            )
+
+def tab_ST_ARIMA_original_OK(df, indicador, p, d, q, n):
+    """
+    Compila y entrena el modelo ARIMA y realiza la predicción:
+    - df: dataset ya diferenciado con columnas con nombres originales ['periodo', indicadores]
+    - indicador: nombre corto del indicador
+    - p, d, q: parámetros del modelo
+    . n: períodos futuros a predecir
+    IMPORTANTE: la serie debe ser estacionaria y deben estar calculados
+                previamente: q (con PACF), d (con ADF) y p (con ACF)
+    """
+
+    # Se verifica que la serie sea estacionaria (NO_EXISTE = sin prueba ADF, no se verificó estacionariedad)
+    if d == NO_EXISTE:
+        reporte = ("<div style='font-size: 16px !important; color: #FF0000; font-weight: bold;'>"
+                    "La serie debe ser estacionaria para aplicar el modelo ARIMA. "
+                    "Debe aplicarse la diferenciación (si corresponde) y "
+                    "la prueba ADF para verificar ESTACIONARIEDAD.</div>"
+                    )
+        return reporte, None, None
+    
+    # Se verifica que el dataframe con la serie diferenciada ya exista
+    if p == NO_EXISTE or q == NO_EXISTE:
+        reporte = ("<div style='font-size: 16px !important; color: #FF0000 !important; font-weight: bold !important;'>"
+                    "Faltan parámetros para el modelo ARIMA. El coeficiente "
+                    "<i style='color: #FF0000;'>p</i> se obtiene con la FUNCIÓN DE AUTOCORRELACIÓN (ACF) y "
+                    "el coeficiente <i style='color: #FF0000;'>q</i> con la FUNCIÓN DE AUTOCORRELACIÓN PARCIAL (PACF).</div>"
+                    )
+        return reporte, None, None
+    
+    # Se convierte el nombre corto del  "indicador" a su nombre original
+    ind_orig = next((k for k, v in dict_ncortos.items() if v == indicador), indicador)
+    
+    # Se convierte 'periodo' a formato datetime y establecerlo como índice con frecuencia,
+    # porque así lo requiere el modelo ARIMA
+    df = df.copy()
+    # 1. Convertir a datetime
+    df['periodo'] = pd.to_datetime(df['periodo'])
+    df = df.sort_values('periodo').set_index('periodo')
+    
+    # 2. Convertir a PeriodIndex para manejar frecuencias sin día específico
+    # Esto elimina el ValueWarning de statsmodels
+    df.index = pd.DatetimeIndex(df.index).to_period() 
+    
+    serie = df[ind_orig].dropna()
+
+    # Validación de longitud mínima de la serie (Regla general: T > p + q + 1)
+    if len(serie) < (p + q + 2):
+        reporte = ("<div style='font-size: 16px !important; color: #FF0000; font-weight: bold;'>"
+                    "La serie no tiene suficientes datos para los valores de "
+                    "<i>p</i>  y <i>q</i> calculados.<br>"
+                    f"<i>p</i> = {p}; <i>q</i> = {q}.</div>"
+                    )
+        return reporte, None, None
+
+    # Ajuste del Modelo ARIMA (p, d, q)
+    try:
+        # enforce_stationarity=False y enforce_invertibility=False ayudan a evitar los UserWarnings
+        # de parámetros iniciales, permitiendo que el optimizador encuentre la solución.
+        modelo = ARIMA(serie, order=(p, d, q), enforce_stationarity=False, enforce_invertibility=False)
+        resultado = modelo.fit()
+    except Exception as e:
+        return f"Error al ajustar el modelo: {str(e)}", None, None
+
+    # 1. Obtener la tabla de coeficientes como HTML
+    html_str = resultado.summary().tables[1].as_html()
+
+    # 2. Leer la tabla usando StringIO para evitar el FutureWarning
+    # Se requiere lxml instalado: pip install lxml
+    try:
+        df_coef = pd.read_html(StringIO(html_str), header=0, index_col=0)[0]
+        
+        # 3. Transponer la tabla
+        df_coef_t = df_coef.transpose()
+
+        # 4. Convertir a HTML con estilos específicos
+        coef_html = df_coef_t.to_html(classes='table_arima', border=0)
+    except Exception as e:
+        coef_html = f"<p>Error al procesar la tabla: {e}</p>"
+
+    reporte = f"""
+        <div style='font-family: Arial; font-size: 14px; overflow-x: auto;'>
+            <h4 style='color: #000000;'>Resumen de Coeficientes ARIMA: <i>p</i> = {p}, <i>d</i> = {d}, <i>q</i> = {q}</h4>
+            <style>
+                .table_arima {{ 
+                    width: 100%; 
+                    border-collapse: collapse; 
+                    margin-top: 10px; 
+                    background-color: #FFFFFF !important;
+                }}
+                /* Estilo para los encabezados (Métricas/Parámetros) */
+                .table_arima th {{ 
+                    background-color: #FFFFFF !important; 
+                    color: #000000 !important;
+                    padding: 12px; 
+                    text-align: center; 
+                    border: 2px solid #D5DBDB; 
+                    font-size: 15px;
+                    font-weight: bold;
+                }}
+                /* Estilo para las celdas de datos */
+                .table_arima td {{ 
+                    background-color: #FFFFFF !important;
+                    color: #000000 !important;
+                    padding: 10px; 
+                    border: 2px solid #D5DBDB; 
+                    text-align: right; 
+                    font-family: Arial, sans-serif;
+                    font-size: 16px;
+                    font-weight: bold;
+                }}
+                /* Eliminamos cualquier sombreado al pasar el mouse */
+                .table_arima tr:hover {{ background-color: #FFFFFF !important; }}
+            </style>
+            {coef_html}
+        </div>
+        """
+
+    # Ejecución de la prueba de Ljung-Box sobre los residuos, para verificar
+    # su independencia (Ruido Blanco). Se sugiere: lags=10 o lags=min(10, len(residuos)//5)
+    residuos = resultado.resid
+    lb_test = acorr_ljungbox(residuos, lags=[10], return_df=True)
+    p_value_lb = lb_test['lb_pvalue'].iloc[0]
+
+    # Determinación del estado de ruido blanco (Alfa = 0.05)
+    es_ruido_blanco = p_value_lb > 0.05
+    color_status = "#28B463" if es_ruido_blanco else "#CB4335"
+    mensaje_lb = "Residuos independientes (Ruido Blanco)" if es_ruido_blanco else "Residuos Autocorrelacionados"
+
+    # Actualización del reporte HTML con los resultados de la prueba de Ljung-Box.
+    reporte_lb = f"""
+    <div style='font-family: Arial; font-size: 14px; margin-top: 10px; border-top: 1px solid #ddd; padding-top: 10px;'>
+        <b style='color: #000000;'>Validación de Residuos (Prueba Ljung-Box):</b><br>
+        Estadístico p-value: <span style='color: {color_status}; font-weight: bold;'>{p_value_lb:.4f}</span><br>
+        Estado: <b style='color: {color_status};'>{mensaje_lb}</b>
+        <p style='font-size: 12px; color: #566573;'>
+            <i>Nota: Un p-value > 0.05 indica que los residuos son independientes, 
+            lo cual es un requisito para un modelo ARIMA robusto.</i>
+        </p>
+    </div>
+    """
+
+    # Predicción de 'n' pasos futuros
+    forecast_obj = resultado.get_forecast(steps=n)
+    pronostico = forecast_obj.predicted_mean
+    intervalos = forecast_obj.conf_int()
+
+    # Se crea el eje X Histórico (2011 - 2024)
+    # Genera la lista de años como strings, saltando los primeros 'd' años
+    anios_hist = [str(anio) for anio in range(YEAR_MIN + d, YEAR_MAX + 1)]
+    
+    # Se crea el eje X Futuro (2025 en adelante)
+    anios_fut = [str(YEAR_MAX + i) for i in range(n)]
+
+    # DataFrames simplificados para Plotly
+    df_plot_hist = pd.DataFrame({
+        'Año': anios_hist,
+        'Valor': serie.values.flatten()
+    })
+
+    df_plot_pred = pd.DataFrame({
+        'Año': anios_fut,
+        'Predicción': pronostico.values.flatten(),
+        'Inf': intervalos.iloc[:, 0].values,
+        'Sup': intervalos.iloc[:, 1].values
+    })
+
+    # Se grafican con Plotly los dos DataFrames
+    fig_prediccion = go.Figure()
+
+    # Trazado Histórico
+    fig_prediccion.add_trace(go.Scatter(
+        x=df_plot_hist['Año'],
+        y=df_plot_hist['Valor'],
+        mode='lines+markers',
+        name='Histórico (2011-2024)',
+        line=dict(color='#1f77b4', width=3),
+        showlegend=False
+    ))
+
+    # Trazado Predicho
+    fig_prediccion.add_trace(go.Scatter(
+        x=df_plot_pred['Año'],
+        y=df_plot_pred['Predicción'],
+        mode='lines+markers',
+        name='Predicción (2025+)',
+        line=dict(color='#FF7F0E', width=3),
+        showlegend=False
+    ))
+
+    # Intervalos de Confianza (Banda Sombreada)
+    fig_prediccion.add_trace(go.Scatter(
+        x=df_plot_pred['Año'].tolist() + df_plot_pred['Año'].tolist()[::-1],
+        y=df_plot_pred['Sup'].tolist() + df_plot_pred['Inf'].tolist()[::-1],
+        fill='toself',
+        fillcolor='rgba(255, 127, 14, 0.2)',
+        line=dict(color='rgba(255,255,255,0)'),
+        hoverinfo="skip",
+        showlegend=False
+    ))
+
+    fig_prediccion.update_xaxes(
+        tickmode='linear', 
+        tick0=0, 
+        dtick=1, 
+        tickfont=dict(size=12, color='black', family='Arial Black'),
+        tickformat='d',
+    )
+    fig_prediccion.update_yaxes(
+        tickfont=dict(size=12, color='black', family='Arial Black'),
+    )
+    
+    titulo = f"MATRÍCULA: {dict_nlargos[ind_orig].upper()}"
+    fig_prediccion.update_layout(
+        # title=f"Predicción ARIMA: {indicador.upper()}",
+        title={
+            'text': f"<b>{titulo}</b>",
+            'font': {'size': 14, 'color': 'black'},
+            'xanchor': 'left'
+        },
+        # xaxis_title="Año",
+        height=400,
+        autosize=True,
+        margin=dict(l=10, r=10, t=50, b=10, pad=0),
+        # yaxis_title="Matrícula",
+        xaxis=dict(type='category', tickangle=-45),
+        template="plotly_white",
+        hovermode="x unified"
+    )
+
+
+    # Se convierte el DataFrame de predicciones a HTML, con 'index=False' para 
+    # no mostrar el índice numérico; 'justify='center'' para encabezados y
+    # redondeo a 2 decimales
+    tabla_pred_html = df_plot_pred.to_html(
+        classes='table_arima', 
+        border=0, 
+        index=False, 
+        justify='center',
+        formatters={
+            'Predicción': lambda x: f"{x:,.2f}",
+            'Inf': lambda x: f"{x:,.2f}",
+            'Sup': lambda x: f"{x:,.2f}"
+        }
+    )
+
+    # Estilo CSS para la tabla
+    tabla_pred = f"""
+        <div style='font-family: Arial; font-size: 14px; overflow-x: auto; margin-top: 20px;'>
+            <h4 style='color: #000000;'>Valores Pronosticados (2025 en adelante)</h4>
+            <style>
+                .table_arima {{ 
+                    width: 100%; 
+                    border-collapse: collapse; 
+                    margin-top: 10px; 
+                    background-color: #FFFFFF !important;
+                }}
+                .table_arima th {{ 
+                    background-color: #F4F6F7 !important; 
+                    color: #000000 !important;
+                    padding: 12px; 
+                    text-align: center; 
+                    border: 2px solid #D5DBDB; 
+                    font-size: 15px;
+                    font-weight: bold;
+                }}
+                .table_arima td {{ 
+                    background-color: #FFFFFF !important;
+                    color: #000000 !important;
+                    padding: 10px; 
+                    border: 2px solid #D5DBDB; 
+                    text-align: right; 
+                    font-family: Arial, sans-serif;
+                    font-size: 16px;
+                    font-weight: bold;
+                }}
+                .table_arima tr:hover {{ background-color: #F2F4F4 !important; }}
+            </style>
+            {tabla_pred_html}
+        </div>
+    """
+
+    # Gráfica de Diagnóstico de Residuos (fig_residuos)
+    # residuos = resultado.resid
+    fig_residuos = make_subplots(
+        rows=4, cols=1, 
+        subplot_titles=(
+            'Residuos Estandarizados', 
+            'Histograma y Densidad (KDE)', 
+            'Gráfico de Probabilidad Normal (Q-Q Plot)', 
+            'Correlograma (Función de Autocorrelación)'
+        ),
+        vertical_spacing=0.08 # Espaciado entre subplots
+    )
+
+    # Subplot 1: Residuos estandarizados
+    fig_residuos.add_trace(go.Scatter(y=residuos, mode='lines', name='Residuos'), 
+                           row=1, col=1)
+    fig_residuos.add_hline(y=0, 
+                           line_dash="dash", 
+                           line_color="black", 
+                           row=1, col=1)
+
+    # Subplot 2: Histograma + KDE
+    fig_residuos.add_trace(go.Histogram(x=residuos, 
+                                        nbinsx=30, 
+                                        name='Hist.', 
+                                        histnorm='probability density'), 
+                                        row=2, col=1)
+    
+    # Subplot 3: Q-Q Plot
+    qq = stats.probplot(residuos, dist="norm")
+    fig_residuos.add_trace(go.Scatter(x=qq[0][0], y=qq[0][1], 
+                                      mode='markers', name='Q-Q'), 
+                                      row=3, col=1)
+    fig_residuos.add_trace(go.Scatter(x=qq[0][0], 
+                                      y=qq[0][0]*qq[1][0] + qq[1][1], 
+                                      mode='lines', 
+                                      line=dict(color='red')), 
+                                      row=3, col=1)
+
+    # Subplot 4: Correlograma (ACF de residuos)
+    acf_res = sm.tsa.stattools.acf(residuos, nlags=20)
+    fig_residuos.add_trace(go.Bar(x=list(range(len(acf_res))), 
+                                  y=acf_res, name='ACF Residuos'), 
+                                  row=4, col=1)
+
+    fig_residuos.update_layout(height=800,
+                            autosize=True,
+                            margin=dict(l=10, r=20, t=10, b=10, pad=0),
+                            template="plotly_white", 
+                            showlegend=False, 
+                            #title_text="Diagnóstico Detallado de Residuos"
+                            )
+
+
+    return reporte, fig_prediccion, tabla_pred, fig_residuos, reporte_lb
+
+def tab_ST_ARIMA(df, indicador, p, d, q, n):
+    """
+    Compila y entrena el modelo ARIMA y realiza la predicción:
+    - df: dataset ya diferenciado con columnas con nombres originales ['periodo', indicadores]
+    - indicador: nombre corto del indicador
+    - p, d, q: parámetros del modelo
+    . n: períodos futuros a predecir
+    IMPORTANTE: la serie debe ser estacionaria y deben estar calculados
+                previamente: q (con PACF), d (con ADF) y p (con ACF)
+    """
+
+    # Se verifica que la serie sea estacionaria (NO_EXISTE = sin prueba ADF, no se verificó estacionariedad)
+    if d == NO_EXISTE:
+        reporte = ("<div style='font-size: 16px !important; color: #FF0000; font-weight: bold;'>"
+                    "La serie debe ser estacionaria para aplicar el modelo ARIMA. "
+                    "Debe aplicarse la diferenciación (si corresponde) y "
+                    "la prueba ADF para verificar ESTACIONARIEDAD.</div>"
+                    )
+        return reporte, None, None, None, None
+    
+    # Se verifica que el dataframe con la serie diferenciada ya exista
+    if p == NO_EXISTE or q == NO_EXISTE:
+        reporte = ("<div style='font-size: 16px !important; color: #FF0000 !important; font-weight: bold !important;'>"
+                    "Faltan parámetros para el modelo ARIMA. El coeficiente "
+                    "<i style='color: #FF0000;'>p</i> se obtiene con la FUNCIÓN DE AUTOCORRELACIÓN (ACF) y "
+                    "el coeficiente <i style='color: #FF0000;'>q</i> con la FUNCIÓN DE AUTOCORRELACIÓN PARCIAL (PACF).</div>"
+                    )
+        return reporte, None, None, None, None
+    
+    # Se convierte el nombre corto del  "indicador" a su nombre original
+    ind_orig = next((k for k, v in dict_ncortos.items() if v == indicador), indicador)
+    
+    # Se convierte 'periodo' a formato datetime y establecerlo como índice con frecuencia,
+    # porque así lo requiere el modelo ARIMA
+    df = df.copy()
+    # 1. Convertir a datetime
+    df['periodo'] = pd.to_datetime(df['periodo'])
+    df = df.sort_values('periodo').set_index('periodo')
+    
+    # 2. Convertir a PeriodIndex para manejar frecuencias sin día específico
+    # Esto elimina el ValueWarning de statsmodels
+    df.index = pd.DatetimeIndex(df.index).to_period() 
+    
+    serie = df[ind_orig].dropna()
+
+    # Validación de longitud mínima de la serie (Regla general: T > p + q + 1)
+    if len(serie) < (p + q + 2):
+        reporte = ("<div style='font-size: 16px !important; color: #FF0000; font-weight: bold;'>"
+                    "La serie no tiene suficientes datos para los valores de "
+                    "<i>p</i>  y <i>q</i> calculados.<br>"
+                    f"<i>p</i> = {p}; <i>q</i> = {q}.</div>"
+                    )
+        return reporte, None, None, None, None
+
+    # Ajuste del Modelo ARIMA (p, d, q)
+    try:
+        # enforce_stationarity=False y enforce_invertibility=False ayudan a evitar los UserWarnings
+        # de parámetros iniciales, permitiendo que el optimizador encuentre la solución.
+        modelo = ARIMA(serie, order=(p, d, q), enforce_stationarity=False, enforce_invertibility=False)
+        resultado = modelo.fit()
+    except Exception as e:
+        return f"Error al ajustar el modelo: {str(e)}", None, None, None, None
+
+    # --- CÁLCULOS ESTADÍSTICOS ---
+    n_obs = len(serie)
+    k_params = p + q + 1 
+    gl = n_obs - k_params
+    
+    aic_val = resultado.aic
+    bic_val = resultado.bic
+    aicc_val = aic_val + (2 * k_params**2 + 2 * k_params) / (n_obs - k_params - 1) if (n_obs - k_params - 1) > 0 else np.nan
+
+    residuos_raw = resultado.resid
+    # RMSE y MAPE
+    rmse_val = np.sqrt(np.mean(residuos_raw**2))
+    mape_val = np.mean(np.abs(residuos_raw / serie)) * 100
+
+    # Test Jarque-Bera con Interpretación
+    jb_test = resultado.test_normality(method='jarquebera')
+    jb_p_value = jb_test[0, 1]
+    jb_status = "Normal" if jb_p_value > 0.05 else "No normal"
+    jb_color = "#28B463" if jb_p_value > 0.05 else "#CB4335"
+
+    if k_params <= 2: complejidad = "Baja"
+    elif k_params <= 4: complejidad = "Media"
+    else: complejidad = "Alta"
+
+    if n_obs < 15 or gl < 10: riesgo = "Muy Alto"
+    elif n_obs < 25 or gl < 20: riesgo = "Alto"
+    elif n_obs < 50: riesgo = "Aceptable"
+    else: riesgo = "Bajo"
+    
+    color_riesgo = {"Bajo": "#28B463", "Aceptable": "#F1C40F", "Alto": "#E67E22", "Muy Alto": "#CB4335"}[riesgo]
+
+    metricas_dict = {
+        "Cantidad de Observaciones (n)": f"{n_obs}",
+        "Grados de Libertad (GL)": f"{gl}",
+        "AIC (Akaike)": f"{aic_val:.2f}",
+        "AICc (Akaike Corregido)": f"{aicc_val:.2f}",
+        "BIC (Bayesiano)": f"{bic_val:.2f}",
+        "RMSE (Raíz Error Cuadrático Medio)": f"{rmse_val:,.2f}",
+        "MAPE (Error Porcentual)": f"{mape_val:.2f}%",
+        "Normalidad Errores (Jarque-Bera)": f"<b style='color: {jb_color};'>{jb_status}</b> (p={jb_p_value:.4f})",
+        "Complejidad del Modelo": complejidad,
+        "Nivel de Riesgo en Estimación": f"<span style='color: {color_riesgo};'>{riesgo}</span>"
+    }
+
+    # 1. Obtener la tabla de coeficientes como HTML
+    html_str = resultado.summary().tables[1].as_html()
+
+    # 2. Leer la tabla usando StringIO para evitar el FutureWarning
+    try:
+        df_coef = pd.read_html(StringIO(html_str), header=0, index_col=0)[0]
+        df_coef_t = df_coef.transpose()
+        coef_html = df_coef_t.to_html(classes='table_arima', border=0)
+    except Exception as e:
+        coef_html = f"<p>Error al procesar la tabla: {e}</p>"
+
+    filas_info_html = ""
+    for metrica, valor in metricas_dict.items():
+        filas_info_html += f"""
+            <tr>
+                <td style='padding: 8px; border: 1px solid black; background-color: #F2F4F4; font-weight: bold; text-align: left;'>{metrica}</td>
+                <td style='padding: 8px; border: 1px solid black; background-color: #FFFFFF; font-weight: bold; text-align: right;'>{valor}</td>
+            </tr>
+        """
+
+    reporte = f"""
+        <div style='font-family: Arial; font-size: 14px; overflow-x: auto;'>
+            <h4 style='color: #000000;'>Robustez y Coeficientes ARIMA: <i>p</i> = {p}, <i>d</i> = {d}, <i>q</i> = {q}</h4>
+            
+            <table style='width: 100%; border-collapse: collapse; margin-bottom: 20px; border: 1px solid black;'>
+                <tr style='background-color: #F2F4F4;'>
+                    <th style='padding: 10px; border: 1px solid black; text-align: center; color: black;'>Parámetro / Métrica</th>
+                    <th style='padding: 10px; border: 1px solid black; text-align: center; color: black;'>Valor Estimado</th>
+                </tr>
+                {filas_info_html}
+            </table>
+
+            <style>
+                .table_arima {{ 
+                    width: 100%; 
+                    border-collapse: collapse; 
+                    margin-top: 10px; 
+                    background-color: #FFFFFF !important;
+                }}
+                .table_arima th {{ 
+                    background-color: #F2F4F4 !important; 
+                    color: #000000 !important;
+                    padding: 12px; 
+                    text-align: center; 
+                    border: 1px solid black; 
+                    font-size: 15px;
+                    font-weight: bold;
+                }}
+                .table_arima td {{ 
+                    background-color: #FFFFFF !important;
+                    color: #000000 !important;
+                    padding: 10px; 
+                    border: 1px solid black; 
+                    text-align: right; 
+                    font-family: Arial, sans-serif;
+                    font-size: 16px;
+                    font-weight: bold;
+                }}
+            </style>
+            {coef_html}
+        </div>
+        """
+
+    # Ejecución de la prueba de Ljung-Box sobre los residuos
+    residuos = resultado.resid
+    lb_test = acorr_ljungbox(residuos, lags=[10], return_df=True)
+    p_value_lb = lb_test['lb_pvalue'].iloc[0]
+
+    # Determinación del estado de ruido blanco
+    es_ruido_blanco = p_value_lb > 0.05
+    color_status = "#28B463" if es_ruido_blanco else "#CB4335"
+    mensaje_lb = "Residuos independientes (Ruido Blanco)" if es_ruido_blanco else "Residuos Autocorrelacionados"
+
+    reporte_lb = f"""
+    <div style='font-family: Arial; font-size: 14px; margin-top: 10px; border-top: 1px solid #ddd; padding-top: 10px;'>
+        <b style='color: #000000;'>Validación de Residuos (Prueba Ljung-Box):</b><br>
+        Estadístico p-value: <span style='color: {color_status}; font-weight: bold;'>{p_value_lb:.4f}</span><br>
+        Estado: <b style='color: {color_status};'>{mensaje_lb}</b>
+        <p style='font-size: 12px; color: #566573;'>
+            <i>Nota: Un p-value > 0.05 indica que los residuos son independientes, 
+            lo cual es un requisito para un modelo ARIMA robusto.</i><br>
+        </p>
+    </div>
+    """
+
+    # Predicción de 'n' pasos futuros
+    forecast_obj = resultado.get_forecast(steps=n)
+    pronostico = forecast_obj.predicted_mean
+    intervalos = forecast_obj.conf_int()
+
+    anios_hist = [str(anio) for anio in range(YEAR_MIN + d, YEAR_MAX + 1)]
+    anios_fut = [str(YEAR_MAX + i) for i in range(1, n+1)]
+
+    df_plot_hist = pd.DataFrame({
+        'Año': anios_hist, 
+        'Valor': serie.values.flatten()
+    })
+    df_plot_pred = pd.DataFrame({
+        'Año': anios_fut,
+        'Valor': pronostico.values.flatten(),
+        'Inf': intervalos.iloc[:, 0].values,
+        'Sup': intervalos.iloc[:, 1].values
+    })
+
+    # Se agrega al df histórico el primer dato del df predicho para que no quede un salto en el gráfico
+    # Se extrae la primera fila df_plot_pred con [[:1]] para mantenerlo como DataFrame
+    primer_dato_pred = df_plot_pred.iloc[0:1].copy()
+    # Se concatena al final de df_plot_hist (solo las columnas 'Año' y 'Valor')
+    df_plot_hist = pd.concat([
+        df_plot_hist, 
+        primer_dato_pred[['Año', 'Valor']]
+    ], ignore_index=True) # Para que no mantenga el índice 0 original y tome el índice que corresponda
+
+
+    fig_prediccion = go.Figure()
+
+    fig_prediccion.add_trace(go.Scatter(
+        x=df_plot_hist['Año'], y=df_plot_hist['Valor'],
+        mode='lines+markers', name='Histórico (2011-2024)',
+        line=dict(color='#1f77b4', width=3), showlegend=False
+    ))
+
+    fig_prediccion.add_trace(go.Scatter(
+        x=df_plot_pred['Año'], y=df_plot_pred['Valor'],
+        mode='lines+markers', name='Predicción (2025+)',
+        line=dict(color='#FF7F0E', width=3), showlegend=False
+    ))
+
+    fig_prediccion.add_trace(go.Scatter(
+        x=df_plot_pred['Año'].tolist() + df_plot_pred['Año'].tolist()[::-1],
+        y=df_plot_pred['Sup'].tolist() + df_plot_pred['Inf'].tolist()[::-1],
+        fill='toself', fillcolor='rgba(255, 127, 14, 0.2)',
+        line=dict(color='rgba(255,255,255,0)'), hoverinfo="skip", showlegend=False
+    ))
+
+    fig_prediccion.update_xaxes(
+        tickmode='linear', tick0=0, dtick=1, 
+        tickfont=dict(size=12, color='black', family='Arial'), tickformat='d',
+    )
+    fig_prediccion.update_yaxes(tickfont=dict(size=12, color='black', family='Arial Black'))
+    
+    titulo = f"MATRÍCULA: {dict_nlargos[ind_orig].upper()}"
+    fig_prediccion.update_layout(
+        title={'text': f"<b>{titulo}</b>", 'font': {'size': 14, 'color': 'black'}, 'xanchor': 'left'},
+        height=400, autosize=True, margin=dict(l=10, r=10, t=50, b=10, pad=0),
+        xaxis=dict(type='category', tickangle=-45), template="plotly_white", hovermode="x unified"
+    )
+
+    tabla_pred_html = df_plot_pred.to_html(
+        classes='table_arima', border=0, index=False, justify='center',
+        formatters={'Predicción': lambda x: f"{x:,.2f}", 'Inf': lambda x: f"{x:,.2f}", 'Sup': lambda x: f"{x:,.2f}"}
+    )
+
+    tabla_pred = f"""
+        <div style='font-family: Arial; font-size: 14px; overflow-x: auto; margin-top: 20px;'>
+            <h4 style='color: #000000;'>Valores Pronosticados (2025 en adelante)</h4>
+            <style>
+                .table_arima {{ width: 100%; border-collapse: collapse; margin-top: 10px; background-color: #FFFFFF !important; }}
+                .table_arima th {{ background-color: #F2F4F4 !important; color: #000000 !important; padding: 12px; text-align: center; border: 1px solid black; font-size: 15px; font-weight: bold; }}
+                .table_arima td {{ background-color: #FFFFFF !important; color: #000000 !important; padding: 10px; border: 1px solid black; text-align: right; font-family: Arial, sans-serif; font-size: 16px; font-weight: bold; }}
+                .table_arima tr:hover {{ background-color: #F2F4F4 !important; }}
+            </style>
+            {tabla_pred_html}
+        </div>
+    """
+
+    fig_residuos = make_subplots(
+        rows=4, cols=1, 
+        subplot_titles=('Residuos Estandarizados', 
+                        'Histograma y Densidad (KDE)', 
+                        'Probabilidad Normal (Q-Q Plot)', 
+                        'Correlograma (ACF)'),
+        vertical_spacing=0.08
+    )
+
+    # Residuos estandarizados
+    fig_residuos.add_trace(go.Scatter(y=residuos, 
+                                      mode='lines', 
+                                      name='Residuos'), 
+                                      row=1, col=1)
+    fig_residuos.add_hline(y=0, line_dash="dash", 
+                           line_color="black", 
+                           row=1, col=1)
+    
+    # Histograma y Densidad
+    fig_residuos.add_trace(go.Histogram(x=residuos, 
+                                        nbinsx=30, 
+                                        name='Hist.', 
+                                        histnorm='probability density'), 
+                                        row=2, col=1)
+    
+    # Probabilidad Normal
+    qq = stats.probplot(residuos, dist="norm")
+    fig_residuos.add_trace(go.Scatter(x=qq[0][0],
+                                      y=qq[0][1], 
+                                      mode='markers', 
+                                      name='Q-Q'), 
+                                      row=3, col=1)
+    fig_residuos.add_trace(go.Scatter(x=qq[0][0], 
+                                      y=qq[0][0]*qq[1][0] + qq[1][1], 
+                                      mode='lines', 
+                                      line=dict(color='red')), 
+                                      row=3, col=1)
+
+    # Correlograma
+    acf_res = sm.tsa.stattools.acf(residuos, nlags=20)
+    fig_residuos.add_trace(go.Bar(x=list(range(len(acf_res))), 
+                                  y=acf_res, 
+                                  name='ACF Residuos'), 
+                                  row=4, col=1)
+
+    # Área de graficación
+    fig_residuos.update_layout(height=1000, 
+                               autosize=True, 
+                               margin=dict(l=20, r=20, t=40, b=10, pad=0), 
+                               template="plotly_white", 
+                               showlegend=False)
+
+    # Configuración de Títulos de Subplots (Arial Black, 14pt)
+    fig_residuos.update_annotations(font=dict(family="Arial Black", size=14))
+
+    # Configuración de Ejes (Arial Black, 14pt) y Cuadrícula Negra
+    fig_residuos.update_xaxes(
+        tickfont=dict(family="Arial Black", size=12),
+        showgrid=True, gridcolor='gray',
+        linecolor='gray', mirror=True
+    )
+    fig_residuos.update_yaxes(
+        tickfont=dict(family="Arial Black", size=12),
+        showgrid=True, gridcolor='gray',
+        linecolor='gray', mirror=True
+    )
+
+    return reporte, fig_prediccion, tabla_pred, fig_residuos, reporte_lb
 
 # endregion FUNCIONES PARA LA PESTAÑA "SERIES TEMPORALES"
 
@@ -1798,10 +2800,20 @@ with gr.Blocks(title="Análisis Educativo") as app:
     dataset_diff_state_1 = gr.State(pd.DataFrame())
     dataset_diff_state_2 = gr.State(pd.DataFrame())
     dataset_diff_state_3 = gr.State(pd.DataFrame())
-    # Para guardar el grado de diferenciación
-    level_diff_state_1 = gr.State(value=0)
-    level_diff_state_2 = gr.State(value=0)
-    level_diff_state_3 = gr.State(value=0)
+    # Para guardar el grado de diferenciación, usamos 9 para indicar que no hubo diferenciación
+    # Los grados de diferenciación pueden ser: 0, 1, 2, 3, 4
+    # Sirven también para el parámetro 'd' en el modelo ARIMA(p, d, q)
+    level_diff_state_1 = gr.State(value=NO_EXISTE)
+    level_diff_state_2 = gr.State(value=NO_EXISTE)
+    level_diff_state_3 = gr.State(value=NO_EXISTE)
+    # Para guardar los otros parámetros del modelo ARIMA (p, d, q)
+    ARIMA_p_1 = gr.State(value=NO_EXISTE)
+    ARIMA_p_2 = gr.State(value=NO_EXISTE)
+    ARIMA_p_3 = gr.State(value=NO_EXISTE)
+    ARIMA_q_1 = gr.State(value=NO_EXISTE)
+    ARIMA_q_2 = gr.State(value=NO_EXISTE)
+    ARIMA_q_3 = gr.State(value=NO_EXISTE)
+
 
     gr.Row(elem_classes="header-tab")
     
@@ -1920,9 +2932,9 @@ with gr.Blocks(title="Análisis Educativo") as app:
 
 
             tipo_matricula.change(
-                fn=tab_EDA_on_dataset_change,
-                inputs=[tipo_matricula, chk_mostrar, chk_interactivo],
-                outputs=[dataset_state, dataset_filter_state, provincia, departamento, 
+                fn = tab_EDA_on_dataset_change,
+                inputs = [tipo_matricula, chk_mostrar, chk_interactivo],
+                outputs = [dataset_state, dataset_filter_state, provincia, departamento, 
                             sector, ambito, info_label,
                             data_dataset, stats_table, output_table,
                             output_plot_box, output_plot_evolution,
@@ -1932,10 +2944,10 @@ with gr.Blocks(title="Análisis Educativo") as app:
             )
             
             provincia.change(
-                fn=tab_EDA_on_provincia_change,
-                inputs=[dataset_state, dataset_filter_state, tipo_matricula, provincia, 
+                fn = tab_EDA_on_provincia_change,
+                inputs = [dataset_state, dataset_filter_state, tipo_matricula, provincia, 
                         chk_mostrar, chk_interactivo],
-                outputs=[dataset_state, dataset_filter_state, provincia, departamento, 
+                outputs = [dataset_state, dataset_filter_state, provincia, departamento, 
                             sector, ambito, info_label,
                             data_dataset, stats_table, output_table,
                             output_plot_box, output_plot_evolution,
@@ -1945,10 +2957,10 @@ with gr.Blocks(title="Análisis Educativo") as app:
             )
             
             departamento.change(
-                fn=tab_EDA_on_departamento_change,
-                inputs=[dataset_state, dataset_filter_state, tipo_matricula, provincia, departamento, 
+                fn = tab_EDA_on_departamento_change,
+                inputs = [dataset_state, dataset_filter_state, tipo_matricula, provincia, departamento, 
                         chk_mostrar, chk_interactivo],
-                outputs=[dataset_state, dataset_filter_state, provincia, departamento, 
+                outputs = [dataset_state, dataset_filter_state, provincia, departamento, 
                             sector, ambito, info_label,
                             data_dataset, stats_table, output_table,
                             output_plot_box, output_plot_evolution,
@@ -1958,10 +2970,10 @@ with gr.Blocks(title="Análisis Educativo") as app:
             )
 
             sector.change(
-                fn=tab_EDA_on_opcion_change,
-                inputs=[dataset_state, dataset_filter_state, tipo_matricula, provincia,
+                fn = tab_EDA_on_opcion_change,
+                inputs = [dataset_state, dataset_filter_state, tipo_matricula, provincia,
                         departamento, sector, ambito, chk_mostrar, chk_interactivo],
-                outputs=[dataset_state, dataset_filter_state, provincia, departamento, 
+                outputs = [dataset_state, dataset_filter_state, provincia, departamento, 
                             sector, ambito, info_label,
                             data_dataset, stats_table, output_table,
                             output_plot_box, output_plot_evolution,
@@ -1971,10 +2983,10 @@ with gr.Blocks(title="Análisis Educativo") as app:
             )
             
             ambito.change(
-                fn=tab_EDA_on_opcion_change,
-                inputs=[dataset_state, dataset_filter_state, tipo_matricula, provincia,
+                fn = tab_EDA_on_opcion_change,
+                inputs = [dataset_state, dataset_filter_state, tipo_matricula, provincia,
                         departamento, sector, ambito, chk_mostrar, chk_interactivo],
-                outputs=[dataset_state, dataset_filter_state, provincia, departamento, 
+                outputs = [dataset_state, dataset_filter_state, provincia, departamento, 
                             sector, ambito, info_label,
                             data_dataset, stats_table, output_table,
                             output_plot_box, output_plot_evolution,
@@ -1984,10 +2996,10 @@ with gr.Blocks(title="Análisis Educativo") as app:
             )
 
             btn_mostrar.click(
-                fn=tab_EDA_show_data,
-                inputs=[dataset_state, tipo_matricula, provincia,
+                fn = tab_EDA_show_data,
+                inputs = [dataset_state, tipo_matricula, provincia,
                         departamento, sector, ambito, chk_mostrar, chk_interactivo],
-                outputs=[dataset_state, dataset_filter_state, provincia, departamento, 
+                outputs = [dataset_state, dataset_filter_state, provincia, departamento, 
                             sector, ambito, info_label,
                             data_dataset, stats_table, output_table,
                             output_plot_box, output_plot_evolution,
@@ -1997,68 +3009,68 @@ with gr.Blocks(title="Análisis Educativo") as app:
             )
 
             indicador.change(
-                fn=tab_EDA_create_all_graphs,
-                inputs=[dataset_filter_state, indicador, chk_serie, chk_mg, chk_tend,
+                fn = tab_EDA_create_all_graphs,
+                inputs = [dataset_filter_state, indicador, chk_serie, chk_mg, chk_tend,
                        chk_mm, chk_sd, chk_interactivo],
-                outputs=[output_plot_evolution, output_plot_histogram, output_plot_normal_dist]
+                outputs = [output_plot_evolution, output_plot_histogram, output_plot_normal_dist]
             )
 
             btn_anterior.click(
-                fn=tab_EDA_create_prev_all_graphs,
-                inputs=[dataset_filter_state, indicador, chk_serie, chk_mg, chk_tend,
+                fn = tab_EDA_create_prev_all_graphs,
+                inputs = [dataset_filter_state, indicador, chk_serie, chk_mg, chk_tend,
                        chk_mm, chk_sd, chk_interactivo],
-                outputs=[indicador, output_plot_evolution, output_plot_histogram,
+                outputs = [indicador, output_plot_evolution, output_plot_histogram,
                         output_plot_normal_dist]
             )
             
             btn_siguiente.click(
-                fn=tab_EDA_create_next_all_graphs,
-                inputs=[dataset_filter_state, indicador, chk_serie, chk_mg, chk_tend,
+                fn = tab_EDA_create_next_all_graphs,
+                inputs = [dataset_filter_state, indicador, chk_serie, chk_mg, chk_tend,
                        chk_mm, chk_sd, chk_interactivo],
-                outputs=[indicador, output_plot_evolution, output_plot_histogram,
+                outputs = [indicador, output_plot_evolution, output_plot_histogram,
                         output_plot_normal_dist]
             )
 
             chk_serie.change(
-                fn=tab_EDA_options_graph,
-                inputs=[dataset_filter_state, indicador, chk_serie, chk_mg, chk_tend,
+                fn = tab_EDA_options_graph,
+                inputs = [dataset_filter_state, indicador, chk_serie, chk_mg, chk_tend,
                        chk_mm, chk_sd, chk_interactivo],
-                outputs=[output_plot_evolution]
+                outputs = [output_plot_evolution]
             )
 
             chk_mg.change(
-                fn=tab_EDA_options_graph,
-                inputs=[dataset_filter_state, indicador, chk_serie, chk_mg, chk_tend,
+                fn = tab_EDA_options_graph,
+                inputs = [dataset_filter_state, indicador, chk_serie, chk_mg, chk_tend,
                        chk_mm, chk_sd, chk_interactivo],
-                outputs=[output_plot_evolution]
+                outputs = [output_plot_evolution]
             )
 
             chk_tend.change(
-                fn=tab_EDA_options_graph,
-                inputs=[dataset_filter_state, indicador, chk_serie, chk_mg, chk_tend,
+                fn = tab_EDA_options_graph,
+                inputs = [dataset_filter_state, indicador, chk_serie, chk_mg, chk_tend,
                        chk_mm, chk_sd, chk_interactivo],
-                outputs=[output_plot_evolution]
+                outputs = [output_plot_evolution]
             )
 
             chk_mm.change(
-                fn=tab_EDA_options_graph,
-                inputs=[dataset_filter_state, indicador, chk_serie, chk_mg, chk_tend,
+                fn = tab_EDA_options_graph,
+                inputs = [dataset_filter_state, indicador, chk_serie, chk_mg, chk_tend,
                        chk_mm, chk_sd, chk_interactivo],
-                outputs=[output_plot_evolution]
+                outputs = [output_plot_evolution]
             )
 
             chk_sd.change(
-                fn=tab_EDA_options_graph,
-                inputs=[dataset_filter_state, indicador, chk_serie, chk_mg, chk_tend,
+                fn = tab_EDA_options_graph,
+                inputs = [dataset_filter_state, indicador, chk_serie, chk_mg, chk_tend,
                        chk_mm, chk_sd, chk_interactivo],
-                outputs=[output_plot_evolution]
+                outputs = [output_plot_evolution]
             )
 
             chk_mostrar.select(
-                fn=tab_EDA_on_checkbox,
-                inputs=[tipo_matricula, provincia, departamento, sector, ambito, 
+                fn = tab_EDA_on_checkbox,
+                inputs = [tipo_matricula, provincia, departamento, sector, ambito, 
                         chk_mostrar, chk_interactivo],
-                outputs=[dataset_state, dataset_filter_state, provincia, departamento, 
+                outputs = [dataset_state, dataset_filter_state, provincia, departamento, 
                             sector, ambito, info_label,
                             data_dataset, stats_table, output_table,
                             output_plot_box, output_plot_evolution,
@@ -2068,16 +3080,16 @@ with gr.Blocks(title="Análisis Educativo") as app:
             )
 
             chk_interactivo.select(
-                fn=tab_EDA_graph_interactive,
-                inputs=[dataset_filter_state, indicador, chk_serie, chk_mg, chk_tend,
+                fn = tab_EDA_graph_interactive,
+                inputs = [dataset_filter_state, indicador, chk_serie, chk_mg, chk_tend,
                        chk_mm, chk_sd, chk_interactivo],
-                outputs=[output_plot_box, output_plot_evolution]
+                outputs = [output_plot_box, output_plot_evolution]
             )
 
             tab_EDA.select(
-                fn=tab_EDA_on_load, 
-                inputs=[tipo_matricula, chk_mostrar, chk_interactivo], 
-                outputs=[dataset_state, dataset_filter_state, provincia, departamento, 
+                fn = tab_EDA_on_load, 
+                inputs = [tipo_matricula, chk_mostrar, chk_interactivo], 
+                outputs = [dataset_state, dataset_filter_state, provincia, departamento, 
                             sector, ambito, info_label,
                             data_dataset, stats_table, output_table,
                             output_plot_box, output_plot_evolution,
@@ -2093,7 +3105,7 @@ with gr.Blocks(title="Análisis Educativo") as app:
                 gr.HTML("&nbsp;&nbsp;COMPARACIÓN DE SERIES TEMPORALES", elem_classes="title-text")
             
 
-
+            # region SECCIÓN 1: SELECCIÓN DE LAS TRES SERIES TEMPORALES
             ### SECCIÓN 1: SELECCIÓN DE LAS TRES SERIES TEMPORALES A COMPARAR
             with gr.Row():
                 with gr.Column(elem_classes="custom-tab-2", scale=20):    
@@ -2112,13 +3124,18 @@ with gr.Blocks(title="Análisis Educativo") as app:
                     with gr.Row(elem_classes="custom-tab"):
                         with gr.Column():
                             gr.HTML("Opciones de Gráficos", elem_classes="title-group")
-                            graph_serie = gr.Checkbox(label="Serie", value=True, elem_classes="custom-checkbox")
-                            graph_mg = gr.Checkbox(label="Media Global", value=True, elem_classes="custom-checkbox")
-                            graph_tend = gr.Checkbox(label="Tendencia", value=True, elem_classes="custom-checkbox")
+                            graph_serie = gr.Checkbox(label="Serie", value=True, 
+                                                      elem_classes="custom-checkbox")
+                            graph_mg = gr.Checkbox(label="Media Global", value=True, 
+                                                   elem_classes="custom-checkbox")
+                            graph_tend = gr.Checkbox(label="Tendencia", value=True, 
+                                                     elem_classes="custom-checkbox")
                             graph_mm = gr.Radio(label="Media Móvil", choices=["No", "k = 2 atrás",
                                                             "k = 3 atrás", "k = 3 centrado"],
-                                                            value="k = 3 centrado", type="index", elem_classes="custom-radio")
-                            graph_sd = gr.Checkbox(label="SD Móvil", value=True, elem_classes="custom-checkbox")
+                                                            value="k = 3 centrado", type="index", 
+                                                            elem_classes="custom-radio")
+                            graph_sd = gr.Checkbox(label="SD Móvil", value=True, 
+                                                   elem_classes="custom-checkbox")
 
                 with gr.Column(scale=20):
                     with gr.Row(elem_classes="custom-tab"):
@@ -2180,9 +3197,9 @@ with gr.Blocks(title="Análisis Educativo") as app:
                                 var3 = gr.Dropdown(label="", choices=[], elem_classes="custom-dropdown-small")
                         with gr.Column(scale=20):
                             tend3 = gr.Plot(show_label=False, visible=False)
+            # endregion SECCIÓN 1: SELECCIÓN DE LAS TRES SERIES TEMPORALES
 
-
-
+            # region SECCION 2: DESCOMPOSICIÓN DE LAS TRES SERIES TEMPORALES
             ### SECCIÓN 2: DESCOMPOSICIÓN DE LAS TRES SERIES TEMPORALES APLICANDO EL MÉTODO STL
             with gr.Row():
                 with gr.Column(elem_classes="custom-tab-2", scale=20):    
@@ -2216,8 +3233,9 @@ with gr.Blocks(title="Análisis Educativo") as app:
                         with gr.Column():
                             STL_graph3 = gr.Plot(show_label=False, visible=False)
                             STL_info3 = gr.HTML("Interpretación", visible=False)
+            # endregion SECCION 2: DESCOMPOSICIÓN DE LAS TRES SERIES TEMPORALES
 
-
+            # region SECCIÓN 3: DIFERENCIACIÓN DE LAS SERIES Y PRUEBA ADF
             ### CÁLCULO DEL TEST ADF PARA ESTACIONARIEDAD DE LAS TRES SERIES TEMPORALES
             ### APLICANDO PREVIAMENTE LOS GRADOS DE DIFERENCIACIÓN INDICADOS
             with gr.Row():
@@ -2235,7 +3253,7 @@ with gr.Blocks(title="Análisis Educativo") as app:
                     with gr.Row():
                         leveldiff1 = gr.Radio(label="Grado de Diferenciación", choices=[0, 1, 2, 3, 4], value=0, visible=False)
                     with gr.Row():
-                        grafdiff1 = gr.Plot(show_label=False, visible=False)
+                        diff_graph1 = gr.Plot(show_label=False, visible=False)
                     with gr.Row():
                         with gr.Column():                        
                             ADF_info1 = gr.HTML("Interpretación", visible=False)
@@ -2246,7 +3264,7 @@ with gr.Blocks(title="Análisis Educativo") as app:
                     with gr.Row():
                         leveldiff2 = gr.Radio(label="Grado de Diferenciación", choices=[0, 1, 2, 3, 4], value=0, visible=False)
                     with gr.Row():
-                        grafdiff2 = gr.Plot(show_label=False, visible=False)                    
+                        diff_graph2 = gr.Plot(show_label=False, visible=False)                    
                     with gr.Row():
                         with gr.Column():
                             ADF_info2 = gr.HTML("Interpretación", visible=False)
@@ -2257,13 +3275,14 @@ with gr.Blocks(title="Análisis Educativo") as app:
                     with gr.Row():
                         leveldiff3 = gr.Radio(label="Grado de Diferenciación", choices=[0, 1, 2, 3, 4], value=0, visible=False)
                     with gr.Row():
-                        grafdiff3 = gr.Plot(show_label=False, visible=False)
+                        diff_graph3 = gr.Plot(show_label=False, visible=False)
                     with gr.Row():
                         with gr.Column():
                             ADF_info3 = gr.HTML("Interpretación", visible=False)
+            # endregion SECCIÓN 3: DIFERENCIACIÓN DE LAS SERIES Y PRUEBA ADF
 
-
-            ### SECCIÓN 3: CÁLCULO DE AUTOCORRELACIONES DE LAS TRES SERIES TEMPORALES
+            # region SECCIÓN 4: CÁLCULO DE AUTOCORRELACIONES DE LAS SERIES
+            ### SECCIÓN 4: CÁLCULO DE AUTOCORRELACIONES DE LAS TRES SERIES TEMPORALES
             with gr.Row():
                 with gr.Column(elem_classes="custom-tab-2", scale=20):    
                     gr.HTML("&nbsp;&nbsp;4. FUNCIONES DE AUTOCORRELACIÓN (ACF) Y DE AUTOCORRELACIÓN PARCIAL (PACF) DE LAS SERIES (DEBEN SER ESTACIONARIAS)", 
@@ -2295,23 +3314,71 @@ with gr.Blocks(title="Análisis Educativo") as app:
 
                 with gr.Column():
                     with gr.Row():
-                        ACF_desc3 = gr.HTML("Autocornrelació de la Serie 3", elem_classes="info-display-3")
+                        ACF_desc3 = gr.HTML("AutocorrelacióN de la Serie 3", elem_classes="info-display-3")
                     with gr.Row():
                         with gr.Column():
                             ACF_graph3 = gr.Plot(show_label=False, visible=False)
                             ACF_info3 = gr.HTML("Interpretación ACF", visible=False)
                             PACF_graph3 = gr.Plot(show_label=False, visible=False)
                             PACF_info3 = gr.HTML("Interpretación PACF", visible=False)
+            # endregion SECCIÓN 4: CÁLCULO DE AUTOCORRELACIONES DE LAS SERIES
+
+            # region SECCIÓN 5: APLICACIÓN DEL MODELO ARIMA
+            with gr.Row():
+                with gr.Column(elem_classes="custom-tab-2", scale=20): 
+                    gr.HTML("&nbsp;&nbsp;5. APLICACIÓN DEL MODELO PREDICTIVO ARIMA",
+                            elem_classes="subtitle-text")
+                with gr.Column(min_width=150):
+                    ARIMA_button = gr.Button("Calcular", variant="primary", visible=True, 
+                                               elem_classes="custom-button3")
+                    
+            with gr.Row(elem_classes="custom-tab"):
+                gr.HTML("El modelo ARIMA(p, d, q) es adecuado para series con tendencia clara o que requieren "
+                        "diferenciación para ser estacionarias. Usa el PACF para el componente autoregresivo (p); "
+                        "el grado de diferenciación para el parámetro (d) y la ACF para el componente "
+                        "de media móvil (q). Si solo el primer o segundo retardo (lag) en ACF y PACF son significativos "
+                        "luego de la diferenciación, el modelo más adecuado es ARIMA(p, d, q).",
+                        elem_classes="info-display-2a")
+           
+            with gr.Row(elem_classes="custom-tab"):
+                with gr.Column():
+                    with gr.Row():
+                        ARIMA_desc1 = gr.HTML("ARIMA de la Serie 1", elem_classes="info-display-3")
+                    with gr.Row():
+                        with gr.Column():                        
+                            ARIMA_info1 = gr.HTML("Parámetros y Estadísticos de ARIMA", visible=False)
+                            ARIMA_graph1 = gr.Plot(show_label=False, visible=False)
+                            ARIMA_preds1 = gr.HTML("Tabla de Valores Predichos", visible=False)
+                            ARIMA_graph1_resids = gr.Plot(show_label=False, visible=False)
+                            ARIMA_resids1 = gr.HTML("Prueba Ljung-Box de Residuos", visible=False)
+
+                with gr.Column():
+                    with gr.Row():
+                        ARIMA_desc2 = gr.HTML("ARIMA de la Serie 2", elem_classes="info-display-3")
+                    with gr.Row():
+                        with gr.Column():
+                            ARIMA_info2 = gr.HTML("Parámetros y Estadísticos de ARIMA", visible=False)
+                            ARIMA_graph2 = gr.Plot(show_label=False, visible=False)
+                            ARIMA_preds2 = gr.HTML("Tabla de Valores Predichos", visible=False)
+                            ARIMA_graph2_resids = gr.Plot(show_label=False, visible=False)
+                            ARIMA_resids2 = gr.HTML("Prueba Ljung-Box de Residuos", visible=False)
+
+                with gr.Column():
+                    with gr.Row():
+                        ARIMA_desc3 = gr.HTML("ARIMA de la Serie 3", elem_classes="info-display-3")
+                    with gr.Row():
+                        with gr.Column():
+                            ARIMA_info3 = gr.HTML("Parámetros y Estadísticos de ARIMA", visible=False)
+                            ARIMA_graph3 = gr.Plot(show_label=False, visible=False)
+                            ARIMA_preds3 = gr.HTML("Tabla de Valores Predichos", visible=False)
+                            ARIMA_graph3_resids = gr.Plot(show_label=False, visible=False)
+                            ARIMA_resids3 = gr.HTML("Prueba Ljung-Box de Residuos", visible=False)
+                            
+
+            # endregion SECCIÓN 5: APLICACIÓN DEL MODELO ARIMA
 
 
 
-
-
-
-
-            with gr.Row(elem_classes="custom-tab-2"):    
-                gr.HTML("&nbsp;&nbsp;5. SELECCIÓN DEL MODELO Y VALORES DE SUS HIPERPARÁMETROS APLICANDO UN ALGORITMO GENÉTICO", elem_classes="subtitle-text")  
-            
             with gr.Row(elem_classes="custom-tab-2"):    
                 gr.HTML("&nbsp;&nbsp;6. PREDICCIÓN DE LAS SERIES", elem_classes="subtitle-text")
            
@@ -2322,278 +3389,405 @@ with gr.Blocks(title="Análisis Educativo") as app:
 
 
             mat.change(
-                fn=tab_ST_on_mat_change,
-                inputs=[mat],
-                outputs=[dataset_state,
-                         prov1, dep1, sec1, amb1, var1, tend1,
-                         prov2, dep2, sec2, amb2, var2, tend2,
-                         prov3, dep3, sec3, amb3, var3, tend3,
-                         dataset_filter_state_1, dataset_filter_state_2, dataset_filter_state_3,
-                         STL_desc1, STL_desc2, STL_desc3,
-                         STL_graph1, STL_graph2, STL_graph3,
-                         STL_info1, STL_info2, STL_info3,
-                         ADF_desc1, ADF_desc2, ADF_desc3,
-                         leveldiff1, leveldiff2, leveldiff3,
-                         grafdiff1, grafdiff2, grafdiff3,
-                         ADF_info1, ADF_info2, ADF_info3,
-                         ACF_desc1, ACF_desc2, ACF_desc3,
-                         ACF_graph1, ACF_graph2, ACF_graph3,
-                         ACF_info1, ACF_info2, ACF_info3,
-                         PACF_graph1, PACF_graph2, PACF_graph3,
-                         PACF_info1, PACF_info2, PACF_info3]
+                fn = tab_ST_on_mat_change,
+                inputs = [mat],
+                outputs = [dataset_state,
+                            prov1, dep1, sec1, amb1, var1, tend1,
+                            prov2, dep2, sec2, amb2, var2, tend2,
+                            prov3, dep3, sec3, amb3, var3, tend3,
+                            dataset_filter_state_1, dataset_filter_state_2, dataset_filter_state_3,
+                            dataset_diff_state_1, dataset_diff_state_2, dataset_diff_state_3,
+                            STL_desc1, STL_desc2, STL_desc3,
+                            STL_graph1, STL_graph2, STL_graph3,
+                            STL_info1, STL_info2, STL_info3,
+                            ADF_desc1, ADF_desc2, ADF_desc3,
+                            leveldiff1, leveldiff2, leveldiff3,
+                            level_diff_state_1, level_diff_state_2, level_diff_state_3,
+                            diff_graph1, diff_graph2, diff_graph3,
+                            ADF_info1, ADF_info2, ADF_info3,
+                            ACF_desc1, ACF_desc2, ACF_desc3,
+                            ACF_graph1, ACF_graph2, ACF_graph3,
+                            ACF_info1, ACF_info2, ACF_info3,
+                            PACF_graph1, PACF_graph2, PACF_graph3,
+                            PACF_info1, PACF_info2, PACF_info3,
+                            ARIMA_p_1, ARIMA_p_2, ARIMA_p_3,
+                            ARIMA_q_1, ARIMA_q_2, ARIMA_q_3,
+                            ARIMA_desc1, ARIMA_desc2, ARIMA_desc3,
+                            ARIMA_info1, ARIMA_info2, ARIMA_info3,
+                            ARIMA_graph1, ARIMA_graph2, ARIMA_graph3,
+                            ARIMA_preds1, ARIMA_preds2, ARIMA_preds3,
+                            ARIMA_graph1_resids, ARIMA_graph2_resids, ARIMA_graph3_resids,
+                            ARIMA_resids1, ARIMA_resids2, ARIMA_resids3]
             )
             
             prov1.change(
-                fn=tab_ST_on_prov_change,
-                inputs=[dataset_state, prov1, sec1, amb1, var1],
-                outputs=[dep1, dataset_filter_state_1, tend1,
-                         STL_desc1, STL_graph1, STL_info1,
-                         ACF_desc1, ACF_graph1, ACF_info1,
-                         PACF_graph1, PACF_info1,
-                         ADF_desc1, leveldiff1, grafdiff1, ADF_info1]
+                fn = tab_ST_on_prov_change,
+                inputs = [dataset_state, prov1, sec1, amb1, var1],
+                outputs = [dataset_filter_state_1, dataset_diff_state_1,
+                            dep1, tend1,
+                            STL_desc1, STL_graph1, STL_info1,
+                            ADF_desc1, leveldiff1, diff_graph1, ADF_info1,
+                            level_diff_state_1,
+                            ACF_desc1, ACF_graph1, ACF_info1,
+                            PACF_graph1, PACF_info1,
+                            ARIMA_p_1, ARIMA_q_1,
+                            ARIMA_desc1, ARIMA_info1, ARIMA_graph1, ARIMA_preds1,
+                            ARIMA_graph1_resids, ARIMA_resids1]
             )
 
             prov2.change(
-                fn=tab_ST_on_prov_change,
-                inputs=[dataset_state, prov2, sec2, amb2, var2],
-                outputs=[dep2, dataset_filter_state_2, tend2, 
-                         STL_desc2, STL_graph2, STL_info2,
-                         ACF_desc2, ACF_graph2, ACF_info2,
-                         PACF_graph2, PACF_info2,
-                         ADF_desc2, leveldiff2, grafdiff2, ADF_info2]
+                fn = tab_ST_on_prov_change,
+                inputs = [dataset_state, prov2, sec2, amb2, var2],
+                outputs = [dataset_filter_state_2, dataset_diff_state_2,
+                            dep2, tend2, 
+                            STL_desc2, STL_graph2, STL_info2,
+                            ADF_desc2, leveldiff2, diff_graph2, ADF_info2,
+                            level_diff_state_2,
+                            ACF_desc2, ACF_graph2, ACF_info2,
+                            PACF_graph2, PACF_info2,
+                            ARIMA_p_2, ARIMA_q_2,
+                            ARIMA_desc2, ARIMA_info2, ARIMA_graph2, ARIMA_preds2,
+                            ARIMA_graph2_resids, ARIMA_resids2]
             )
             
             prov3.change(
-                fn=tab_ST_on_prov_change,
-                inputs=[dataset_state, prov3, sec3, amb3, var3],
-                outputs=[dep3, dataset_filter_state_3, tend3, 
-                         STL_desc3, STL_graph3, STL_info3,
-                         ACF_desc3, ACF_graph3, ACF_info3,
-                         PACF_graph3, PACF_info3,
-                         ADF_desc3, leveldiff3, grafdiff3, ADF_info3]
+                fn = tab_ST_on_prov_change,
+                inputs = [dataset_state, prov3, sec3, amb3, var3],
+                outputs = [dataset_filter_state_3, dataset_diff_state_3,
+                            dep3, tend3, 
+                            STL_desc3, STL_graph3, STL_info3,
+                            ADF_desc3, leveldiff3, diff_graph3, ADF_info3,
+                            level_diff_state_3,
+                            ACF_desc3, ACF_graph3, ACF_info3,
+                            PACF_graph3, PACF_info3,
+                            ARIMA_p_3, ARIMA_q_3,
+                            ARIMA_desc3, ARIMA_info3, ARIMA_graph3, ARIMA_preds3,
+                            ARIMA_graph3_resids, ARIMA_resids3]
             )
             
             dep1.change(
-                fn=tab_ST_on_dep_change,
-                inputs=[dataset_state, prov1, dep1, sec1, amb1, var1],
-                outputs=[dataset_filter_state_1, tend1, 
-                         STL_desc1, STL_graph1, STL_info1,
-                         ACF_desc1, ACF_graph1, ACF_info1,
-                         PACF_graph1, PACF_info1,
-                         ADF_desc1, leveldiff1, grafdiff1, ADF_info1]
+                fn = tab_ST_on_option_change,
+                inputs = [dataset_state, prov1, dep1, sec1, amb1, var1],
+                outputs = [dataset_filter_state_1, dataset_diff_state_1,
+                            tend1, 
+                            STL_desc1, STL_graph1, STL_info1,
+                            ADF_desc1, leveldiff1, diff_graph1, ADF_info1,
+                            level_diff_state_1,
+                            ACF_desc1, ACF_graph1, ACF_info1,
+                            PACF_graph1, PACF_info1,
+                            ARIMA_p_1, ARIMA_q_1,
+                            ARIMA_desc1, ARIMA_info1, ARIMA_graph1, ARIMA_preds1,
+                            ARIMA_graph1_resids, ARIMA_resids1]
             )
 
             dep2.change(
-                fn=tab_ST_on_dep_change,
+                fn = tab_ST_on_option_change,
                 inputs = [dataset_state, prov2, dep2, sec2, amb2, var2],
-                outputs=[dataset_filter_state_2, tend2,
-                         STL_desc2, STL_graph2, STL_info2,
-                         ACF_desc2, ACF_graph2, ACF_info2,
-                         PACF_graph2, PACF_info2,
-                         ADF_desc2, leveldiff2, grafdiff2, ADF_info2]
+                outputs = [dataset_filter_state_2, dataset_diff_state_2, 
+                            tend2,
+                            STL_desc2, STL_graph2, STL_info2,
+                            ADF_desc2, leveldiff2, diff_graph2, ADF_info2,
+                            level_diff_state_2,
+                            ACF_desc2, ACF_graph2, ACF_info2,
+                            PACF_graph2, PACF_info2,
+                            ARIMA_p_2, ARIMA_q_2,
+                            ARIMA_desc2, ARIMA_info2, ARIMA_graph2, ARIMA_preds2,
+                            ARIMA_graph2_resids, ARIMA_resids2]
             )
 
             dep3.change(
-                fn=tab_ST_on_dep_change,
+                fn = tab_ST_on_option_change,
                 inputs = [dataset_state, prov3, dep3, sec3, amb3, var3],
-                outputs=[dataset_filter_state_3, tend3, 
-                         STL_desc3, STL_graph3, STL_info3,
-                         ACF_desc3, ACF_graph3, ACF_info3,
-                         PACF_graph3, PACF_info3,
-                         ADF_desc3, leveldiff3, grafdiff3, ADF_info3]
+                outputs = [dataset_filter_state_3, dataset_diff_state_3, 
+                            tend3, 
+                            STL_desc3, STL_graph3, STL_info3,
+                            ADF_desc3, leveldiff3, diff_graph3, ADF_info3,
+                            level_diff_state_3, 
+                            ACF_desc3, ACF_graph3, ACF_info3,
+                            PACF_graph3, PACF_info3,
+                            ARIMA_p_3, ARIMA_q_3,
+                            ARIMA_desc3, ARIMA_info3, ARIMA_graph3, ARIMA_preds3,
+                            ARIMA_graph3_resids, ARIMA_resids3]
             )
 
             sec1.change(
-                fn=tab_ST_on_option_change,
+                fn = tab_ST_on_option_change,
                 inputs = [dataset_state, prov1, dep1, sec1, amb1, var1],
-                outputs=[dataset_filter_state_1, tend1, 
-                         STL_desc1, STL_graph1, STL_info1,
-                         ACF_desc1, ACF_graph1, ACF_info1,
-                         PACF_graph1, PACF_info1,
-                         ADF_desc1, leveldiff1, grafdiff1, ADF_info1]
+                outputs = [dataset_filter_state_1, dataset_diff_state_1,
+                            tend1, 
+                            STL_desc1, STL_graph1, STL_info1,
+                            ADF_desc1, leveldiff1, diff_graph1, ADF_info1,
+                            level_diff_state_1,
+                            ACF_desc1, ACF_graph1, ACF_info1,
+                            PACF_graph1, PACF_info1,
+                            ARIMA_p_1, ARIMA_q_1,
+                            ARIMA_desc1, ARIMA_info1, ARIMA_graph1, ARIMA_preds1,
+                            ARIMA_graph1_resids, ARIMA_resids1]
             )
             
             sec2.change(
-                fn=tab_ST_on_option_change,
+                fn = tab_ST_on_option_change,
                 inputs = [dataset_state, prov2, dep2, sec2, amb2, var2],
-                outputs=[dataset_filter_state_2, tend2, 
-                         STL_desc2, STL_graph2, STL_info2,
-                         ACF_desc2, ACF_graph2, ACF_info2,
-                         PACF_graph2, PACF_info2,
-                         ADF_desc2, leveldiff2, grafdiff2, ADF_info2]
+                outputs = [dataset_filter_state_2, dataset_diff_state_2,
+                            tend2,
+                            STL_desc2, STL_graph2, STL_info2,
+                            ADF_desc2, leveldiff2, diff_graph2, ADF_info2,
+                            level_diff_state_2,
+                            ACF_desc2, ACF_graph2, ACF_info2,
+                            PACF_graph2, PACF_info2,
+                            ARIMA_p_2, ARIMA_q_2,
+                            ARIMA_desc2, ARIMA_info2, ARIMA_graph2, ARIMA_preds2,
+                            ARIMA_graph2_resids, ARIMA_resids2]
             )
 
             sec3.change(
-                fn=tab_ST_on_option_change,
+                fn = tab_ST_on_option_change,
                 inputs = [dataset_state, prov3, dep3, sec3, amb3, var3],
-                outputs=[dataset_filter_state_3, tend3, 
-                         STL_desc3, STL_graph3, STL_info3,
-                         ACF_desc3, ACF_graph3, ACF_info3,
-                         PACF_graph3, PACF_info3,
-                         ADF_desc3, leveldiff3, grafdiff3, ADF_info3]
+                outputs = [dataset_filter_state_3, dataset_diff_state_3,
+                            tend3, 
+                            STL_desc3, STL_graph3, STL_info3,
+                            ADF_desc3, leveldiff3, diff_graph3, ADF_info3,
+                            level_diff_state_3, 
+                            ACF_desc3, ACF_graph3, ACF_info3,
+                            PACF_graph3, PACF_info3,
+                            ARIMA_p_3, ARIMA_q_3,
+                            ARIMA_desc3, ARIMA_info3, ARIMA_graph3, ARIMA_preds3,
+                            ARIMA_graph3_resids, ARIMA_resids3]
             )
 
             amb1.change(
-                fn=tab_ST_on_option_change,
+                fn = tab_ST_on_option_change,
                 inputs = [dataset_state, prov1, dep1, sec1, amb1, var1],
-                outputs=[dataset_filter_state_1, tend1, 
-                         STL_desc1, STL_graph1, STL_info1,
-                         ACF_desc1, ACF_graph1, ACF_info1,
-                         PACF_graph1, PACF_info1,
-                         ADF_desc1, leveldiff1, grafdiff1, ADF_info1]
+                outputs = [dataset_filter_state_1, dataset_diff_state_1,
+                            tend1, 
+                            STL_desc1, STL_graph1, STL_info1,
+                            ADF_desc1, leveldiff1, diff_graph1, ADF_info1,
+                            level_diff_state_1,
+                            ACF_desc1, ACF_graph1, ACF_info1,
+                            PACF_graph1, PACF_info1,
+                            ARIMA_p_1, ARIMA_q_1,
+                            ARIMA_desc1, ARIMA_info1, ARIMA_graph1, ARIMA_preds1,
+                            ARIMA_graph1_resids, ARIMA_resids1]
             )
             
             amb2.change(
-                fn=tab_ST_on_option_change,
+                fn = tab_ST_on_option_change,
                 inputs = [dataset_state, prov2, dep2, sec2, amb2, var2],
-                outputs=[dataset_filter_state_2, tend2, 
-                         STL_desc2, STL_graph2, STL_info2,
-                         ACF_desc2, ACF_graph2, ACF_info2,
-                         PACF_graph2, PACF_info2,
-                         ADF_desc2, leveldiff2, grafdiff2, ADF_info2]
+                outputs = [dataset_filter_state_2, dataset_diff_state_2,
+                            tend2,
+                            STL_desc2, STL_graph2, STL_info2,
+                            ADF_desc2, leveldiff2, diff_graph2, ADF_info2,
+                            level_diff_state_2,
+                            ACF_desc2, ACF_graph2, ACF_info2,
+                            PACF_graph2, PACF_info2,
+                            ARIMA_p_2, ARIMA_q_2,
+                            ARIMA_desc2, ARIMA_info2, ARIMA_graph2, ARIMA_preds2,
+                            ARIMA_graph2_resids, ARIMA_resids2]
             )
 
             amb3.change(
-                fn=tab_ST_on_option_change,
+                fn = tab_ST_on_option_change,
                 inputs = [dataset_state, prov3, dep3, sec3, amb3, var3],
-                outputs=[dataset_filter_state_3, tend3, 
-                         STL_desc3, STL_graph3, STL_info3,
-                         ACF_desc3, ACF_graph3, ACF_info3,
-                         PACF_graph3, PACF_info3,
-                         ADF_desc3, leveldiff3, grafdiff3, ADF_info3]
+                outputs = [dataset_filter_state_3, dataset_diff_state_3,
+                            tend3, 
+                            STL_desc3, STL_graph3, STL_info3,
+                            ADF_desc3, leveldiff3, diff_graph3, ADF_info3,
+                            level_diff_state_3, 
+                            ACF_desc3, ACF_graph3, ACF_info3,
+                            PACF_graph3, PACF_info3,
+                            ARIMA_p_3, ARIMA_q_3,
+                            ARIMA_desc3, ARIMA_info3, ARIMA_graph3, ARIMA_preds3,
+                            ARIMA_graph3_resids, ARIMA_resids3]
             )
 
             var1.change(
-                fn=tab_ST_on_option_change,
+                fn = tab_ST_on_option_change,
                 inputs = [dataset_state, prov1, dep1, sec1, amb1, var1],
-                outputs=[dataset_filter_state_1, tend1, 
-                         STL_desc1, STL_graph1, STL_info1,
-                         ACF_desc1, ACF_graph1, ACF_info1,
-                         PACF_graph1, PACF_info1,
-                         ADF_desc1, leveldiff1, grafdiff1, ADF_info1]
+                outputs = [dataset_filter_state_1, dataset_diff_state_1,
+                            tend1, 
+                            STL_desc1, STL_graph1, STL_info1,
+                            ADF_desc1, leveldiff1, diff_graph1, ADF_info1,
+                            level_diff_state_1,
+                            ACF_desc1, ACF_graph1, ACF_info1,
+                            PACF_graph1, PACF_info1,
+                            ARIMA_p_1, ARIMA_q_1,
+                            ARIMA_desc1, ARIMA_info1, ARIMA_graph1, ARIMA_preds1,
+                            ARIMA_graph1_resids, ARIMA_resids1]
             )
             
             var2.change(
-                fn=tab_ST_on_option_change,
+                fn = tab_ST_on_option_change,
                 inputs = [dataset_state, prov2, dep2, sec2, amb2, var2],
-                outputs=[dataset_filter_state_2, tend2, 
-                         STL_desc2, STL_graph2, STL_info2,
-                         ACF_desc2, ACF_graph2, ACF_info2,
-                         PACF_graph2, PACF_info2,
-                         ADF_desc2, leveldiff2, grafdiff2, ADF_info2]
+                outputs = [dataset_filter_state_2, dataset_diff_state_2,
+                            tend2,
+                            STL_desc2, STL_graph2, STL_info2,
+                            ADF_desc2, leveldiff2, diff_graph2, ADF_info2,
+                            level_diff_state_2,
+                            ACF_desc2, ACF_graph2, ACF_info2,
+                            PACF_graph2, PACF_info2,
+                            ARIMA_p_2, ARIMA_q_2,
+                            ARIMA_desc2, ARIMA_info2, ARIMA_graph2, ARIMA_preds2,
+                            ARIMA_graph2_resids, ARIMA_resids2]
             )
 
             var3.change(
-                fn=tab_ST_on_option_change,
+                fn = tab_ST_on_option_change,
                 inputs = [dataset_state, prov3, dep3, sec3, amb3, var3],
-                outputs=[dataset_filter_state_3, tend3, 
-                         STL_desc3, STL_graph3, STL_info3,
-                         ACF_desc3, ACF_graph3, ACF_info3,
-                         PACF_graph3, PACF_info3,
-                         ADF_desc3, leveldiff3, grafdiff3, ADF_info3]
+                outputs = [dataset_filter_state_3, dataset_diff_state_3,
+                            tend3, 
+                            STL_desc3, STL_graph3, STL_info3,
+                            ADF_desc3, leveldiff3, diff_graph3, ADF_info3,
+                            level_diff_state_3, 
+                            ACF_desc3, ACF_graph3, ACF_info3,
+                            PACF_graph3, PACF_info3,
+                            ARIMA_p_3, ARIMA_q_3,
+                            ARIMA_desc3, ARIMA_info3, ARIMA_graph3, ARIMA_preds3,
+                            ARIMA_graph3_resids, ARIMA_resids3]
             )
 
             graph_serie.change(
-                fn=tab_ST_on_graph_change,
-                inputs=[dataset_filter_state_1, dataset_filter_state_2, dataset_filter_state_3,
-                        var1, var2, var3, graph_serie, graph_mg, graph_tend, graph_mm, graph_sd],
-                outputs=[tend1, tend2, tend3]
+                fn = tab_ST_on_graph_change,
+                inputs = [dataset_filter_state_1, dataset_filter_state_2, dataset_filter_state_3,
+                            var1, var2, var3, graph_serie, graph_mg, graph_tend, graph_mm, graph_sd],
+                outputs = [tend1, tend2, tend3]
             )
 
             graph_mg.change(
-                fn=tab_ST_on_graph_change,
-                inputs=[dataset_filter_state_1, dataset_filter_state_2, dataset_filter_state_3,
-                        var1, var2, var3, graph_serie, graph_mg, graph_tend, graph_mm, graph_sd],
-                outputs=[tend1, tend2, tend3]
+                fn = tab_ST_on_graph_change,
+                inputs = [dataset_filter_state_1, dataset_filter_state_2, dataset_filter_state_3,
+                            var1, var2, var3, graph_serie, graph_mg, graph_tend, graph_mm, graph_sd],
+                outputs = [tend1, tend2, tend3]
             )
             
             graph_tend.change(
-                fn=tab_ST_on_graph_change,
-                inputs=[dataset_filter_state_1, dataset_filter_state_2, dataset_filter_state_3,
-                        var1, var2, var3, graph_serie, graph_mg, graph_tend, graph_mm, graph_sd],
-                outputs=[tend1, tend2, tend3]
+                fn = tab_ST_on_graph_change,
+                inputs = [dataset_filter_state_1, dataset_filter_state_2, dataset_filter_state_3,
+                            var1, var2, var3, graph_serie, graph_mg, graph_tend, graph_mm, graph_sd],
+                outputs = [tend1, tend2, tend3]
             )
 
             graph_mm.change(
-                fn=tab_ST_on_graph_change,
-                inputs=[dataset_filter_state_1, dataset_filter_state_2, dataset_filter_state_3,
-                        var1, var2, var3, graph_serie, graph_mg, graph_tend, graph_mm, graph_sd],
-                outputs=[tend1, tend2, tend3]
+                fn = tab_ST_on_graph_change,
+                inputs = [dataset_filter_state_1, dataset_filter_state_2, dataset_filter_state_3,
+                            var1, var2, var3, graph_serie, graph_mg, graph_tend, graph_mm, graph_sd],
+                outputs = [tend1, tend2, tend3]
             )
 
             graph_sd.change(
-                fn=tab_ST_on_graph_change,
-                inputs=[dataset_filter_state_1, dataset_filter_state_2, dataset_filter_state_3,
-                        var1, var2, var3, graph_serie, graph_mg, graph_tend, graph_mm, graph_sd],
-                outputs=[tend1, tend2, tend3]
+                fn = tab_ST_on_graph_change,
+                inputs = [dataset_filter_state_1, dataset_filter_state_2, dataset_filter_state_3,
+                            var1, var2, var3, graph_serie, graph_mg, graph_tend, graph_mm, graph_sd],
+                outputs = [tend1, tend2, tend3]
             )
 
             tab_ST.select(
-                fn=tab_ST_on_mat_change,
-                inputs=[mat],
-                outputs=[dataset_state,
-                         prov1, dep1, sec1, amb1, var1, tend1,
-                         prov2, dep2, sec2, amb2, var2, tend2,
-                         prov3, dep3, sec3, amb3, var3, tend3,
-                         dataset_filter_state_1, dataset_filter_state_2, dataset_filter_state_3,
-                         STL_desc1, STL_desc2, STL_desc3,
-                         STL_graph1, STL_graph2, STL_graph3,
-                         STL_info1, STL_info2, STL_info3,
-                         ADF_desc1, ADF_desc2, ADF_desc3,
-                         leveldiff1, leveldiff2, leveldiff3,
-                         grafdiff1, grafdiff2, grafdiff3,
-                         ADF_info1, ADF_info2, ADF_info3,
-                         ACF_desc1, ACF_desc2, ACF_desc3,
-                         ACF_graph1, ACF_graph2, ACF_graph3,
-                         ACF_info1, ACF_info2, ACF_info3,
-                         PACF_graph1, PACF_graph2, PACF_graph3,
-                         PACF_info1, PACF_info2, PACF_info3]
+                fn = tab_ST_on_mat_change,
+                inputs = [mat],
+                outputs = [dataset_state,
+                            prov1, dep1, sec1, amb1, var1, tend1,
+                            prov2, dep2, sec2, amb2, var2, tend2,
+                            prov3, dep3, sec3, amb3, var3, tend3,
+                            dataset_filter_state_1, dataset_filter_state_2, dataset_filter_state_3,
+                            dataset_diff_state_1, dataset_diff_state_2, dataset_diff_state_3,
+                            STL_desc1, STL_desc2, STL_desc3,
+                            STL_graph1, STL_graph2, STL_graph3,
+                            STL_info1, STL_info2, STL_info3,
+                            ADF_desc1, ADF_desc2, ADF_desc3,
+                            leveldiff1, leveldiff2, leveldiff3,
+                            level_diff_state_1, level_diff_state_2, level_diff_state_3,
+                            diff_graph1, diff_graph2, diff_graph3,
+                            ADF_info1, ADF_info2, ADF_info3,
+                            ACF_desc1, ACF_desc2, ACF_desc3,
+                            ACF_graph1, ACF_graph2, ACF_graph3,
+                            ACF_info1, ACF_info2, ACF_info3,
+                            PACF_graph1, PACF_graph2, PACF_graph3,
+                            PACF_info1, PACF_info2, PACF_info3,
+                            ARIMA_p_1, ARIMA_p_2, ARIMA_p_3,
+                            ARIMA_q_1, ARIMA_q_2, ARIMA_q_3,
+                            ARIMA_desc1, ARIMA_desc2, ARIMA_desc3,
+                            ARIMA_info1, ARIMA_info2, ARIMA_info3,
+                            ARIMA_graph1, ARIMA_graph2, ARIMA_graph3,
+                            ARIMA_preds1, ARIMA_preds2, ARIMA_preds3,
+                            ARIMA_graph1_resids, ARIMA_graph2_resids, ARIMA_graph3_resids,
+                            ARIMA_resids1, ARIMA_resids2, ARIMA_resids3]
                 )
 
             leveldiff1.change(
-                fn=tab_ST_on_level_change,
-                outputs=[grafdiff1, ADF_info1]
+                fn = tab_ST_on_level_change,
+                outputs = [diff_graph1, ADF_info1, level_diff_state_1,
+                            ACF_graph1, ACF_info1, PACF_graph1, PACF_info1,
+                            ARIMA_p_1, ARIMA_q_1,
+                            ARIMA_info1, ARIMA_graph1, ARIMA_preds1,
+                            ARIMA_graph1_resids, ARIMA_resids1]
             )
 
             leveldiff2.change(
-                fn=tab_ST_on_level_change,
-                outputs=[grafdiff2, ADF_info2]
+                fn = tab_ST_on_level_change,
+                outputs = [diff_graph2, ADF_info2, level_diff_state_2,
+                            ACF_graph2, ACF_info2, PACF_graph2, PACF_info2,
+                            ARIMA_p_2, ARIMA_q_2,
+                            ARIMA_info2, ARIMA_graph2, ARIMA_preds2,
+                            ARIMA_graph2_resids, ARIMA_resids2]
             )
 
             leveldiff3.change(
-                fn=tab_ST_on_level_change,
-                outputs=[grafdiff3, ADF_info3]
+                fn = tab_ST_on_level_change,
+                outputs = [diff_graph3, ADF_info3, level_diff_state_3,
+                            ACF_graph3, ACF_info3, PACF_graph3, PACF_info3,
+                            ARIMA_p_3, ARIMA_q_3,
+                            ARIMA_info3, ARIMA_graph3, ARIMA_preds3,
+                            ARIMA_graph3_resids, ARIMA_resids3]
             )
 
             graph_button.click(
-                fn=tab_ST_on_graph_change,
-                inputs=[dataset_filter_state_1, dataset_filter_state_2, dataset_filter_state_3,
-                        var1, var2, var3, graph_serie, graph_mg, graph_tend, graph_mm, graph_sd],
-                outputs=[tend1, tend2, tend3]
+                fn = tab_ST_on_graph_change,
+                inputs = [dataset_filter_state_1, dataset_filter_state_2, dataset_filter_state_3,
+                            var1, var2, var3, graph_serie, graph_mg, graph_tend, graph_mm, graph_sd],
+                outputs = [tend1, tend2, tend3]
             )
 
             STL_button.click(
-                fn=tab_ST_stl_decomp_all,
-                inputs=[dataset_filter_state_1, dataset_filter_state_2, dataset_filter_state_3,
-                        var1, var2, var3],
-                outputs=[STL_graph1, STL_info1, STL_graph2, STL_info2, STL_graph3, STL_info3]
-            )
-
-            ACF_PACF_button.click(
-                fn=tab_ST_ACF_PACF_all,
-                inputs=[dataset_diff_state_1, dataset_diff_state_2, dataset_diff_state_3,
-                        var1, var2, var3],
-                outputs=[ACF_graph1, ACF_info1, ACF_graph2, ACF_info2, ACF_graph3, ACF_info3,
-                         PACF_graph1, PACF_info1, PACF_graph2, PACF_info2, PACF_graph3, PACF_info3]
+                fn = tab_ST_stl_decomp_all,
+                inputs = [dataset_filter_state_1, dataset_filter_state_2, dataset_filter_state_3,
+                            var1, var2, var3],
+                outputs = [STL_graph1, STL_info1, STL_graph2, STL_info2, STL_graph3, STL_info3]
             )
 
             ADF_button.click(
-                fn=tab_ST_diff_ADF_all,
-                inputs=[dataset_filter_state_1, dataset_filter_state_2, dataset_filter_state_3,
-                        var1, var2, var3, leveldiff1, leveldiff2, leveldiff3],
-                outputs=[dataset_diff_state_1, grafdiff1, ADF_info1, level_diff_state_1,
-                         dataset_diff_state_2, grafdiff2, ADF_info2, level_diff_state_2,
-                         dataset_diff_state_3, grafdiff3, ADF_info3, level_diff_state_3]
+                fn = tab_ST_diff_ADF_all,
+                inputs = [dataset_filter_state_1, dataset_filter_state_2, dataset_filter_state_3,
+                            var1, var2, var3, 
+                            leveldiff1, leveldiff2, leveldiff3],
+                outputs = [dataset_diff_state_1, diff_graph1, ADF_info1, level_diff_state_1,
+                            dataset_diff_state_2, diff_graph2, ADF_info2, level_diff_state_2,
+                            dataset_diff_state_3, diff_graph3, ADF_info3, level_diff_state_3]
+            )
+
+            ACF_PACF_button.click(
+                fn = tab_ST_ACF_PACF_all,
+                inputs = [dataset_diff_state_1, dataset_diff_state_2, dataset_diff_state_3,
+                            var1, var2, var3, level_diff_state_1, level_diff_state_2, level_diff_state_3],
+                outputs = [ACF_graph1, ACF_info1, ARIMA_q_1,
+                            ACF_graph2, ACF_info2, ARIMA_q_2,
+                            ACF_graph3, ACF_info3, ARIMA_q_3,
+                            PACF_graph1, PACF_info1, ARIMA_p_1,
+                            PACF_graph2, PACF_info2, ARIMA_p_2,
+                            PACF_graph3, PACF_info3, ARIMA_p_3]
+            )
+
+            ARIMA_button.click(
+                fn = tab_ST_ARIMA_all,
+                inputs = [dataset_diff_state_1, dataset_diff_state_2, dataset_diff_state_3,
+                            var1, var2, var3,
+                            ARIMA_p_1, ARIMA_p_2, ARIMA_p_3,
+                            level_diff_state_1, level_diff_state_2, level_diff_state_3,
+                            ARIMA_q_1, ARIMA_q_2, ARIMA_q_3],
+                outputs = [ARIMA_info1, ARIMA_graph1, ARIMA_preds1,
+                            ARIMA_graph1_resids, ARIMA_resids1,
+                            ARIMA_info2, ARIMA_graph2, ARIMA_preds2,
+                            ARIMA_graph2_resids, ARIMA_resids2,
+                            ARIMA_info3, ARIMA_graph3, ARIMA_preds3,
+                            ARIMA_graph3_resids, ARIMA_resids3]
             )
 
 

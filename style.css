@@ -457,6 +457,11 @@
     font-size: var(--font-title3) !important;
     margin-bottom: 0px !important;
 }
+.info-display-2a {
+    font-weight: bold !important;
+    font-size: var(--font-title3) !important;
+    margin-bottom: 5px !important;
+}
 
 
 
