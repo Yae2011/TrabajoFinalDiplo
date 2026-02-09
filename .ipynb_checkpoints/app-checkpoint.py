@@ -380,7 +380,7 @@ with gr.Blocks(title="Análisis Educativo") as app:
             
             with gr.Row():
                 with gr.Column(min_width=180, scale=1, elem_classes="custom-tab"):
-                    tipo_matricula = gr.Radio(
+                    tipo_cultivo = gr.Radio(
                         label="Tipo de Matrícula", 
                         choices=["Por Curso", "Por Edad", "Por Población", "Por Trayectoria"],
                         value="Por Curso",
@@ -417,9 +417,9 @@ with gr.Blocks(title="Análisis Educativo") as app:
             
             # --- Interactions ---
             # 1. Load Data on Type Change
-            tipo_matricula.change(
+            tipo_cultivo.change(
                 fn=on_dataset_change,
-                inputs = [tipo_matricula],
+                inputs = [tipo_cultivo],
                 outputs = [dataset_state, provincia, departamento, sector, ambito, info_label, stats_table, output_table, output_plot_box, output_plot_evolution]
             )
             
@@ -437,7 +437,7 @@ with gr.Blocks(title="Análisis Educativo") as app:
             # 3. Filter and Show
             btn_mostrar.click(
                 fn=show_data,
-                inputs = [dataset_state, tipo_matricula, provincia, departamento, sector, ambito],
+                inputs = [dataset_state, tipo_cultivo, provincia, departamento, sector, ambito],
                 outputs = [stats_table, output_table, info_label, output_plot_box, output_plot_evolution]
             )
 
@@ -459,7 +459,7 @@ with gr.Blocks(title="Análisis Educativo") as app:
             for comp in input_components:
                 comp.change(
                     fn=auto_update_or_clear, 
-                    inputs = [dataset_state, tipo_matricula, provincia, departamento, sector, ambito],
+                    inputs = [dataset_state, tipo_cultivo, provincia, departamento, sector, ambito],
                     outputs = [stats_table, output_table, info_label, output_plot_box, output_plot_evolution]
                 )
 
@@ -467,10 +467,10 @@ with gr.Blocks(title="Análisis Educativo") as app:
             # def clear_all():
             #     return None, None, pd.DataFrame(), pd.DataFrame(), "", None, None
                 
-            # tipo_matricula.change(fn=clear_all, inputs=None, outputs = [provincia, departamento, stats_table, output_table, info_label, output_plot_box, output_plot_evolution])
+            # tipo_cultivo.change(fn=clear_all, inputs=None, outputs = [provincia, departamento, stats_table, output_table, info_label, output_plot_box, output_plot_evolution])
             
             # Initial Load Trigger (Optional, to load the default selection)
-            app.load(fn=on_dataset_change, inputs = [tipo_matricula], outputs = [dataset_state, provincia, departamento])
+            app.load(fn=on_dataset_change, inputs = [tipo_cultivo], outputs = [dataset_state, provincia, departamento])
 
         with gr.Tab("Series Temporales"):
             with gr.Row(elem_classes="title-tab"):

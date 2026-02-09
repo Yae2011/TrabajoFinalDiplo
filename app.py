@@ -3,6 +3,7 @@ import pandas as pd
 import numpy as np
 import os
 import base64
+import math
 import matplotlib.pyplot as plt
 import plotly.graph_objects as go
 from io import StringIO
@@ -20,20 +21,26 @@ import seaborn as sns
 # region CONSTANTES Y DICCIONARIOS
 # --- Constantes ---
 DATA_PATH = "./Datasets"
+IMAGE_PATH = "./Images"
 FILE_MAP = {
-    "Por Curso": "Matricula 2011-2024.csv",
-    # "Por Edad": "Matricula por Edad 2011-2024.csv",
-    "Por Población": "Poblacion 2011-2024.csv",
-    "Por Trayectoria": "Trayectoria 2011-2024.csv"
+    "ARROZ": "arroz_depurado.csv",
+    "AVENA": "avena_depurado.csv",
+    "GIRASOL": "girasol_depurado.csv",
+    "MAÍZ": "maiz_depurado.csv",
+    "POROTO": "poroto_depurado.csv",
+    "SOJA": "soja_depurado.csv",
+    "SORGO": "sorgo_depurado.csv",
+    "TRIGO": "trigo_depurado.csv",
+    "YERBA MATE": "yerbamate_depurado.csv",
 }
-KEY_COLUMNS = ['periodo', 'provincia', 'departamento', 'sector', 'ambito']
-MIN_REG = 14 # Cantidad mínima de registros para cada serie temporal (serie 2011-2024 = 14 registros anuales)
+KEY_COLUMNS = ['cultivo', 'periodo', 'provincia', 'departamento']
+MIN_REG = 20 # Cantidad mínima de registros para cada serie temporal
 NO_EXISTE = 999 # Para indicar que no se aplicó la prueba ADF o que no se calcularon grados de diferenciación en las series
-YEAR_MIN = 2011 # Primer año de la serie de datos
+YEAR_MIN = 1930 # Primer año de la serie de datos
 YEAR_MAX = 2024 # ültimo año de la serie de datos 
 
 # Se cargan las descripciones de las variables de los datasets en un diccionario
-# para títulos de gráficos de evolución de matrícula
+# para títulos de gráficos de evolución de cultivos
 variables = os.path.join(DATA_PATH, "Nombres_Largos.csv")
 df_vars = pd.read_csv(variables, header=None, encoding='latin-1', sep=',')
 dict_nlargos = df_vars.set_index(df_vars.columns[0])[df_vars.columns[1]].to_dict()
@@ -59,11 +66,8 @@ def load_data(dataset_type):
         df = pd.read_csv(path, encoding='utf-8', sep=',')
         return df, list(df['provincia'].unique())
     except Exception as e:
-        try:
-             df = pd.read_csv(path, encoding='latin1', sep=';')
-             return df, list(df['provincia'].unique())
-        except:
-             return pd.DataFrame(), [f"Error cargando: {e}"]
+        return pd.DataFrame(), [f"Error cargando: {e}"]
+
 # endregion
 
 
@@ -72,7 +76,7 @@ def tab_EDA_on_load(dataset_type, automatico, interactivo):
     df, provincias = load_data(dataset_type)
     
     if df.empty:
-        m_inic = "EL DATASET DE MATRÍCULA SELECCIONADO NO ESTÁ DISPONIBLE"
+        m_inic = "EL DATASET DE CULTIVOS SELECCIONADO NO ESTÁ DISPONIBLE"
         return df, pd.DataFrame(), gr.update(choices=[], value=None), gr.update(choices=[], value=None), \
                 gr.update(value="Ambos"), gr.update(value="Ambos"), gr.HTML(value=m_inic), \
                 gr.update(visible=False), pd.DataFrame(), pd.DataFrame(), None, None, None, None, \
@@ -113,7 +117,7 @@ def tab_EDA_on_dataset_change(dataset_type, automatico, interactivo):
     df, provincias = load_data(dataset_type)
     
     if df.empty:
-        m_inic = "EL DATASET DE MATRÍCULA SELECCIONADO NO ESTÁ DISPONIBLE"
+        m_inic = "EL DATASET DE CULTIVOS SELECCIONADO NO ESTÁ DISPONIBLE"
         return df, pd.DataFrame(), gr.update(choices=[], value=None), gr.update(choices=[], value=None), \
                 gr.update(value="Ambos"), gr.update(value="Ambos"), gr.HTML(value=m_inic), \
                 gr.update(visible=False), pd.DataFrame(), pd.DataFrame(), None, None, None, None, \
@@ -298,7 +302,7 @@ def tab_EDA_create_evolution_graph(df, indicador, serie=True, med_glob=True, ten
                                    h_estatico=5, h_interactivo=350):
     """
     - df: dataset filtrado con columnas con nombres originales ['periodo', indicador]
-    - indicador: nombre original de columna de matrícula
+    - indicador: nombre original de columna
     - serie: muestra la serie de datos
     - med_glob: muestra la media global
     - tend: muestra la tendencia
@@ -309,7 +313,7 @@ def tab_EDA_create_evolution_graph(df, indicador, serie=True, med_glob=True, ten
     h_estatico: altura relativa para el gráfico estático en Matplotlib
     h_interactivo: altura en pixeles para el gráfico interactivo con Plotly
     """
-    
+
     # 1. Validación y Preparación de Datos
     if df is None or df.empty:
         return None
@@ -317,10 +321,10 @@ def tab_EDA_create_evolution_graph(df, indicador, serie=True, med_glob=True, ten
     df_sorted = df.sort_values('periodo').reset_index(drop=True)
     x_data = df_sorted['periodo']
     y_data = df_sorted[indicador]
-    
+
     # Título dinámico (puedes ajustar el diccionario de nombres aquí)
-    titulo = f"CANTIDAD DE ALUMNOS MATRICULADOS: {dict_nlargos[indicador].upper()}"
-    
+    titulo = f"{dict_nlargos[indicador].upper()}"
+
     # Configuración de la ventana para cálculos móviles
     if tipo_mov == 3:
         k, centro, lab_m = 3, False, "3 atrás"
@@ -336,7 +340,7 @@ def tab_EDA_create_evolution_graph(df, indicador, serie=True, med_glob=True, ten
         # Serie principal
         if serie:
             fig.add_trace(go.Scatter(
-                x=x_data, y=y_data, mode='lines+markers', name='Matrícula',
+                x=x_data, y=y_data, mode='lines+markers', name='Cultivo',
                 line=dict(color='green', width=3),
                 marker=dict(color='red', size=8, line=dict(width=1, color='darkred'))
             ))
@@ -389,7 +393,7 @@ def tab_EDA_create_evolution_graph(df, indicador, serie=True, med_glob=True, ten
             height=h_interactivo,
             xaxis=dict(
                 tickmode='linear',
-                tick0=2011, dtick=1, range=[2010.5, 2024.5],
+                tick0=2011, dtick=1, # range=[2010.5, 2024.5],
                 showline=True, # Línea del eje X (borde inferior)
                 tickfont=dict(size=10, family="Arial, sans-serif", color="black"),
                 linewidth=1,
@@ -413,10 +417,11 @@ def tab_EDA_create_evolution_graph(df, indicador, serie=True, med_glob=True, ten
     else:
         # Creamos la figura explícitamente
         fig, ax = plt.subplots(figsize=(12, h_estatico))
-        
+
         try:
+            
             if serie:
-                ax.plot(x_data, y_data, label="Matrícula", marker='o', linewidth=3, 
+                ax.plot(x_data, y_data, label="Cultivo", marker='o', linewidth=3, 
                         color='green', markerfacecolor='red', markeredgecolor='red')
 
             if med_glob:
@@ -439,10 +444,6 @@ def tab_EDA_create_evolution_graph(df, indicador, serie=True, med_glob=True, ten
 
             # Configuración final del eje y cuadrícula
             ax.set_title(titulo)
-            ax.set_xticks(range(2011, 2025))
-            ax.set_xlim(2010.5, 2024.5)
-            # ax.set_xlabel("Año")
-            #   Qax.set_ylabel("Estudiantes")
             ax.grid(True, linestyle='--', alpha=0.6)
             ax.legend()
             plt.tight_layout()
@@ -497,7 +498,7 @@ def tab_EDA_create_normal_dist_graph(df, indicador):
         # Configuración de títulos y etiquetas utilizando el diccionario de nombres largos
         titulo = f"DISTRIBUCIÓN NORMAL: {dict_nlargos[indicador].upper()}"
         ax.set_title(titulo)
-        ax.set_xlabel("MATRÍCULA")
+        ax.set_xlabel("CULTIVO")
         ax.set_ylabel("DENSIDAD")
         ax.grid(True, linestyle='--', alpha=0.5)
         
@@ -542,7 +543,7 @@ def tab_EDA_create_histogram_graph(df, indicador):
         # Configuración de títulos y etiquetas
         titulo = f"DISTRIBUCIÓN DE FRECUENCIAS: {dict_nlargos[indicador].upper()}"
         ax.set_title(titulo)
-        ax.set_xlabel("MATRÍCULA")
+        ax.set_xlabel("CULTIVO")
         ax.set_ylabel("FRECUENCIA (AÑOS)")
         
         ax.grid(True, linestyle='--', alpha=0.5)
@@ -696,7 +697,6 @@ def tab_EDA_create_prev_all_graphs(df, indicador, serie, mg, tend, mm, sd, inter
 
     return gr.update(value=indicador_ncorto), fig1, fig2, fig3
 
-def get_filtered_subset_2(df, provincia, departamento, sector, ambito, key_columns, agrupar_detalles=True):
 
     if df is None or df.empty:
         return pd.DataFrame() # Retorna DF vacío si no hay datos
@@ -707,30 +707,11 @@ def get_filtered_subset_2(df, provincia, departamento, sector, ambito, key_colum
     # Filtrado inicial
     res_df = df[(df['provincia'] == provincia) & (df['departamento'] == departamento)].copy()
     
-    # Aplicación de filtros condicionales
-    if sector != 'Ambos':
-        res_df = res_df[res_df['sector'] == sector]
-        
-    if ambito != 'Ambos':
-        res_df = res_df[res_df['ambito'] == ambito]
-
     if res_df.empty:
         return pd.DataFrame(columns=df.columns) # Retorna estructura original vacía
 
-    # Si agrupar_detalles es True, forzamos la etiqueta 'Ambos' en las filas
-    if agrupar_detalles:
-        if sector == 'Ambos' and 'sector' in res_df.columns:
-            res_df['sector'] = 'Ambos'
-        if ambito == 'Ambos' and 'ambito' in res_df.columns:
-            res_df['ambito'] = 'Ambos'
-
     # Definición de dimensiones de agrupación
     group_cols = list(key_columns)
-    
-    # Añadimos dimensiones opcionales si existen en el DataFrame
-    for col in ['grado', 'sector', 'ambito']:
-        if col in res_df.columns and col not in group_cols:
-            group_cols.append(col)
     
     # Identificación de métricas (solo numéricas)
     numeric_cols = [col for col in res_df.columns 
@@ -747,7 +728,7 @@ def get_filtered_subset_2(df, provincia, departamento, sector, ambito, key_colum
     final_cols = group_cols + numeric_cols
     return final_df[final_cols]
 
-def get_filtered_subset(df, provincia, departamento, sector, ambito, key_columns, agrupar_detalles=True, min_reg=0):
+def get_filtered_subset(df, cultivo, provincia, departamento, key_columns):
 
     if df is None or df.empty:
         return pd.DataFrame() # Retorna DF vacío si no hay datos
@@ -758,31 +739,12 @@ def get_filtered_subset(df, provincia, departamento, sector, ambito, key_columns
     # Filtrado inicial
     res_df = df[(df['provincia'] == provincia) & (df['departamento'] == departamento)].copy()
     
-    # Aplicación de filtros condicionales
-    if sector != 'Ambos':
-        res_df = res_df[res_df['sector'] == sector]
-        
-    if ambito != 'Ambos':
-        res_df = res_df[res_df['ambito'] == ambito]
-
     if res_df.empty:
         # return pd.DataFrame(columns=df.columns) # Retorna estructura original vacía
         return pd.DataFrame()
 
-    # Si agrupar_detalles es True, forzamos la etiqueta 'Ambos' en las filas
-    if agrupar_detalles:
-        if sector == 'Ambos' and 'sector' in res_df.columns:
-            res_df['sector'] = 'Ambos'
-        if ambito == 'Ambos' and 'ambito' in res_df.columns:
-            res_df['ambito'] = 'Ambos'
-
     # Definición de dimensiones de agrupación
     group_cols = list(key_columns)
-    
-    # Añadimos dimensiones opcionales si existen en el DataFrame
-    for col in ['grado', 'sector', 'ambito']:
-        if col in res_df.columns and col not in group_cols:
-            group_cols.append(col)
     
     # Identificación de métricas (solo numéricas)
     numeric_cols = [col for col in res_df.columns 
@@ -794,12 +756,8 @@ def get_filtered_subset(df, provincia, departamento, sector, ambito, key_columns
     # Limpieza final para Gradio
     # Gradio a veces tiene problemas con tipos de datos complejos o NaNs en la visualización
     final_df = final_df.fillna(0)
+    print(final_df)
     
-    # Verificación del umbral mínimo de registros solicitado
-    if len(final_df) < min_reg: # Comprueba si el tamaño del DF es menor al umbral
-        # return pd.DataFrame(columns=final_df.columns)
-        return pd.DataFrame()
-
     # Reordenar columnas para que las dimensiones precedan a las métricas
     final_cols = group_cols + numeric_cols
     return final_df[final_cols]
@@ -813,10 +771,10 @@ def tab_EDA_show_data(df, dataset_type, provincia, departamento, sector, ambito,
     # if departamento is None: # Cuando se cambió la provincia pero no se seleccionó un departamento
     #    departamento = dptos_sorted[0]
 
-    filtered = get_filtered_subset(df, provincia, departamento, sector, ambito, KEY_COLUMNS, True, min_reg=MIN_REG)
+    filtered = get_filtered_subset(df, provincia, departamento, KEY_COLUMNS)
     
     if filtered.empty:
-        info_text = f" MATRÍCULA {dataset_type.upper()} PARA {provincia} - {departamento} (SECTOR {sector.upper()} - ÁMBITO {ambito.upper()}): SIN REGISTROS"
+        info_text = f" CULTIVO {dataset_type.upper()} PARA {provincia} - {departamento} (SECTOR {sector.upper()} - ÁMBITO {ambito.upper()}): SIN REGISTROS"
         return df, filtered, gr.update(value=provincia), gr.update(value=departamento), \
             gr.update(value=sector), gr.update(value=ambito), \
             info_text, gr.update(visible=False), pd.DataFrame(), pd.DataFrame(), \
@@ -840,7 +798,7 @@ def tab_EDA_show_data(df, dataset_type, provincia, departamento, sector, ambito,
     indicador_first = indicadores[0]
 
     # Data 1: Mensaje informativo sobre registros y campos
-    info_text = f" MATRÍCULA {dataset_type.upper()} PARA {provincia} - {departamento} (SECTOR {sector.upper()} - ÁMBITO {ambito.upper()}): {len(filtered)} REGISTROS  -  {len(cols_to_show)} CAMPOS"
+    info_text = f" CULTIVO {dataset_type.upper()} PARA {provincia} - {departamento} (SECTOR {sector.upper()} - ÁMBITO {ambito.upper()}): {len(filtered)} REGISTROS  -  {len(cols_to_show)} CAMPOS"
    
     # Data 2: Calcular estadísticas del dataset filtrado
     stats = (
@@ -891,7 +849,7 @@ def tab_EDA_on_checkbox(dataset_type, provincia, departamento, sector, ambito, a
     df, provincias = load_data(dataset_type)
 
     if df.empty:
-        m_inic = "EL DATASET DE MATRÍCULA SELECCIONADO NO ESTÁ DISPONIBLE"
+        m_inic = "EL DATASET DE CULTIVO SELECCIONADO NO ESTÁ DISPONIBLE"
         return df, pd.DataFrame(), gr.update(choices=[], value=None), gr.update(choices=[], value=None), \
                 gr.update(value="Ambos"), gr.update(value="Ambos"), gr.HTML(value=m_inic), \
                 gr.update(visible=False), pd.DataFrame(), pd.DataFrame(), \
@@ -923,22 +881,23 @@ def tab_EDA_on_checkbox(dataset_type, provincia, departamento, sector, ambito, a
 
 # region FUNCIONES PARA LA PESTAÑA "SERIES TEMPORALES"
 
-def tab_ST_on_mat_change(dataset_type):
+def tab_ST_on_cult_change_OBSOLETA(dataset_type):
     df, provincias = load_data(dataset_type)
 
     if df.empty:
         msg = "Sin datos"
         return (pd.DataFrame(), # Dataset vacío
-                ## Campos vacíos: Prov., Depto., Sec., Ámb., Indicador, Tendencia
+                ## Campos vacíos: Prov., Depto., Indicador, Tendencia
                 gr.update(choices=[], value=None), gr.update(choices=[], value=None),
-                gr.update(value="Ambos"), gr.update(value="Ambos"),
                 gr.update(choices=[], value=None), gr.Plot(visible=False),
                 gr.update(choices=[], value=None), gr.update(choices=[], value=None),
-                gr.update(value="Ambos"), gr.update(value="Ambos"),
                 gr.update(choices=[], value=None), gr.Plot(visible=False),
                 gr.update(choices=[], value=None), gr.update(choices=[], value=None),
-                gr.update(value="Ambos"), gr.update(value="Ambos"),
                 gr.update(choices=[], value=None), gr.Plot(visible=False),
+                ## Info de las series: Inicio, Final, C/Rges, S/Regs
+                gr.update(value="-"), gr.update(value="-"), gr.update(value="-"), gr.update(value="-"),
+                gr.update(value="-"), gr.update(value="-"), gr.update(value="-"), gr.update(value="-"),
+                gr.update(value="-"), gr.update(value="-"), gr.update(value="-"), gr.update(value="-"),
                 ## Datasets filtrados se devuelven vacíos
                 pd.DataFrame(), pd.DataFrame(), pd.DataFrame(),
                 ## Datasets diferenciados se devuelven vacíos
@@ -1012,43 +971,43 @@ def tab_ST_on_mat_change(dataset_type):
     # Se guarda el nombre corto del primer indicador
     indicador_first = indicadores[0]
 
-    # Se filtra el dataset de matrícula
-    sector = "Ambos"
-    ambito = "Ambos"
-    filtered = get_filtered_subset(df, prov_first, dpto_first, sector, ambito, 
-                                   KEY_COLUMNS, True, min_reg=MIN_REG)
+    # Se filtra el dataset de cultivo
+    filtered = get_filtered_subset(df, prov_first, dpto_first, KEY_COLUMNS)
+
+    # Se obtiene información de la serie
+    inicio = pd.to_numeric(filtered['periodo']).min()
+    final = pd.to_numeric(filtered['periodo']).max()
+    regs = filtered['periodo'].nunique()
+    regsno = (final - inicio + 1) - regs
 
     # Al actualizar el dataset, se muestra la primera provincia, el primer departamento,
-    # sector = "Ambos", ambiente="Ambos", el primer indicador y el gráfico correspodiente.
+    # el primer indicador y el gráfico correspodiente.
     # Se hace para las tres series temporales
     msg = ("<b>"
            f"PROVINCIA: {prov_first.upper()}<br>"
            f"DEPARTAMENTO: {dpto_first.upper()}<br>"
-           f"SECTOR: {sector.upper()} - ÁMBITO: {ambito.upper()}<br>"
            f"INDICADOR: {dict_nlargos[indicadores_originales[0]].upper()}"
            "</b>")
-    return (df, # Dataset cargado de la matrícula
-                ## Campos por defecto Serie 1: Prov., Depto., Sec., Ámb., Indicador, Tendencia
+    return (df, # Dataset cargado de cultivo
+                ## Campos por defecto Serie 1: Prov., Depto., Indicador, Tendencia
                 gr.update(choices=provincias_sorted, value=prov_first),
                 gr.update(choices=dptos_sorted, value=dpto_first),
-                gr.update(choices=["Estatal", "Privado", "Ambos"], value="Ambos"),
-                gr.update(choices=["Urbano", "Rural", "Ambos"], value="Ambos"),
                 gr.update(choices=indicadores, value=indicador_first),
                 gr.Plot(visible=False),
-                ## Campos por defecto Serie 2: Prov., Depto., Sec., Ámb., Indicador, Tendencia
+                ## Campos por defecto Serie 2: Prov., Depto., Indicador, Tendencia
                 gr.update(choices=provincias_sorted, value=prov_first),
                 gr.update(choices=dptos_sorted, value=dpto_first),
-                gr.update(choices=["Estatal", "Privado", "Ambos"], value="Ambos"),
-                gr.update(choices=["Urbano", "Rural", "Ambos"], value="Ambos"),
                 gr.update(choices=indicadores, value=indicador_first),
                 gr.Plot(visible=False),
-                ## Campos por defecto Serie 3: Prov., Depto., Sec., Ámb., Indicador, Tendencia
+                ## Campos por defecto Serie 3: Prov., Depto., Indicador, Tendencia
                 gr.update(choices=provincias_sorted, value=prov_first),
                 gr.update(choices=dptos_sorted, value=dpto_first),
-                gr.update(choices=["Estatal", "Privado", "Ambos"], value="Ambos"),
-                gr.update(choices=["Urbano", "Rural", "Ambos"], value="Ambos"),
                 gr.update(choices=indicadores, value=indicador_first),
                 gr.Plot(visible=False),
+                ## Info de las series (inicialmente las tres series iguales)
+                inicio, final, regs, regsno,
+                inicio, final, regs, regsno,
+                inicio, final, regs, regsno,
                 # Datasets filtrados con campos por defecto
                 filtered, filtered, filtered,
                 ## Datasets diferenciados se devuelven vacíos
@@ -1101,27 +1060,192 @@ def tab_ST_on_mat_change(dataset_type):
                 # Info de residuos
                 gr.update(visible=False), gr.update(visible=False), gr.update(visible=False)
                 )
-            
-def tab_ST_on_prov_change(df, provincia, sector, ambito, indicador):
-    
-    # Se arma el listado ordenado de departamentos de la provincia
+
+def tab_ST_on_cult_change_all(cult1, cult2, cult3):
+
+    # Esta función se ejecuta cada vez que se entra a la pestaña "SERIES TEMPORALES";
+    # las series se reinician con el primer cultivo de la lista (se indica manualmente: ARROS)
+    # y con la primera provincia, la primera zona y la primera variable,
+    # eso lo hace automáticamente la función tab_ST_on_cult_change()
+
+    cult1 = "ARROZ"
+    cult2 = "ARROZ"
+    cult3 = "ARROZ"
+
+    dfa, a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13, a14, a15, a16, a17, a18, a19, a20, a21, a22, a23, a24, a25, a26, a27, a28, a29, a30, a31, a32 = tab_ST_on_cult_change(cult1)
+
+    dfb, b1, b2, b3, b4, b5, b6, b7, b8, b9, b10, b11, b12, b13, b14, b15, b16, b17, b18, b19, b20, b21, b22, b23, b24, b25, b26, b27, b28, b29, b30, b31, b32 = tab_ST_on_cult_change(cult2)
+
+    dfc, c1, c2, c3, c4, c5, c6, c7, c8, c9, c10, c11, c12, c13, c14, c15, c16, c17, c18, c19, c20, c21, c22, c23, c24, c25, c26, c27, c28, c29, c30, c31, c32 = tab_ST_on_cult_change(cult3)
+
+    return dfa, a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, \
+            a11, a12, a13, a14, a15, a16, a17, a18, a19, \
+            a20, a21, a22, a23, a24, a25, a26, a27, a28, a29, a30, a31, a32, \
+            dfb, b1, b2, b3, b4, b5, b6, b7, b8, b9, b10, \
+            b11, b12, b13, b14, b15, b16, b17, b18, b19, \
+            b20, b21, b22, b23, b24, b25, b26, b27, b28, b29, b30, b31, b32, \
+            dfc, c1, c2, c3, c4, c5, c6, c7, c8, c9, c10, \
+            c11, c12, c13, c14, c15, c16, c17, c18, c19, \
+            c20, c21, c22, c23, c24, c25, c26, c27, c28, c29, c30, c31, c32
+
+def tab_ST_on_cult_change(dataset_type):
+    df, provincias = load_data(dataset_type)
+
+    if df.empty:
+        msg = "Sin datos"
+        return (pd.DataFrame(), # Dataset vacío
+                ## Campos vacíos: Cultivo, Prov., Depto., Indicador, Tendencia
+                gr.update(choices=[], value=None), 
+                gr.update(choices=[], value=None), gr.update(choices=[], value=None),
+                gr.update(choices=[], value=None), gr.Plot(visible=False),
+                # Info de la serie
+                gr.update(value="-"), gr.update(value="-"), gr.update(value="-"), gr.update(value="-"),
+                ## Dataset filtrado se devuelvn vacío
+                pd.DataFrame(),
+                ## Dataset diferenciado se devuelve vacío
+                pd.DataFrame(),
+                ## Sección de Descomposición de la Serie
+                # Información de filtros
+                gr.update(visible=False),
+                # Gráfico de descomposición e interpretación
+                gr.Plot(visible=False), gr.update(visible=False),
+                ## Sección de Diferenciación y Prueba ADF
+                # Información de filtros
+                gr.update(visible=False),
+                # Grado de diferenciación
+                gr.update(value=0, visible=True),
+                # Gráfico de diferenciación
+                gr.Plot(visible=False),
+                # Resultado prueba ADF
+                gr.update(visible=False),
+                # Variable de estado de grados de diferenciación
+                gr.update(value=NO_EXISTE),
+                ## Sección de ACF y PACF
+                # Información de filtros
+                gr.update(visible=False),
+                # Gráfico e interpretación de ACF
+                gr.Plot(visible=False), gr.update(visible=False),
+                # Gráfico e interpretación de PACF
+                gr.Plot(visible=False), gr.update(visible=False),
+                ## Sección ARIMA
+                # Variables de estado 'p' y 'q'
+                gr.update(value=NO_EXISTE), gr.update(value=NO_EXISTE),
+                # Información de filtros y parámetros de ARIMA
+                gr.update(visible=False), gr.update(visible=False),
+                # Gráfico de predicciones y tabla de predicciones
+                gr.Plot(visible=False), gr.update(visible=False),
+                # Gráficos de residuos e info de residuos
+                gr.Plot(visible=False), gr.update(visible=False)
+                )
+
+    # Se arma el listado ordenado de provincias y se guarda la primera provincia
+    provincias_sorted = sorted([str(p) for p in provincias])
+    prov_first = provincias_sorted[0]
+
+    # Se arma el listado ordenado de departamentos de la primera provincia de la lista
     # y se guarda el primer departamento de la lista
-    dptos = df[df['provincia'] == provincia]['departamento'].unique()
+    dptos = df[df['provincia'] == prov_first]['departamento'].unique()
     dptos_sorted = sorted([str(d) for d in dptos if d is not None])
     dpto_first = dptos_sorted[0]
-    
-    # Como el parámetro "indicador" se recibe con el nombre descriptivo corto
-    # se debe convertir a su nombre original
-    ind_orig = next((k for k, v in dict_ncortos.items() if v == indicador), indicador)
 
-    # Se filtra el dataset de matrícula
-    filtered = get_filtered_subset(df, provincia, dpto_first, sector, ambito, 
-                                   KEY_COLUMNS, True, min_reg=MIN_REG)
+    # Listado de las variables numéricas del dataset, excluyendo "periodo"
+    # y se guarda la primera variable de la lista
+    numeric_cols = df.select_dtypes(include=['number']).columns.tolist()
+    cols_to_plot = [c for c in numeric_cols if c != 'periodo']
+    indicadores_originales = cols_to_plot
+    # Se renombran los indicadores (nombres de columnas numéricas) con los nombres cortos del diccionario
+    indicadores = [dict_ncortos.get(col, col) for col in indicadores_originales]
+    # Se guarda el nombre corto del primer indicador
+    indicador_first = indicadores[0]
+
+    # Se filtra el dataset de cultivo
+    filtered = get_filtered_subset(df, dataset_type, prov_first, dpto_first, KEY_COLUMNS)
+
+    # Se obtiene información de la serie
+    inicio = pd.to_numeric(filtered['periodo']).min()
+    final = pd.to_numeric(filtered['periodo']).max()
+    regs = filtered['periodo'].nunique()
+    regsno = (final - inicio + 1) - regs
+
+    # Al actualizar el dataset, se muestra la primera provincia, el primer departamento
+    # y el primer indicador.
+    msg = ("<b>"
+           f"CULTIVO: {dataset_type.upper()}<br>"
+           f"PROVINCIA: {prov_first.upper()}<br>"
+           f"DEPARTAMENTO: {dpto_first.upper()}<br>"
+           f"INDICADOR: {dict_nlargos[indicadores_originales[0]].upper()}"
+           "</b>")
+
+    return (df, # Dataset cargado de cultivo
+                ## Campos por defecto de la serie: Cultivo, Prov., Depto., Indicador, Tendencia
+                gr.update(value=dataset_type),
+                gr.update(choices=provincias_sorted, value=prov_first),
+                gr.update(choices=dptos_sorted, value=dpto_first),
+                gr.update(choices=indicadores, value=indicador_first),
+                gr.Plot(visible=False),
+                # Info de la serie
+                inicio, final, regs, regsno,
+                ## Dataset filtrado
+                filtered,
+                ## Dataset diferenciads se devuelve vacío
+                pd.DataFrame(),
+                ## Sección de Descomposición de la Serie
+                # Información de filtros
+                msg,
+                # Gráfico de descomposición e interpretación
+                gr.Plot(visible=False), gr.update(visible=False),
+                ## Sección de Diferenciación y Prueba ADF
+                # Información de filtros
+                msg,
+                # Grado de diferenciación
+                gr.update(value=0, visible=True),
+                # Gráfico de diferenciación
+                gr.Plot(visible=False),
+                # Resultado prueba ADF
+                gr.update(visible=False),
+                # Variable de estado de grados de diferenciación
+                gr.update(value=NO_EXISTE),
+                ## Sección de ACF y PACF
+                # Información de filtros
+                msg,
+                # Gráfico e interpretación de ACF
+                gr.Plot(visible=False), gr.update(visible=False),
+                # Gráfico e interpretación de PACF
+                gr.Plot(visible=False), gr.update(visible=False),
+                ## Sección ARIMA
+                # Variables de estado 'p' y 'q'
+                gr.update(value=NO_EXISTE), gr.update(value=NO_EXISTE),
+                # Información de filtros y parámetros de ARIMA
+                msg, gr.update(visible=False),
+                # Gráfico de predicciones y tabla de predicciones
+                gr.Plot(visible=False), gr.update(visible=False),
+                # Gráficos de residuos e info de residuos
+                gr.Plot(visible=False), gr.update(visible=False)
+                )
+
+def tab_ST_on_prov_change(df, cultivo, provincia, indicador):
     
-    if filtered.empty:
+    if not df.empty:
+        # Se arma el listado ordenado de departamentos de la provincia
+        # y se guarda el primer departamento de la lista
+        dptos = df[df['provincia'] == provincia]['departamento'].unique()
+        dptos_sorted = sorted([str(d) for d in dptos if d is not None])
+        dpto_first = dptos_sorted[0]
+        
+        # Como el parámetro "indicador" se recibe con el nombre descriptivo corto
+        # se debe convertir a su nombre original
+        ind_orig = next((k for k, v in dict_ncortos.items() if v == indicador), indicador)
+
+    # Se filtra el dataset de cultivo
+    if not df.empty:
+        filtered = get_filtered_subset(df, cultivo, provincia, dpto_first, KEY_COLUMNS)
+    
+    if df.empty or filtered.empty:
         return (pd.DataFrame(), pd.DataFrame(),
                 # Lista de departamentos
                 gr.update(choices=[], value=None),
+                # Info de la serie
+                gr.update(value="-"), gr.update(value="-"), gr.update(value="-"), gr.update(value="-"),
                 # Gráfico de tendencia
                 gr.Plot(visible=False), 
                 ## Sección de Descomposición de la Serie
@@ -1158,14 +1282,22 @@ def tab_ST_on_prov_change(df, provincia, sector, ambito, indicador):
                 gr.Plot(visible=False), gr.update(visible=False)
                 )
     
+    # Se obtiene información de la serie
+    inicio = pd.to_numeric(filtered['periodo']).min()
+    final = pd.to_numeric(filtered['periodo']).max()
+    regs = filtered['periodo'].nunique()
+    regsno = (final - inicio + 1) - regs
+
     msg = ("<b>"
+           f"CULTIVO: {cultivo.upper()}<br>"
            f"PROVINCIA: {provincia.upper()}<br>DEPARTAMENTO: {dpto_first.upper()}<br>"
-           f"SECTOR: {sector.upper()} - ÁMBITO: {ambito.upper()}<br>"
            f"INDICADOR: {dict_nlargos[ind_orig].upper()}"
            "</b>")
     return (filtered, pd.DataFrame(),
                 # Lista de departamentos
                 gr.update(choices=dptos_sorted, value=dpto_first),
+                # Info de la serie
+                inicio, final, regs, regsno,
                 # Gráfico de tendencia
                 gr.Plot(visible=False), 
                 ## Sección de Descomposición de la Serie
@@ -1202,20 +1334,20 @@ def tab_ST_on_prov_change(df, provincia, sector, ambito, indicador):
                 gr.Plot(visible=False), gr.update(visible=False)
                 )
 
-def tab_ST_on_option_change(df, provincia, departamento, sector, ambito, indicador):
+def tab_ST_on_option_change(df, cultivo, provincia, departamento, indicador):
 
     # Como el parámetro "indicador" se recibe con el nombre descriptivo corto
     # se debe convertir a su nombre original
     ind_orig = next((k for k, v in dict_ncortos.items() if v == indicador), indicador)
 
-    # Se filtra el dataset de matrícula
-    filtered = get_filtered_subset(df, provincia, departamento, sector, ambito, 
-                                   KEY_COLUMNS, True, min_reg=MIN_REG)
+    # Se filtra el dataset de cultivo
+    if not df.empty:
+        filtered = get_filtered_subset(df, cultivo, provincia, departamento, KEY_COLUMNS)
     
-    if filtered.empty:
+    if df.empty or filtered.empty:
         return (pd.DataFrame(), pd.DataFrame(),
-                # Lista de departamentos
-                gr.update(choices=[], value=None),
+                # Info de la serie
+                gr.update(value="-"), gr.update(value="-"), gr.update(value="-"), gr.update(value="-"),
                 # Gráfico de tendencia
                 gr.Plot(visible=False), 
                 ## Sección de Descomposición de la Serie
@@ -1252,12 +1384,21 @@ def tab_ST_on_option_change(df, provincia, departamento, sector, ambito, indicad
                 gr.Plot(visible=False), gr.update(visible=False)
                 )
     
+    # Se obtiene información de la serie
+    inicio = pd.to_numeric(filtered['periodo']).min()
+    final = pd.to_numeric(filtered['periodo']).max()
+    regs = filtered['periodo'].nunique()
+    regsno = (final - inicio + 1) - regs
+
     msg = ("<b>"
-           f"PROVINCIA: {provincia.upper()}<br>DEPARTAMENTO: {departamento.upper()}<br>"
-           f"SECTOR: {sector.upper()} - ÁMBITO: {ambito.upper()}<br>"
+           f"CULTIVO: {cultivo.upper()}<br>"
+           f"PROVINCIA: {provincia.upper()}<br>"
+           f"DEPARTAMENTO: {departamento.upper()}<br>"
            f"INDICADOR: {dict_nlargos[ind_orig].upper()}"
            "</b>")
     return (filtered, pd.DataFrame(),
+                # Info de la serie
+                inicio, final, regs, regsno,
                 # Gráfico de tendencia
                 gr.Plot(visible=False), 
                 ## Sección de Descomposición de la Serie
@@ -1309,22 +1450,21 @@ def tab_ST_on_graph_change(filtered1, filtered2, filtered3, ind1, ind2, ind3,
 
     mmov =  0 < mm < 4
     tipo = mm + 1
-    graph1 = tab_EDA_create_evolution_graph(filtered1, ind_orig1, serie, mg, tend, mmov, sd, 
-                                            tipo, interactivo=False, h_estatico=4.13)
-    graph2 = tab_EDA_create_evolution_graph(filtered2, ind_orig2, serie, mg, tend, mmov, sd, 
-                                            tipo, interactivo=False, h_estatico=4.13)
-    graph3 = tab_EDA_create_evolution_graph(filtered3, ind_orig3, serie, mg, tend, mmov, sd, 
-                                            tipo, interactivo=False, h_estatico=4.13)
 
-    return gr.Plot(value=graph1, visible=True), gr.Plot(value=graph2, visible=True), \
-            gr.Plot(value=graph3, visible=True)
+    graph1 = tab_EDA_create_evolution_graph(filtered1, ind_orig1, serie, mg, tend, mmov, sd, 
+                                            tipo, interactivo=False, h_estatico=5.15)
+    graph2 = tab_EDA_create_evolution_graph(filtered2, ind_orig2, serie, mg, tend, mmov, sd, 
+                                            tipo, interactivo=False, h_estatico=5.15)
+    graph3 = tab_EDA_create_evolution_graph(filtered3, ind_orig3, serie, mg, tend, mmov, sd, 
+                                            tipo, interactivo=False, h_estatico=5.15)
+
+    return gr.update(visible=True), gr.update(visible=True), gr.update(visible=True), \
+                graph1, graph2, graph3
 
 def tab_ST_stl_decomp(df, indicador):
     """
-    Se aplica la descomposición STL (Seasonal-Trend decomposition using LOESS) 
-    debido a que se trabaja con una serie corta de datos (n = 14), donde no resulta 
-    conveniente utilizar modelos clásicos de medias móviles ni modelos predictivos complejos 
-    como ARIMA/SARIMA. Este enfoque se destaca por tres ventajas clave:
+    Se aplica la descomposición STL (Seasonal-Trend decomposition using LOESS).
+    Este enfoque se destaca por tres ventajas clave:
     * Robustez ante anomalías: STL ignora valores atípicos mediante un ajuste robusto, 
       evitando que eventos excepcionales desvíen la tendencia real.
     * Integridad de la serie: a diferencia de las medias móviles, no existe pérdida de datos 
@@ -1345,7 +1485,9 @@ def tab_ST_stl_decomp(df, indicador):
 
     df = df.sort_values('periodo').reset_index(drop=True)
     serie = df[ind_orig]
-    
+    nobs = len(serie)
+    marcasx = nobs if nobs <= 10 else 10
+
     # Se entrena el modelo STL. En datos anuales con N=14, el 'period' suele fijarse en un ciclo 
     # hipotético o se usa period=2 (para capturar la variabilidad bianual mínima).
     # Robust indica que el modelo debe ignorar las anomalías o años atípicos.
@@ -1368,7 +1510,7 @@ def tab_ST_stl_decomp(df, indicador):
             )
         )
     
-    titulo = f"DESCOMPOSICIÓN STL DE LA MATRÍCULA: {dict_nlargos[ind_orig].upper()}"
+    titulo = f"DESCOMPOSICIÓN STL DE: {dict_nlargos[ind_orig].upper()}"
     # Datos originales
     fig.add_trace(go.Scatter(x=df['periodo'], y=serie, name="Original", 
                              line=dict(color='black')), row=1, col=1)
@@ -1393,16 +1535,18 @@ def tab_ST_stl_decomp(df, indicador):
     )
     fig.update_annotations(font=dict(size=12, color='black', family='Arial Black'))
     fig.update_xaxes(
-        tickmode='linear', 
-        tick0=2011, 
-        dtick=1, 
-        range=[2010.5, 2024.5],
-        tickfont=dict(size=8, color='black', family='Arial Black'),
+        tickmode='auto', # 'linear',
+        # tick0=2011, 
+        # dtick=10, # Salto entre etiquetas
+        nticks=10, # Número máximo de etiquetas en el eje x
+        tickangle=0,
+        # range=[2010.5, 2024.5],
+        tickfont=dict(size=10, color='black', family='Arial Black'),
         tickformat='d',
         showticklabels=True # Fuerza la visibilidad en todos los subgráficos
     )
     fig.update_yaxes(
-        tickfont=dict(size=8, color='black', family='Arial Black'),
+        tickfont=dict(size=10, color='black', family='Arial Black'),
     )
 
     # Métricas
@@ -1421,14 +1565,14 @@ def tab_ST_stl_decomp(df, indicador):
     if variabilidad_residuo < 5:
         desc_ruido = "baja. El modelo explica casi la totalidad de los datos; los factores externos son mínimos."
     elif variabilidad_residuo < 15:
-        desc_ruido = "moderada. Existen fluctuaciones aleatorias o eventos puntuales que afectan la matrícula."
+        desc_ruido = "moderada. Existen fluctuaciones aleatorias o eventos puntuales que afectan el cultivo."
     else:
         desc_ruido = "alta. La serie es altamente impredecible; hay una fuerte influencia de variables no capturadas por la tendencia."
 
     reporte = (f"<b>Variabilidad No Explicada (Ruido): </b>"
                 f"{variabilidad_residuo:.2f}% respecto a la media. La variabilidad es {desc_ruido}<br>"
                 f"<b>Tendencia: </b>"
-                f"La serie presenta {interpretacion_tendencia} de la matrícula.<br>"
+                f"La serie presenta {interpretacion_tendencia} del cultivo.<br>"
                 f"<b>Años con Desviaciones Significativas: </b>"
                 f"{puntos_atipicos['periodo'].tolist() if not puntos_atipicos.empty else 'Ninguno'}<br>"
                 )
@@ -1522,15 +1666,16 @@ def tab_ST_ACF(df, indicador, grado_dif):
     fig.add_hline(y=-conf_interval, line_dash="dash", line_color="orange", annotation_text="IC 95%")
     
     fig.update_xaxes(
-        tickmode='linear', 
-        tick0=0, 
-        dtick=1, 
-        # range=[0, 7],
-        tickfont=dict(size=12, color='black', family='Arial Black'),
+        # tick0=0, 
+        # dtick=1, 
+        tickfont=dict(size=10, color='black', family='Arial Black'),
         tickformat='d',
+        tickmode='auto', # 'linear',
+        nticks=10, # Número máximo de etiquetas en el eje x
+        tickangle=0,
     )
     fig.update_yaxes(
-        tickfont=dict(size=12, color='black', family='Arial Black'),
+        tickfont=dict(size=10, color='black', family='Arial Black'),
     )
     fig.update_layout(
         # title=f"{dict_nlargos[ind_orig].upper()}",
@@ -1637,14 +1782,16 @@ def tab_ST_PACF(df, indicador, grado_dif):
     fig.add_hline(y=-conf_interval, line_dash="dash", line_color="black", annotation_text="IC 95%")
     
     fig.update_xaxes(
-        tickmode='linear', 
-        tick0=0, 
-        dtick=1, 
-        tickfont=dict(size=12, color='black', family='Arial Black'),
+        # tick0=0, 
+        # dtick=1, 
+        tickfont=dict(size=10, color='black', family='Arial Black'),
         tickformat='d',
+        tickmode='auto', # 'linear',
+        nticks=10, # Número máximo de etiquetas en el eje x
+        tickangle=0,
     )
     fig.update_yaxes(
-        tickfont=dict(size=12, color='black', family='Arial Black'),
+        tickfont=dict(size=10, color='black', family='Arial Black'),
     )
     fig.update_layout(
         height=400,
@@ -1712,106 +1859,6 @@ def tab_ST_ACF_PACF_all(df1, df2, df3, var1, var2, var3, level1, level2, level3)
             gr.update(value = desc3b, visible = True),
             p3
             )
-
-'''
-def tab_ST_ADF(df, indicador):
-    """
-    Aplica el Test de Dickey-Fuller Aumentado (ADF).
-    - df: DataFrame con los datos originales.
-    - indicador: Nombre corto del indicador.
-    """
-    
-    # Recuperación del nombre original y preparación de la serie
-    ind_orig = next((k for k, v in dict_ncortos.items() if v == indicador), indicador)
-    df = df.sort_values('periodo').reset_index(drop=True)
-    serie = df[ind_orig].dropna()
-    n_obs = len(serie)
-
-    # Se verifica si todos los valores son iguales (incluye ceros)
-    if np.all(serie == serie.iloc[0]):
-        return """
-        <div style="padding:15px; border:2px solid #ffa000; background-color:#fff9c4; border-radius:8px;">
-            <strong style="color:#f57c00;"> Error en el Análisis:</strong><br>
-            La serie temporal es constante (todos los valores son iguales). 
-            La varianza es 0, lo que impide calcular el estadístico ADF. 
-            Una serie constante se considera determinista y no requiere pruebas de raíz unitaria.
-        </div>
-        """
-    
-    # Test ADF con autolag='AIC' (Criterio de Información de Akaike), lo que es recomendado
-    # en análisis de series temporales muy cortas. El AIC penaliza la inclusión de demasiados
-    # retardos (lags), evitando el sobreajuste, algo crítico para pocas observaciones.
-    res = adfuller(serie, autolag='AIC')
-    
-    test_stat = res[0]      # Estadístico del test
-    p_value = res[1]        # Valor p
-    lags_used = res[2]      # Rezagos seleccionados
-    crit_values = res[4]    # Valores críticos al 1%, 5% y 10%
-
-    # Lógica de interpretación
-    # H0: La serie tiene raíz unitaria (no es estacionaria)
-    # H1: La serie es estacionaria
-    es_estacionaria = p_value < 0.05
-    color_status = "#1a73e8" if es_estacionaria else "#d93025"
-    conclusion_msg = "ESTACIONARIA" if es_estacionaria else "NO ESTACIONARIA"
-
-    # Construcción de la salida HTML
-    html_output = f"""
-    <div style="font-family: 'Segoe UI', Arial, sans-serif; padding: 20px; border: 1px solid #e0e0e0; border-radius: 8px; background-color: #ffffff;">
-        <table style="width: 100%; border-collapse: collapse; margin: 20px 0;">
-            <tbody>
-                <tr>
-                    <td style="border: 1px solid #ddd; padding: 10px; font-size: 14px !important; font-weight: bold !important;">Estadístico de la Prueba</td>
-                    <td style="border: 1px solid #ddd; padding: 10px; text-align: center; font-size: 14px !important; font-weight: bold !important;">{test_stat:.4f}</td>
-                </tr>
-                <tr>
-                    <td style="border: 1px solid #ddd; padding: 10px;  font-size: 14px !important; font-weight: bold !important;">P-Valor (Nivel de significancia)</td>
-                    <td style="border: 1px solid #ddd; padding: 10px; text-align: center; font-size: 14px !important; font-weight: bold !important;">{p_value:.4f}</td>
-                </tr>
-                <tr>
-                    <td style="border: 1px solid #ddd; padding: 10px; font-size: 14px !important; font-weight: bold !important;">Rezagos utilizados (AIC)</td>
-                    <td style="border: 1px solid #ddd; padding: 10px; text-align: center; font-size: 14px !important; font-weight: bold !important;">{lags_used}</td>
-                </tr>
-            </tbody>
-        </table>
-
-        <div style="background-color: #f1f3f4; padding: 15px; border-radius: 5px; margin-bottom: 20px;">
-            <h4 style="margin: 0 0 10px 0; color: #5f6368;">Valores Críticos:</h4>
-            <code style="display: block; white-space: pre;">1% (Confianza 99%): {crit_values['1%']:.4f}</code>
-            <code style="display: block; white-space: pre;">5% (Confianza 95%): {crit_values['5%']:.4f}</code>
-            <code style="display: block; white-space: pre;">10% (Confianza 90%): {crit_values['10%']:.4f}</code>
-        </div>
-
-        <div style="padding: 15px; border-left: 5px solid {color_status}; background-color: {color_status}10; margin-bottom: 20px;">
-            <strong style="color: {color_status}; font-size: 1.2em;">Conclusión: {conclusion_msg}</strong>
-            <p style="margin: 5px 0 0 0; color: #3c4043;">
-                A un nivel de confianza del 95%, el p-valor de {p_value:.4f} indica que 
-                {'se rechaza' if es_estacionaria else 'no se puede rechazar'} la hipótesis nula de raíz unitaria.
-            </p>
-        </div>
-
-        <p style="font-size: 0.9em; color: #70757a; font-style: italic; line-height: 1.4;">
-            <strong>Nota de fiabilidad:</strong> Al tratarse de una muestra de <strong>{n_obs} datos</strong>, 
-            el test ADF puede presentar una potencia estadística limitada. Los resultados deben considerarse 
-            como <strong>orientadores y no definitivos</strong>. En series de corta duración, factores estacionales 
-            o valores atípicos pueden sesgar la detección de estacionariedad.
-        </p>
-    </div>
-    """
-    return html_output
-'''
-
-'''
-def tab_ST_ADF_all(df1, df2, df3, var1, var2, var3):
-    
-    desc1 = tab_ST_ADF(df1, var1)
-    desc2 = tab_ST_ADF(df2, var2)
-    desc3 = tab_ST_ADF(df3, var3)
-
-    return gr.update(value = desc1, visible = True), \
-            gr.update(value = desc2, visible = True), \
-            gr.update(value = desc3, visible = True)
-'''
 
 def tab_ST_diff_ADF(df, indicador, grado, graficar=True, diferenciar=True, aplicar_adf=True):
     """
@@ -1892,16 +1939,14 @@ def tab_ST_diff_ADF(df, indicador, grado, graficar=True, diferenciar=True, aplic
             margin=dict(l=10, r=10, t=50, b=10, pad=0),
         )
         fig.update_xaxes(
-            tickmode='linear', 
-            tick0=2011, 
-            dtick=1, 
-            range=[2010.5, 2024.5],
-            tickfont=dict(size=8, color='black', family='Arial Black'),
+            tickfont=dict(size=10, color='black', family='Arial Black'),
             tickformat='d',
-            # showticklabels=True # Fuerza la visibilidad en todos los subgráficos
+            tickmode='auto',
+            nticks=10, # Número máximo de etiquetas en el eje x
+            tickangle=0,
         )
         fig.update_yaxes(
-            tickfont=dict(size=8, color='black', family='Arial Black'),
+            tickfont=dict(size=10, color='black', family='Arial Black'),
     )
 
     # Aplicación de Test ADF (sobre la serie final transformada) ---
@@ -2010,9 +2055,12 @@ def tab_ST_on_level_change():
 def tab_ST_ARIMA_all(df1, df2, df3, var1, var2, var3, p1, p2, p3, d1, d2, d3, q1, q2, q3):
 
     '''
-    IMPORTANTE: las series var1, var2 y var3 deben ser ESTACIONARIAS
-    IMPORTANTE: todos los parámatros del modelo ARIMA(q, d, p) deben estar calculados previamente:
-    - d1, d2, d3: grados de dif. dados por el usuario hasta que la prueba ADF arroje ESTACIONARIEDAD
+    IMPORTANTE: los datasetes df1, df2 y df3 deben ser los ORIGINALES ya filtrados por provincial,
+                departamento, sector y ámbito, pero SIN DIFERENCIACIÓN.
+                Si la diferenciación fue necesaria para lograr ESTACIONARIEDAD, verificada con la
+                prueba de ADF, queda indicada con el valor de d > 0 obtenido previamente.
+    IMPORTANTE: todos los parámatros del modelo ARIMA(q, d, p) deben estar calculados:
+    - d1, d2, d3: grados de diferenciación para que la prueba ADF arroje ESTACIONARIEDAD
     - q1, q2, q3: obtenidos en la función de autocorrelación ACF
     - p1, p2, p3: obtenidos en la función de autocorrelación parcial PACF
     '''
@@ -2041,352 +2089,38 @@ def tab_ST_ARIMA_all(df1, df2, df3, var1, var2, var3, p1, p2, p3, d1, d2, d3, q1
             gr.update(value = resid3, visible = True),
             )
 
-def tab_ST_ARIMA_original_OK(df, indicador, p, d, q, n):
-    """
-    Compila y entrena el modelo ARIMA y realiza la predicción:
-    - df: dataset ya diferenciado con columnas con nombres originales ['periodo', indicadores]
-    - indicador: nombre corto del indicador
-    - p, d, q: parámetros del modelo
-    . n: períodos futuros a predecir
-    IMPORTANTE: la serie debe ser estacionaria y deben estar calculados
-                previamente: q (con PACF), d (con ADF) y p (con ACF)
-    """
-
-    # Se verifica que la serie sea estacionaria (NO_EXISTE = sin prueba ADF, no se verificó estacionariedad)
-    if d == NO_EXISTE:
-        reporte = ("<div style='font-size: 16px !important; color: #FF0000; font-weight: bold;'>"
-                    "La serie debe ser estacionaria para aplicar el modelo ARIMA. "
-                    "Debe aplicarse la diferenciación (si corresponde) y "
-                    "la prueba ADF para verificar ESTACIONARIEDAD.</div>"
-                    )
-        return reporte, None, None
-    
-    # Se verifica que el dataframe con la serie diferenciada ya exista
-    if p == NO_EXISTE or q == NO_EXISTE:
-        reporte = ("<div style='font-size: 16px !important; color: #FF0000 !important; font-weight: bold !important;'>"
-                    "Faltan parámetros para el modelo ARIMA. El coeficiente "
-                    "<i style='color: #FF0000;'>p</i> se obtiene con la FUNCIÓN DE AUTOCORRELACIÓN (ACF) y "
-                    "el coeficiente <i style='color: #FF0000;'>q</i> con la FUNCIÓN DE AUTOCORRELACIÓN PARCIAL (PACF).</div>"
-                    )
-        return reporte, None, None
-    
-    # Se convierte el nombre corto del  "indicador" a su nombre original
-    ind_orig = next((k for k, v in dict_ncortos.items() if v == indicador), indicador)
-    
-    # Se convierte 'periodo' a formato datetime y establecerlo como índice con frecuencia,
-    # porque así lo requiere el modelo ARIMA
-    df = df.copy()
-    # 1. Convertir a datetime
-    df['periodo'] = pd.to_datetime(df['periodo'])
-    df = df.sort_values('periodo').set_index('periodo')
-    
-    # 2. Convertir a PeriodIndex para manejar frecuencias sin día específico
-    # Esto elimina el ValueWarning de statsmodels
-    df.index = pd.DatetimeIndex(df.index).to_period() 
-    
-    serie = df[ind_orig].dropna()
-
-    # Validación de longitud mínima de la serie (Regla general: T > p + q + 1)
-    if len(serie) < (p + q + 2):
-        reporte = ("<div style='font-size: 16px !important; color: #FF0000; font-weight: bold;'>"
-                    "La serie no tiene suficientes datos para los valores de "
-                    "<i>p</i>  y <i>q</i> calculados.<br>"
-                    f"<i>p</i> = {p}; <i>q</i> = {q}.</div>"
-                    )
-        return reporte, None, None
-
-    # Ajuste del Modelo ARIMA (p, d, q)
-    try:
-        # enforce_stationarity=False y enforce_invertibility=False ayudan a evitar los UserWarnings
-        # de parámetros iniciales, permitiendo que el optimizador encuentre la solución.
-        modelo = ARIMA(serie, order=(p, d, q), enforce_stationarity=False, enforce_invertibility=False)
-        resultado = modelo.fit()
-    except Exception as e:
-        return f"Error al ajustar el modelo: {str(e)}", None, None
-
-    # 1. Obtener la tabla de coeficientes como HTML
-    html_str = resultado.summary().tables[1].as_html()
-
-    # 2. Leer la tabla usando StringIO para evitar el FutureWarning
-    # Se requiere lxml instalado: pip install lxml
-    try:
-        df_coef = pd.read_html(StringIO(html_str), header=0, index_col=0)[0]
-        
-        # 3. Transponer la tabla
-        df_coef_t = df_coef.transpose()
-
-        # 4. Convertir a HTML con estilos específicos
-        coef_html = df_coef_t.to_html(classes='table_arima', border=0)
-    except Exception as e:
-        coef_html = f"<p>Error al procesar la tabla: {e}</p>"
-
-    reporte = f"""
-        <div style='font-family: Arial; font-size: 14px; overflow-x: auto;'>
-            <h4 style='color: #000000;'>Resumen de Coeficientes ARIMA: <i>p</i> = {p}, <i>d</i> = {d}, <i>q</i> = {q}</h4>
-            <style>
-                .table_arima {{ 
-                    width: 100%; 
-                    border-collapse: collapse; 
-                    margin-top: 10px; 
-                    background-color: #FFFFFF !important;
-                }}
-                /* Estilo para los encabezados (Métricas/Parámetros) */
-                .table_arima th {{ 
-                    background-color: #FFFFFF !important; 
-                    color: #000000 !important;
-                    padding: 12px; 
-                    text-align: center; 
-                    border: 2px solid #D5DBDB; 
-                    font-size: 15px;
-                    font-weight: bold;
-                }}
-                /* Estilo para las celdas de datos */
-                .table_arima td {{ 
-                    background-color: #FFFFFF !important;
-                    color: #000000 !important;
-                    padding: 10px; 
-                    border: 2px solid #D5DBDB; 
-                    text-align: right; 
-                    font-family: Arial, sans-serif;
-                    font-size: 16px;
-                    font-weight: bold;
-                }}
-                /* Eliminamos cualquier sombreado al pasar el mouse */
-                .table_arima tr:hover {{ background-color: #FFFFFF !important; }}
-            </style>
-            {coef_html}
-        </div>
-        """
-
-    # Ejecución de la prueba de Ljung-Box sobre los residuos, para verificar
-    # su independencia (Ruido Blanco). Se sugiere: lags=10 o lags=min(10, len(residuos)//5)
-    residuos = resultado.resid
-    lb_test = acorr_ljungbox(residuos, lags=[10], return_df=True)
-    p_value_lb = lb_test['lb_pvalue'].iloc[0]
-
-    # Determinación del estado de ruido blanco (Alfa = 0.05)
-    es_ruido_blanco = p_value_lb > 0.05
-    color_status = "#28B463" if es_ruido_blanco else "#CB4335"
-    mensaje_lb = "Residuos independientes (Ruido Blanco)" if es_ruido_blanco else "Residuos Autocorrelacionados"
-
-    # Actualización del reporte HTML con los resultados de la prueba de Ljung-Box.
-    reporte_lb = f"""
-    <div style='font-family: Arial; font-size: 14px; margin-top: 10px; border-top: 1px solid #ddd; padding-top: 10px;'>
-        <b style='color: #000000;'>Validación de Residuos (Prueba Ljung-Box):</b><br>
-        Estadístico p-value: <span style='color: {color_status}; font-weight: bold;'>{p_value_lb:.4f}</span><br>
-        Estado: <b style='color: {color_status};'>{mensaje_lb}</b>
-        <p style='font-size: 12px; color: #566573;'>
-            <i>Nota: Un p-value > 0.05 indica que los residuos son independientes, 
-            lo cual es un requisito para un modelo ARIMA robusto.</i>
-        </p>
-    </div>
-    """
-
-    # Predicción de 'n' pasos futuros
-    forecast_obj = resultado.get_forecast(steps=n)
-    pronostico = forecast_obj.predicted_mean
-    intervalos = forecast_obj.conf_int()
-
-    # Se crea el eje X Histórico (2011 - 2024)
-    # Genera la lista de años como strings, saltando los primeros 'd' años
-    anios_hist = [str(anio) for anio in range(YEAR_MIN + d, YEAR_MAX + 1)]
-    
-    # Se crea el eje X Futuro (2025 en adelante)
-    anios_fut = [str(YEAR_MAX + i) for i in range(n)]
-
-    # DataFrames simplificados para Plotly
-    df_plot_hist = pd.DataFrame({
-        'Año': anios_hist,
-        'Valor': serie.values.flatten()
-    })
-
-    df_plot_pred = pd.DataFrame({
-        'Año': anios_fut,
-        'Predicción': pronostico.values.flatten(),
-        'Inf': intervalos.iloc[:, 0].values,
-        'Sup': intervalos.iloc[:, 1].values
-    })
-
-    # Se grafican con Plotly los dos DataFrames
-    fig_prediccion = go.Figure()
-
-    # Trazado Histórico
-    fig_prediccion.add_trace(go.Scatter(
-        x=df_plot_hist['Año'],
-        y=df_plot_hist['Valor'],
-        mode='lines+markers',
-        name='Histórico (2011-2024)',
-        line=dict(color='#1f77b4', width=3),
-        showlegend=False
-    ))
-
-    # Trazado Predicho
-    fig_prediccion.add_trace(go.Scatter(
-        x=df_plot_pred['Año'],
-        y=df_plot_pred['Predicción'],
-        mode='lines+markers',
-        name='Predicción (2025+)',
-        line=dict(color='#FF7F0E', width=3),
-        showlegend=False
-    ))
-
-    # Intervalos de Confianza (Banda Sombreada)
-    fig_prediccion.add_trace(go.Scatter(
-        x=df_plot_pred['Año'].tolist() + df_plot_pred['Año'].tolist()[::-1],
-        y=df_plot_pred['Sup'].tolist() + df_plot_pred['Inf'].tolist()[::-1],
-        fill='toself',
-        fillcolor='rgba(255, 127, 14, 0.2)',
-        line=dict(color='rgba(255,255,255,0)'),
-        hoverinfo="skip",
-        showlegend=False
-    ))
-
-    fig_prediccion.update_xaxes(
-        tickmode='linear', 
-        tick0=0, 
-        dtick=1, 
-        tickfont=dict(size=12, color='black', family='Arial Black'),
-        tickformat='d',
-    )
-    fig_prediccion.update_yaxes(
-        tickfont=dict(size=12, color='black', family='Arial Black'),
-    )
-    
-    titulo = f"MATRÍCULA: {dict_nlargos[ind_orig].upper()}"
-    fig_prediccion.update_layout(
-        # title=f"Predicción ARIMA: {indicador.upper()}",
-        title={
-            'text': f"<b>{titulo}</b>",
-            'font': {'size': 14, 'color': 'black'},
-            'xanchor': 'left'
-        },
-        # xaxis_title="Año",
-        height=400,
-        autosize=True,
-        margin=dict(l=10, r=10, t=50, b=10, pad=0),
-        # yaxis_title="Matrícula",
-        xaxis=dict(type='category', tickangle=-45),
-        template="plotly_white",
-        hovermode="x unified"
-    )
-
-
-    # Se convierte el DataFrame de predicciones a HTML, con 'index=False' para 
-    # no mostrar el índice numérico; 'justify='center'' para encabezados y
-    # redondeo a 2 decimales
-    tabla_pred_html = df_plot_pred.to_html(
-        classes='table_arima', 
-        border=0, 
-        index=False, 
-        justify='center',
-        formatters={
-            'Predicción': lambda x: f"{x:,.2f}",
-            'Inf': lambda x: f"{x:,.2f}",
-            'Sup': lambda x: f"{x:,.2f}"
-        }
-    )
-
-    # Estilo CSS para la tabla
-    tabla_pred = f"""
-        <div style='font-family: Arial; font-size: 14px; overflow-x: auto; margin-top: 20px;'>
-            <h4 style='color: #000000;'>Valores Pronosticados (2025 en adelante)</h4>
-            <style>
-                .table_arima {{ 
-                    width: 100%; 
-                    border-collapse: collapse; 
-                    margin-top: 10px; 
-                    background-color: #FFFFFF !important;
-                }}
-                .table_arima th {{ 
-                    background-color: #F4F6F7 !important; 
-                    color: #000000 !important;
-                    padding: 12px; 
-                    text-align: center; 
-                    border: 2px solid #D5DBDB; 
-                    font-size: 15px;
-                    font-weight: bold;
-                }}
-                .table_arima td {{ 
-                    background-color: #FFFFFF !important;
-                    color: #000000 !important;
-                    padding: 10px; 
-                    border: 2px solid #D5DBDB; 
-                    text-align: right; 
-                    font-family: Arial, sans-serif;
-                    font-size: 16px;
-                    font-weight: bold;
-                }}
-                .table_arima tr:hover {{ background-color: #F2F4F4 !important; }}
-            </style>
-            {tabla_pred_html}
-        </div>
-    """
-
-    # Gráfica de Diagnóstico de Residuos (fig_residuos)
-    # residuos = resultado.resid
-    fig_residuos = make_subplots(
-        rows=4, cols=1, 
-        subplot_titles=(
-            'Residuos Estandarizados', 
-            'Histograma y Densidad (KDE)', 
-            'Gráfico de Probabilidad Normal (Q-Q Plot)', 
-            'Correlograma (Función de Autocorrelación)'
-        ),
-        vertical_spacing=0.08 # Espaciado entre subplots
-    )
-
-    # Subplot 1: Residuos estandarizados
-    fig_residuos.add_trace(go.Scatter(y=residuos, mode='lines', name='Residuos'), 
-                           row=1, col=1)
-    fig_residuos.add_hline(y=0, 
-                           line_dash="dash", 
-                           line_color="black", 
-                           row=1, col=1)
-
-    # Subplot 2: Histograma + KDE
-    fig_residuos.add_trace(go.Histogram(x=residuos, 
-                                        nbinsx=30, 
-                                        name='Hist.', 
-                                        histnorm='probability density'), 
-                                        row=2, col=1)
-    
-    # Subplot 3: Q-Q Plot
-    qq = stats.probplot(residuos, dist="norm")
-    fig_residuos.add_trace(go.Scatter(x=qq[0][0], y=qq[0][1], 
-                                      mode='markers', name='Q-Q'), 
-                                      row=3, col=1)
-    fig_residuos.add_trace(go.Scatter(x=qq[0][0], 
-                                      y=qq[0][0]*qq[1][0] + qq[1][1], 
-                                      mode='lines', 
-                                      line=dict(color='red')), 
-                                      row=3, col=1)
-
-    # Subplot 4: Correlograma (ACF de residuos)
-    acf_res = sm.tsa.stattools.acf(residuos, nlags=20)
-    fig_residuos.add_trace(go.Bar(x=list(range(len(acf_res))), 
-                                  y=acf_res, name='ACF Residuos'), 
-                                  row=4, col=1)
-
-    fig_residuos.update_layout(height=800,
-                            autosize=True,
-                            margin=dict(l=10, r=20, t=10, b=10, pad=0),
-                            template="plotly_white", 
-                            showlegend=False, 
-                            #title_text="Diagnóstico Detallado de Residuos"
-                            )
-
-
-    return reporte, fig_prediccion, tabla_pred, fig_residuos, reporte_lb
-
 def tab_ST_ARIMA(df, indicador, p, d, q, n):
+   
     """
-    Compila y entrena el modelo ARIMA y realiza la predicción:
-    - df: dataset ya diferenciado con columnas con nombres originales ['periodo', indicadores]
-    - indicador: nombre corto del indicador
-    - p, d, q: parámetros del modelo
-    . n: períodos futuros a predecir
-    IMPORTANTE: la serie debe ser estacionaria y deben estar calculados
-                previamente: q (con PACF), d (con ADF) y p (con ACF)
+    Entrena un modelo ARIMA y genera pronósticos integrados a la escala original.
+    
+    df: Dataset original (no diferenciado) que contiene la serie de tiempo.
+    indicador: Nombre de la variable objetivo en el DataFrame (con su nombre descriptivo corto).
+    d: Orden de integración. Número de diferenciaciones necesarias para 
+       alcanzar la estacionariedad, validado previamente mediante la prueba ADF.
+    p: Orden del componente Autorregresivo (AR). Se obtiene analizando la PACF 
+       (Autocorrelación Parcial) sobre la serie estacionaria. Se define por el 
+       último rezago (lag) cuya correlación es ESTADÍSTICAMENTE SIGNIFICATIVA. 
+       Signo positivo: indica persistencia; Signo negativo: indica reversión a la media.
+       Se identifica como un modelo AR puro si la PACF muestra un corte abrupto 
+       ('cut-off') y la ACF decae gradualmente.
+    q: Orden del componente de Media Móvil (MA). Se obtiene analizando la ACF 
+       (Autocorrelación Simple). Representa la relación entre el valor actual y 
+       los errores de pronóstico pasados (choques). Se define por el último rezago 
+       ESTADÍSTICAMENTE SIGNIFICATIVO. Signo positivo: los choques se propagan 
+       en la misma dirección; Signo negativo: los choques tienden a compensarse.
+       Se identifica como un modelo MA puro si la ACF muestra un corte abrupto 
+       y la PACF decae gradualmente.
+    n: Número de periodos futuros a predecir.
+
+    NOTA: 
+    - Modelo AR puro: ARIMA(p, d, 0)
+    - Modelo MA puro: ARIMA(0, d, q)
+    - Modelo MIXTO: ARIMA(p, d, q). Ocurre cuando tanto la ACF como la PACF 
+      presentan decaimientos graduales o cuando ambas muestran persistencia 
+      significativa que requiere ser modelada conjuntamente. si ambas funciones
+      decaen gradualmente (sin un 'cut-off' claro), es más adecuado un modelo ARMA(p, q),
+      porque los componentes AR y MA trabajan juntos para explicar la estructura de la serie.
     """
 
     # Se verifica que la serie sea estacionaria (NO_EXISTE = sin prueba ADF, no se verificó estacionariedad)
@@ -2434,6 +2168,9 @@ def tab_ST_ARIMA(df, indicador, p, d, q, n):
 
     # Ajuste del Modelo ARIMA (p, d, q)
     try:
+        # La serie que se le pasa al modelo ARIMA es la ORIGINAL; el parámetro 'd' le indica que debe
+        # diferenciarla y al hacer la predicción los valores son integrados a la escala orginal.
+        # ARIMA significa: AR = auto-regresivo; I = integrado (para desdiferenciar); MA = medias móviles.
         # enforce_stationarity=False y enforce_invertibility=False ayudan a evitar los UserWarnings
         # de parámetros iniciales, permitiendo que el optimizador encuentre la solución.
         modelo = ARIMA(serie, order=(p, d, q), enforce_stationarity=False, enforce_invertibility=False)
@@ -2575,8 +2312,17 @@ def tab_ST_ARIMA(df, indicador, p, d, q, n):
     pronostico = forecast_obj.predicted_mean
     intervalos = forecast_obj.conf_int()
 
-    anios_hist = [str(anio) for anio in range(YEAR_MIN + d, YEAR_MAX + 1)]
+    anios_hist = [str(anio) for anio in range(YEAR_MIN, YEAR_MAX + 1)]
     anios_fut = [str(YEAR_MAX + i) for i in range(1, n+1)]
+
+    """
+    # Extraemos los años directamente del índice de la serie (que ya es PeriodIndex)
+    # Esto garantiza que len(anios_hist) == len(serie)
+    anios_hist = serie.index.astype(str).tolist()
+    # Para los años futuros, partimos del último año presente en la serie
+    ultimo_anio = int(anios_hist[-1])
+    anios_fut = [str(ultimo_anio + i) for i in range(1, n + 1)]
+    """
 
     df_plot_hist = pd.DataFrame({
         'Año': anios_hist, 
@@ -2626,7 +2372,7 @@ def tab_ST_ARIMA(df, indicador, p, d, q, n):
     )
     fig_prediccion.update_yaxes(tickfont=dict(size=12, color='black', family='Arial Black'))
     
-    titulo = f"MATRÍCULA: {dict_nlargos[ind_orig].upper()}"
+    titulo = f"CULTIVO: {dict_nlargos[ind_orig].upper()}"
     fig_prediccion.update_layout(
         title={'text': f"<b>{titulo}</b>", 'font': {'size': 14, 'color': 'black'}, 'xanchor': 'left'},
         height=400, autosize=True, margin=dict(l=10, r=10, t=50, b=10, pad=0),
@@ -2720,6 +2466,102 @@ def tab_ST_ARIMA(df, indicador, p, d, q, n):
 
     return reporte, fig_prediccion, tabla_pred, fig_residuos, reporte_lb
 
+def tab_ST_serie_complete(df, metodo):
+    """
+    Completa años faltantes dentro de un rango, generando los valores 
+    para las columnas numéricas correspondientes, en base al método 
+    de imputación indicado.
+    Argumentos:
+    - df: dataframe con columnas: cultivo, periodo, provincia, departamento 
+          y 4 variables numéricas.
+    - método: 1 - interpolación lineal;
+              2 - interpolacion polinómica;
+              3 - media móvil (k = 2 hacia atrás);
+              4 - media móvil (k = 3 hacia atrás);
+              5 - media móvila (k = 3 centrado).
+    """
+    print(df)
+
+    # 1. Identificación dinámica de columnas y rango
+    cols_fijas = ['cultivo', 'periodo', 'provincia', 'departamento']
+    # Identificamos las variables numéricas por exclusión
+    cols_num = [c for c in df.columns if c not in cols_fijas]
+    
+    anio_min = int(df['periodo'].min())
+    anio_max = int(df['periodo'].max())
+    rango_completo = np.arange(anio_min, anio_max + 1)
+
+    # 2. Reindexación y expansión de la serie
+    # Ordenamos para asegurar que la interpolación sea cronológica
+    df_res = df.sort_values(['provincia', 'departamento', 'periodo'])
+    
+    # Creamos un nuevo DataFrame con todas las combinaciones posibles de años por grupo
+    df_res = (
+        df_res.set_index(['provincia', 'departamento', 'periodo'])
+        .groupby(level=['provincia', 'departamento'])
+        .apply(lambda x: x.reindex(pd.MultiIndex.from_product(
+            [x.index.get_level_values(0).unique(), 
+             x.index.get_level_values(1).unique(), 
+             rango_completo],
+            names=['provincia', 'departamento', 'periodo']
+        )))
+        .reset_index(level=[0, 1], drop=True)
+        .reset_index()
+    )
+
+    # 3. Propagación de etiquetas constantes (incluye el cultivo redundante)
+    df_res[['cultivo', 'provincia', 'departamento']] = (
+        df_res.groupby(['provincia', 'departamento'])[['cultivo', 'provincia', 'departamento']]
+        .ffill().bfill()
+    )
+    print(df)   
+    # 4. Lógica de Imputación por grupos
+    grupos = df_res.groupby(['provincia', 'departamento'])
+
+    if metodo == 1: # Interpolación lineal
+        df_res[cols_num] = grupos[cols_num].transform(lambda x: x.interpolate(method='linear'))
+        
+    elif metodo == 2: # Interpolación polinómica (orden 2)
+        df_res[cols_num] = grupos[cols_num].transform(
+            lambda x: x.interpolate(method='polynomial', order=2) if x.count() > 2 else x.interpolate(method='linear')
+        )
+        
+    elif metodo == 3: # Media móvil k=2 (ventana 3)
+        df_res[cols_num] = df_res[cols_num].fillna(grupos[cols_num].transform(
+            lambda x: x.rolling(window=3, min_periods=1).mean())
+        )
+        
+    elif metodo == 4: # Media móvil k=3 (ventana 4)
+        df_res[cols_num] = df_res[cols_num].fillna(grupos[cols_num].transform(
+            lambda x: x.rolling(window=4, min_periods=1).mean())
+        )
+        
+    elif metodo == 5: # Media móvil k=3 centrada
+        df_res[cols_num] = df_res[cols_num].fillna(grupos[cols_num].transform(
+            lambda x: x.rolling(window=3, center=True, min_periods=1).mean())
+        )
+
+    # 5. Extrapolación final para cubrir los extremos (bordes de la serie)
+    df_res[cols_num] = grupos[cols_num].transform(lambda x: x.ffill().bfill())
+
+    # Se obtiene información de la serie
+    inicio = pd.to_numeric(df_res['periodo']).min()
+    final = pd.to_numeric(df_res['periodo']).max()
+    regs = df_res['periodo'].nunique()
+    regsno = (final - inicio + 1) - regs
+
+    return df_res, regs, regsno
+
+def tab_ST_on_imputacion_change(df, imp_option):
+
+    df_imput, num1, num2 = tab_ST_serie_complete(df, imp_option)
+
+    return df_imput, num1, num2, \
+            gr.Button(interactive=False), \
+            gr.Button(interactive=True)
+
+
+
 # endregion FUNCIONES PARA LA PESTAÑA "SERIES TEMPORALES"
 
 
@@ -2785,17 +2627,25 @@ portada_video = f'''
 
 ###### INTERFACE GRADIO ######
 
-with gr.Blocks(title="Análisis Educativo") as app:
+with gr.Blocks(title="Análisis de Cultivos") as app:
     gr.HTML(f"<style>{custom_css}</style>")
     
-    # Almacenamiento para el dataset elegido, en pestaña EDA
+    # Almacenamiento para el dataset elegido
     dataset_state = gr.State(pd.DataFrame())
-    # Almacenamiento para el dataset elegido y filtrado por campos clave, en pestaña EDA
+    # Almacenamiento para el dataset elegido y filtrado por campos clave
     dataset_filter_state = gr.State(pd.DataFrame())
+    # Almacenamiento para los tres datasets elegidos, en pestaña ST
+    dataset_state_1 = gr.State(pd.DataFrame())
+    dataset_state_2 = gr.State(pd.DataFrame())
+    dataset_state_3 = gr.State(pd.DataFrame())
     # Almacenamiento para los tres datasets filtrados, en pestaña ST
     dataset_filter_state_1 = gr.State(pd.DataFrame())
     dataset_filter_state_2 = gr.State(pd.DataFrame())
     dataset_filter_state_3 = gr.State(pd.DataFrame())
+    # Almacenamiento para los tres datasets completados con valores imputados
+    dataset_imput_state_1 = gr.State(pd.DataFrame())
+    dataset_imput_state_2 = gr.State(pd.DataFrame())
+    dataset_imput_state_3 = gr.State(pd.DataFrame())
     # Almacenamiento para los tres datasets diferenciados, en pestaña ST
     dataset_diff_state_1 = gr.State(pd.DataFrame())
     dataset_diff_state_2 = gr.State(pd.DataFrame())
@@ -2827,33 +2677,27 @@ with gr.Blocks(title="Análisis Educativo") as app:
             with gr.Row():
                 with gr.Column(scale=8, elem_classes="portrait-bg-video"): # elem_classes="portrait-bg-1"):
                     gr.HTML(portada_video)
-                    gr.HTML("ANÁLISIS DE LA MATRÍCULA ESCOLAR<br>"
-                            "DE LA REPÚBLICA ARGENTINA,<br>"
-                            "EN EL PERÍODO 2011-2024,<br>"
-                            "PARA TODAS LAS JURISDICCIONES<br>"
-                            "EDUCATIVAS DEL PAÍS", elem_classes="portrait-title")
+                    gr.HTML("ANÁLISIS <br> DE SERIES<br>TEMPORALES<br>"
+                            "DE LOS<br>PRINCIPALES<br>CULTIVOS<br>"
+                            "DE LA<br>REPÚBLICA ARGENTINA", elem_classes="portrait-title")
                 with gr.Column(scale=2, elem_classes="portrait-bg-2"):
-                    gr.HTML("Aplicación de algoritmos de Machine Learning "
-                            "a las Bases de Datos Abiertas de la Secretaría de Educación "
-                            "del Ministerio de Capital Humano de la República Argentina, "
-                            "para el análisis de los indicadores de matrícula escolar, "
-                            "para todas las provincias y CABA y sus respectivos "
-                            "departamentos, partidos o comunas.",
+                    gr.HTML("Aplicación de algoritmos de Machine Learning <br>"
+                            "a las Bases de Datos Abiertas <br>"
+                            "de la Dirección Nacional de Agricultura<br>"
+                            "del Ministerio de Agricultura, Ganadería y Pesca<br>"
+                            "de la República Argentina,<br>"
+                            "para el análisis de series temporales de los cultivos más importantes "
+                            "en las principales regiones productoras del país.",
                             elem_classes="portrait-subtitle")
         
 
-        ###### PESTAÑA PROCESO
-        with gr.Tab("Proceso"):
-            with gr.Row(elem_classes="title-tab"):
-                gr.HTML("&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;FLUJOGRAMA DEL PROCESO", elem_classes="title-text")
-            
-        
         ###### PESTAÑA DASHBOARD
         with gr.Tab("Dashboard"):
             with gr.Row(elem_classes="title-tab"):
-                gr.HTML("&nbsp;&nbsp;INDICADORES DE MATRÍCULA", elem_classes="title-text")
+                gr.HTML("&nbsp;&nbsp;INDICADORES DE CULTIVOS", elem_classes="title-text")
         
-        
+
+        """
         ###### PESTAÑA EDA
         with gr.Tab("EDA") as tab_EDA:
             with gr.Row(elem_classes="title-tab"):
@@ -2862,8 +2706,8 @@ with gr.Blocks(title="Análisis Educativo") as app:
             with gr.Row():
                 with gr.Column(min_width=180, # scale=1, 
                                elem_classes="custom-tab"):
-                    tipo_matricula = gr.Radio(
-                        label="Tipo de Matrícula", 
+                    tipo_cultivo = gr.Radio(
+                        label="Tipo de Cultivo", 
                         # choices=["Por Curso", "Por Edad", "Por Población", "Por Trayectoria"],
                         choices=["Por Curso", "Por Población", "Por Trayectoria"],
                         value="Por Curso",
@@ -2931,9 +2775,9 @@ with gr.Blocks(title="Análisis Educativo") as app:
                                     output_plot_normal_dist = gr.Plot(show_label=False)
 
 
-            tipo_matricula.change(
+            tipo_cultivo.change(
                 fn = tab_EDA_on_dataset_change,
-                inputs = [tipo_matricula, chk_mostrar, chk_interactivo],
+                inputs = [tipo_cultivo, chk_mostrar, chk_interactivo],
                 outputs = [dataset_state, dataset_filter_state, provincia, departamento, 
                             sector, ambito, info_label,
                             data_dataset, stats_table, output_table,
@@ -2945,7 +2789,7 @@ with gr.Blocks(title="Análisis Educativo") as app:
             
             provincia.change(
                 fn = tab_EDA_on_provincia_change,
-                inputs = [dataset_state, dataset_filter_state, tipo_matricula, provincia, 
+                inputs = [dataset_state, dataset_filter_state, tipo_cultivo, provincia, 
                         chk_mostrar, chk_interactivo],
                 outputs = [dataset_state, dataset_filter_state, provincia, departamento, 
                             sector, ambito, info_label,
@@ -2958,7 +2802,7 @@ with gr.Blocks(title="Análisis Educativo") as app:
             
             departamento.change(
                 fn = tab_EDA_on_departamento_change,
-                inputs = [dataset_state, dataset_filter_state, tipo_matricula, provincia, departamento, 
+                inputs = [dataset_state, dataset_filter_state, tipo_cultivo, provincia, departamento, 
                         chk_mostrar, chk_interactivo],
                 outputs = [dataset_state, dataset_filter_state, provincia, departamento, 
                             sector, ambito, info_label,
@@ -2971,7 +2815,7 @@ with gr.Blocks(title="Análisis Educativo") as app:
 
             sector.change(
                 fn = tab_EDA_on_opcion_change,
-                inputs = [dataset_state, dataset_filter_state, tipo_matricula, provincia,
+                inputs = [dataset_state, dataset_filter_state, tipo_cultivo, provincia,
                         departamento, sector, ambito, chk_mostrar, chk_interactivo],
                 outputs = [dataset_state, dataset_filter_state, provincia, departamento, 
                             sector, ambito, info_label,
@@ -2984,7 +2828,7 @@ with gr.Blocks(title="Análisis Educativo") as app:
             
             ambito.change(
                 fn = tab_EDA_on_opcion_change,
-                inputs = [dataset_state, dataset_filter_state, tipo_matricula, provincia,
+                inputs = [dataset_state, dataset_filter_state, tipo_cultivo, provincia,
                         departamento, sector, ambito, chk_mostrar, chk_interactivo],
                 outputs = [dataset_state, dataset_filter_state, provincia, departamento, 
                             sector, ambito, info_label,
@@ -2997,7 +2841,7 @@ with gr.Blocks(title="Análisis Educativo") as app:
 
             btn_mostrar.click(
                 fn = tab_EDA_show_data,
-                inputs = [dataset_state, tipo_matricula, provincia,
+                inputs = [dataset_state, tipo_cultivo, provincia,
                         departamento, sector, ambito, chk_mostrar, chk_interactivo],
                 outputs = [dataset_state, dataset_filter_state, provincia, departamento, 
                             sector, ambito, info_label,
@@ -3068,7 +2912,7 @@ with gr.Blocks(title="Análisis Educativo") as app:
 
             chk_mostrar.select(
                 fn = tab_EDA_on_checkbox,
-                inputs = [tipo_matricula, provincia, departamento, sector, ambito, 
+                inputs = [tipo_cultivo, provincia, departamento, sector, ambito, 
                         chk_mostrar, chk_interactivo],
                 outputs = [dataset_state, dataset_filter_state, provincia, departamento, 
                             sector, ambito, info_label,
@@ -3088,7 +2932,7 @@ with gr.Blocks(title="Análisis Educativo") as app:
 
             tab_EDA.select(
                 fn = tab_EDA_on_load, 
-                inputs = [tipo_matricula, chk_mostrar, chk_interactivo], 
+                inputs = [tipo_cultivo, chk_mostrar, chk_interactivo], 
                 outputs = [dataset_state, dataset_filter_state, provincia, departamento, 
                             sector, ambito, info_label,
                             data_dataset, stats_table, output_table,
@@ -3097,7 +2941,7 @@ with gr.Blocks(title="Análisis Educativo") as app:
                             indicador, btn_anterior, btn_siguiente, btn_mostrar,
                             chk_serie, chk_mg, chk_tend, chk_mm, chk_sd]
             )
-        
+        """
 
         ###### PESTAÑA SERIES TEMPORALES
         with gr.Tab("Series Temporales") as tab_ST:
@@ -3112,91 +2956,142 @@ with gr.Blocks(title="Análisis Educativo") as app:
                     gr.HTML("&nbsp;&nbsp;1. SELECCIÓN DE LAS SERIES TEMPORALES A COMPARAR", 
                             elem_classes="subtitle-text")
                 with gr.Column(min_width=150):
-                    graph_button = gr.Button("Graficar", variant="primary", visible=True, 
+                    tend_button = gr.Button("Graficar", variant="primary", visible=True, 
                                                elem_classes="custom-button3")
             
             with gr.Row():
-                with gr.Column(min_width=180):
-                    with gr.Row(elem_classes="custom-tab"):
-                        mat = gr.Radio(label="Tipo de Matrícula", 
-                            choices=["Por Curso", "Por Población", "Por Trayectoria"],
-                            value="Por Curso", elem_classes="custom-radio")
-                    with gr.Row(elem_classes="custom-tab"):
-                        with gr.Column():
-                            gr.HTML("Opciones de Gráficos", elem_classes="title-group")
-                            graph_serie = gr.Checkbox(label="Serie", value=True, 
-                                                      elem_classes="custom-checkbox")
-                            graph_mg = gr.Checkbox(label="Media Global", value=True, 
-                                                   elem_classes="custom-checkbox")
-                            graph_tend = gr.Checkbox(label="Tendencia", value=True, 
-                                                     elem_classes="custom-checkbox")
-                            graph_mm = gr.Radio(label="Media Móvil", choices=["No", "k = 2 atrás",
-                                                            "k = 3 atrás", "k = 3 centrado"],
-                                                            value="k = 3 centrado", type="index", 
-                                                            elem_classes="custom-radio")
-                            graph_sd = gr.Checkbox(label="SD Móvil", value=True, 
-                                                   elem_classes="custom-checkbox")
-
-                with gr.Column(scale=20):
-                    with gr.Row(elem_classes="custom-tab"):
+                with gr.Column():
+                    with gr.Row(elem_classes="custom-tab", min_height=350):
                         with gr.Column(min_width=250):
                             with gr.Row():
-                                gr.HTML("Provincia")
+                                gr.HTML("CULTIVO", elem_classes="info-display-4")
+                                cult1 = gr.Dropdown(label="", 
+                                                    choices=["ARROZ", "AVENA", "GIRASOL", "MAÍZ", "POROTO",
+                                                    "SOJA", "SORGO", "TRIGO", "YERBA MATE"],
+                                                    value="ARROZ", elem_classes="custom-dropdown-small")
+                            with gr.Row():
+                                gr.HTML("PROVINCIA", elem_classes="info-display-4")
                                 prov1 = gr.Dropdown(label="", choices=[], elem_classes="custom-dropdown-small")
                             with gr.Row():
-                                gr.HTML("Departamento")
+                                gr.HTML("ZONA", elem_classes="info-display-4")
                                 dep1 = gr.Dropdown(label="", choices=[], elem_classes="custom-dropdown-small")
                             with gr.Row():
-                                gr.HTML("Sector")
-                                sec1 = gr.Dropdown(label="", choices=[], elem_classes="custom-dropdown-small")
-                            with gr.Row():
-                                gr.HTML("Ámbito")
-                                amb1 = gr.Dropdown(label="", choices=[], elem_classes="custom-dropdown-small")
-                            with gr.Row():
-                                gr.HTML("Indicador")
+                                gr.HTML("INDICADOR", elem_classes="info-display-4")
                                 var1 = gr.Dropdown(label="", choices=[], elem_classes="custom-dropdown-small")
+                            with gr.Row():
+                                gr.HTML("Inicio", elem_classes="info-display-4")
+                                inicio1 = gr.HTML(elem_classes="info-display-5")
+                                gr.HTML("Final", elem_classes="info-display-4")
+                                final1 = gr.HTML(elem_classes="info-display-5")
+                            with gr.Row():
+                                gr.HTML("C/regs.", elem_classes="info-display-4")
+                                regs1 = gr.HTML(elem_classes="info-display-5")
+                                gr.HTML("S/regs.", elem_classes="info-display-4")
+                                regsno1 = gr.HTML(elem_classes="info-display-5")
+                            with gr.Row():
+                                imp1_button = gr.Button("Imputar", variant="primary", visible=True, 
+                                            elem_classes="custom-button3")
+                                noimp1_button = gr.Button("No Imputar", variant="primary", visible=True, 
+                                            elem_classes="custom-button3", interactive=False)
+                            with gr.Row():
+                                imp1_option = gr.Radio(label="Imputación",
+                                                choices=["Interpolación lineal", 
+                                                "Interpolación polinómica",
+                                                "Media móvil (k=2)",
+                                                "Media móvil (k=3 atrás)",
+                                                "Meida móvil (k=3 cent.)"],
+                                                value="Interpolación lineal", type="index", 
+                                                show_label=False,
+                                                elem_classes="custom-radio")
                         with gr.Column(scale=20):
-                            tend1 = gr.Plot(show_label=False, visible=False)
+                            with gr.Row(visible=False) as tend1_area:
+                                tend1 = gr.Plot(show_label=False)
 
-                    with gr.Row(elem_classes="custom-tab"):
+                    with gr.Row(elem_classes="custom-tab", min_height=350):
                         with gr.Column(min_width=250):
                             with gr.Row():
-                                gr.HTML("Provincia")
+                                gr.HTML("CULTIVO", elem_classes="info-display-4")
+                                cult2 = gr.Dropdown(label="", 
+                                                    choices=["ARROZ", "AVENA", "GIRASOL", "MAÍZ", "POROTO",
+                                                    "SOJA", "SORGO", "TRIGO", "YERBA MATE"],
+                                                    value="ARROZ", elem_classes="custom-dropdown-small")
+                            with gr.Row():
+                                gr.HTML("PROVINCIA", elem_classes="info-display-4")
                                 prov2 = gr.Dropdown(label="", choices=[], elem_classes="custom-dropdown-small")
                             with gr.Row():
-                                gr.HTML("Departamento")
+                                gr.HTML("ZONA", elem_classes="info-display-4")
                                 dep2 = gr.Dropdown(label="", choices=[], elem_classes="custom-dropdown-small")
                             with gr.Row():
-                                gr.HTML("Sector")
-                                sec2 = gr.Dropdown(label="", choices=[], elem_classes="custom-dropdown-small")
-                            with gr.Row():
-                                gr.HTML("Ámbito")
-                                amb2 = gr.Dropdown(label="", choices=[], elem_classes="custom-dropdown-small")
-                            with gr.Row():
-                                gr.HTML("Indicador")
+                                gr.HTML("INDICADOR", elem_classes="info-display-4")
                                 var2 = gr.Dropdown(label="", choices=[], elem_classes="custom-dropdown-small")
+                            with gr.Row():
+                                gr.HTML("Inicio", elem_classes="info-display-4")
+                                inicio2 = gr.HTML(elem_classes="info-display-5")
+                                gr.HTML("Final", elem_classes="info-display-4")
+                                final2 = gr.HTML(elem_classes="info-display-5")
+                            with gr.Row():
+                                gr.HTML("C/regs.", elem_classes="info-display-4")
+                                regs2 = gr.HTML(elem_classes="info-display-5")
+                                gr.HTML("S/regs.", elem_classes="info-display-4")
+                                regsno2 = gr.HTML(elem_classes="info-display-5")
                         with gr.Column(scale=20):
-                            tend2 = gr.Plot(show_label=False, visible=False)
+                            with gr.Row(visible=False) as tend2_area:
+                                tend2 = gr.Plot(show_label=False)
 
-                    with gr.Row(elem_classes="custom-tab"):
+                    with gr.Row(elem_classes="custom-tab", min_height=350):
                         with gr.Column(min_width=250):
                             with gr.Row():
-                                gr.HTML("Provincia")
+                                gr.HTML("CULTIVO", elem_classes="info-display-4")
+                                cult3 = gr.Dropdown(label="", 
+                                                    choices=["ARROZ", "AVENA", "GIRASOL", "MAÍZ", "POROTO",
+                                                    "SOJA", "SORGO", "TRIGO", "YERBA MATE"],
+                                                    value="ARROZ", elem_classes="custom-dropdown-small")
+                            with gr.Row():
+                                gr.HTML("PROVINCIA", elem_classes="info-display-4")
                                 prov3 = gr.Dropdown(label="", choices=[], elem_classes="custom-dropdown-small")
                             with gr.Row():
-                                gr.HTML("Departamento")
-                                dep3= gr.Dropdown(label="", choices=[], elem_classes="custom-dropdown-small")
+                                gr.HTML("ZONA", elem_classes="info-display-4")
+                                dep3 = gr.Dropdown(label="", choices=[], elem_classes="custom-dropdown-small")
                             with gr.Row():
-                                gr.HTML("Sector")
-                                sec3 = gr.Dropdown(label="", choices=[], elem_classes="custom-dropdown-small")
-                            with gr.Row():
-                                gr.HTML("Ámbito")
-                                amb3 = gr.Dropdown(label="", choices=[], elem_classes="custom-dropdown-small")
-                            with gr.Row():
-                                gr.HTML("Indicador")
+                                gr.HTML("INDICADOR", elem_classes="info-display-4")
                                 var3 = gr.Dropdown(label="", choices=[], elem_classes="custom-dropdown-small")
+                            with gr.Row():
+                                gr.HTML("Inicio", elem_classes="info-display-4")
+                                inicio3 = gr.HTML(elem_classes="info-display-5")
+                                gr.HTML("Final", elem_classes="info-display-4")
+                                final3 = gr.HTML(elem_classes="info-display-5")
+                            with gr.Row():
+                                gr.HTML("C/regs.", elem_classes="info-display-4")
+                                regs3 = gr.HTML(elem_classes="info-display-5")
+                                gr.HTML("S/regs.", elem_classes="info-display-4")
+                                regsno3 = gr.HTML(elem_classes="info-display-5")
                         with gr.Column(scale=20):
-                            tend3 = gr.Plot(show_label=False, visible=False)
+                            with gr.Row(visible=False) as tend3_area:
+                                tend3 = gr.Plot(show_label=False)
+
+                    with gr.Row(elem_classes="custom-tab"):
+                        with gr.Column():
+                            with gr.Row():
+                                with gr.Column(min_width=20):
+                                    gr.HTML("Opciones de gráficos:", elem_classes="title-group-2")
+                                with gr.Column(min_width=45):
+                                    graph_serie = gr.Checkbox(label="Serie", value=True, 
+                                                        elem_classes="custom-checkbox")
+                                with gr.Column(min_width=45):
+                                    graph_mg = gr.Checkbox(label="Media", value=False, 
+                                                    elem_classes="custom-checkbox")
+                                with gr.Column(min_width=45):
+                                    graph_tend = gr.Checkbox(label="Tendencia", value=True, 
+                                                        elem_classes="custom-checkbox")
+                                with gr.Column(scale=5):
+                                    graph_mm = gr.Radio(label="Media Móvil:", choices=["No", "k = 2 atrás",
+                                                            "k = 3 atrás", "k = 3 centrado"],
+                                                            value="No", type="index", 
+                                                            elem_classes=["custom-radio", "radio-horizontal"])
+                                with gr.Column(min_width=45):
+                                    graph_sd = gr.Checkbox(label="SD Móvil", value=False, 
+                                                    elem_classes="custom-checkbox")
+                            
             # endregion SECCIÓN 1: SELECCIÓN DE LAS TRES SERIES TEMPORALES
 
             # region SECCION 2: DESCOMPOSICIÓN DE LAS TRES SERIES TEMPORALES
@@ -3388,13 +3283,17 @@ with gr.Blocks(title="Análisis Educativo") as app:
 
 
 
-            mat.change(
-                fn = tab_ST_on_mat_change,
-                inputs = [mat],
+            """
+            cult.change(
+                fn = tab_ST_on_cult_change,
+                inputs = [cult],
                 outputs = [dataset_state,
-                            prov1, dep1, sec1, amb1, var1, tend1,
-                            prov2, dep2, sec2, amb2, var2, tend2,
-                            prov3, dep3, sec3, amb3, var3, tend3,
+                            prov1, dep1, var1, tend1_area,
+                            prov2, dep2, var2, tend2_area,
+                            prov3, dep3, var3, tend3_area,
+                            inicio1, final1, regs1, regsno1,
+                            inicio2, final2, regs2, regsno2,
+                            inicio3, final3, regs3, regsno3,
                             dataset_filter_state_1, dataset_filter_state_2, dataset_filter_state_3,
                             dataset_diff_state_1, dataset_diff_state_2, dataset_diff_state_3,
                             STL_desc1, STL_desc2, STL_desc3,
@@ -3419,12 +3318,60 @@ with gr.Blocks(title="Análisis Educativo") as app:
                             ARIMA_graph1_resids, ARIMA_graph2_resids, ARIMA_graph3_resids,
                             ARIMA_resids1, ARIMA_resids2, ARIMA_resids3]
             )
-            
+            """
+            cult1.change(
+                fn = tab_ST_on_cult_change,
+                inputs = [cult1],
+                outputs = [dataset_state_1,
+                            cult1, prov1, dep1, var1, tend1_area,
+                            inicio1, final1, regs1, regsno1,
+                            dataset_filter_state_1, dataset_diff_state_1,
+                            STL_desc1, STL_graph1, STL_info1,
+                            ADF_desc1, leveldiff1, level_diff_state_1, diff_graph1, ADF_info1,
+                            ACF_desc1, ACF_graph1, ACF_info1,
+                            PACF_graph1, PACF_info1,
+                            ARIMA_p_1, ARIMA_q_1,
+                            ARIMA_desc1, ARIMA_info1, ARIMA_graph1,
+                            ARIMA_preds1, ARIMA_graph1_resids, ARIMA_resids1]
+            )
+
+            cult2.change(
+                fn = tab_ST_on_cult_change,
+                inputs = [cult2],
+                outputs = [dataset_state_2,
+                            cult2, prov2, dep2, var2, tend2_area,
+                            inicio2, final2, regs2, regsno2,
+                            dataset_filter_state_2, dataset_diff_state_2,
+                            STL_desc2, STL_graph2, STL_info2,
+                            ADF_desc2, leveldiff2, level_diff_state_2, diff_graph2, ADF_info2,
+                            ACF_desc2, ACF_graph2, ACF_info2,
+                            PACF_graph2, PACF_info2,
+                            ARIMA_p_2, ARIMA_q_2,
+                            ARIMA_desc2, ARIMA_info2, ARIMA_graph2,
+                            ARIMA_preds2, ARIMA_graph2_resids, ARIMA_resids2]
+            )
+
+            cult3.change(
+                fn = tab_ST_on_cult_change,
+                inputs = [cult3],
+                outputs = [dataset_state_3,
+                            cult3, prov3, dep3, var3, tend3_area,
+                            inicio3, final3, regs3, regsno3,
+                            dataset_filter_state_3, dataset_diff_state_3,
+                            STL_desc3, STL_graph3, STL_info3,
+                            ADF_desc3, leveldiff3, level_diff_state_3, diff_graph3, ADF_info3,
+                            ACF_desc3, ACF_graph3, ACF_info3,
+                            PACF_graph3, PACF_info3,
+                            ARIMA_p_3, ARIMA_q_3,
+                            ARIMA_desc3, ARIMA_info3, ARIMA_graph3,
+                            ARIMA_preds3, ARIMA_graph3_resids, ARIMA_resids3]
+            )
+
             prov1.change(
                 fn = tab_ST_on_prov_change,
-                inputs = [dataset_state, prov1, sec1, amb1, var1],
+                inputs = [dataset_state_1, cult1, prov1, var1],
                 outputs = [dataset_filter_state_1, dataset_diff_state_1,
-                            dep1, tend1,
+                            dep1, inicio1, final1, regs1, regsno1, tend1_area,
                             STL_desc1, STL_graph1, STL_info1,
                             ADF_desc1, leveldiff1, diff_graph1, ADF_info1,
                             level_diff_state_1,
@@ -3437,9 +3384,9 @@ with gr.Blocks(title="Análisis Educativo") as app:
 
             prov2.change(
                 fn = tab_ST_on_prov_change,
-                inputs = [dataset_state, prov2, sec2, amb2, var2],
+                inputs = [dataset_state_2, cult2, prov2, var2],
                 outputs = [dataset_filter_state_2, dataset_diff_state_2,
-                            dep2, tend2, 
+                            dep2, inicio2, final2, regs2, regsno2, tend2_area, 
                             STL_desc2, STL_graph2, STL_info2,
                             ADF_desc2, leveldiff2, diff_graph2, ADF_info2,
                             level_diff_state_2,
@@ -3452,9 +3399,9 @@ with gr.Blocks(title="Análisis Educativo") as app:
             
             prov3.change(
                 fn = tab_ST_on_prov_change,
-                inputs = [dataset_state, prov3, sec3, amb3, var3],
+                inputs = [dataset_state_3, cult3, prov3, var3],
                 outputs = [dataset_filter_state_3, dataset_diff_state_3,
-                            dep3, tend3, 
+                            dep3, inicio3, final3, regs3, regsno3, tend3_area, 
                             STL_desc3, STL_graph3, STL_info3,
                             ADF_desc3, leveldiff3, diff_graph3, ADF_info3,
                             level_diff_state_3,
@@ -3467,9 +3414,9 @@ with gr.Blocks(title="Análisis Educativo") as app:
             
             dep1.change(
                 fn = tab_ST_on_option_change,
-                inputs = [dataset_state, prov1, dep1, sec1, amb1, var1],
+                inputs = [dataset_state_1, cult1, prov1, dep1, var1],
                 outputs = [dataset_filter_state_1, dataset_diff_state_1,
-                            tend1, 
+                            inicio1, final1, regs1, regsno1, tend1_area, 
                             STL_desc1, STL_graph1, STL_info1,
                             ADF_desc1, leveldiff1, diff_graph1, ADF_info1,
                             level_diff_state_1,
@@ -3482,9 +3429,9 @@ with gr.Blocks(title="Análisis Educativo") as app:
 
             dep2.change(
                 fn = tab_ST_on_option_change,
-                inputs = [dataset_state, prov2, dep2, sec2, amb2, var2],
+                inputs = [dataset_state_2, cult2, prov2, dep2, var2],
                 outputs = [dataset_filter_state_2, dataset_diff_state_2, 
-                            tend2,
+                            inicio2, final2, regs2, regsno2, tend2_area,
                             STL_desc2, STL_graph2, STL_info2,
                             ADF_desc2, leveldiff2, diff_graph2, ADF_info2,
                             level_diff_state_2,
@@ -3497,99 +3444,9 @@ with gr.Blocks(title="Análisis Educativo") as app:
 
             dep3.change(
                 fn = tab_ST_on_option_change,
-                inputs = [dataset_state, prov3, dep3, sec3, amb3, var3],
+                inputs = [dataset_state_3, cult3, prov3, dep3, var3],
                 outputs = [dataset_filter_state_3, dataset_diff_state_3, 
-                            tend3, 
-                            STL_desc3, STL_graph3, STL_info3,
-                            ADF_desc3, leveldiff3, diff_graph3, ADF_info3,
-                            level_diff_state_3, 
-                            ACF_desc3, ACF_graph3, ACF_info3,
-                            PACF_graph3, PACF_info3,
-                            ARIMA_p_3, ARIMA_q_3,
-                            ARIMA_desc3, ARIMA_info3, ARIMA_graph3, ARIMA_preds3,
-                            ARIMA_graph3_resids, ARIMA_resids3]
-            )
-
-            sec1.change(
-                fn = tab_ST_on_option_change,
-                inputs = [dataset_state, prov1, dep1, sec1, amb1, var1],
-                outputs = [dataset_filter_state_1, dataset_diff_state_1,
-                            tend1, 
-                            STL_desc1, STL_graph1, STL_info1,
-                            ADF_desc1, leveldiff1, diff_graph1, ADF_info1,
-                            level_diff_state_1,
-                            ACF_desc1, ACF_graph1, ACF_info1,
-                            PACF_graph1, PACF_info1,
-                            ARIMA_p_1, ARIMA_q_1,
-                            ARIMA_desc1, ARIMA_info1, ARIMA_graph1, ARIMA_preds1,
-                            ARIMA_graph1_resids, ARIMA_resids1]
-            )
-            
-            sec2.change(
-                fn = tab_ST_on_option_change,
-                inputs = [dataset_state, prov2, dep2, sec2, amb2, var2],
-                outputs = [dataset_filter_state_2, dataset_diff_state_2,
-                            tend2,
-                            STL_desc2, STL_graph2, STL_info2,
-                            ADF_desc2, leveldiff2, diff_graph2, ADF_info2,
-                            level_diff_state_2,
-                            ACF_desc2, ACF_graph2, ACF_info2,
-                            PACF_graph2, PACF_info2,
-                            ARIMA_p_2, ARIMA_q_2,
-                            ARIMA_desc2, ARIMA_info2, ARIMA_graph2, ARIMA_preds2,
-                            ARIMA_graph2_resids, ARIMA_resids2]
-            )
-
-            sec3.change(
-                fn = tab_ST_on_option_change,
-                inputs = [dataset_state, prov3, dep3, sec3, amb3, var3],
-                outputs = [dataset_filter_state_3, dataset_diff_state_3,
-                            tend3, 
-                            STL_desc3, STL_graph3, STL_info3,
-                            ADF_desc3, leveldiff3, diff_graph3, ADF_info3,
-                            level_diff_state_3, 
-                            ACF_desc3, ACF_graph3, ACF_info3,
-                            PACF_graph3, PACF_info3,
-                            ARIMA_p_3, ARIMA_q_3,
-                            ARIMA_desc3, ARIMA_info3, ARIMA_graph3, ARIMA_preds3,
-                            ARIMA_graph3_resids, ARIMA_resids3]
-            )
-
-            amb1.change(
-                fn = tab_ST_on_option_change,
-                inputs = [dataset_state, prov1, dep1, sec1, amb1, var1],
-                outputs = [dataset_filter_state_1, dataset_diff_state_1,
-                            tend1, 
-                            STL_desc1, STL_graph1, STL_info1,
-                            ADF_desc1, leveldiff1, diff_graph1, ADF_info1,
-                            level_diff_state_1,
-                            ACF_desc1, ACF_graph1, ACF_info1,
-                            PACF_graph1, PACF_info1,
-                            ARIMA_p_1, ARIMA_q_1,
-                            ARIMA_desc1, ARIMA_info1, ARIMA_graph1, ARIMA_preds1,
-                            ARIMA_graph1_resids, ARIMA_resids1]
-            )
-            
-            amb2.change(
-                fn = tab_ST_on_option_change,
-                inputs = [dataset_state, prov2, dep2, sec2, amb2, var2],
-                outputs = [dataset_filter_state_2, dataset_diff_state_2,
-                            tend2,
-                            STL_desc2, STL_graph2, STL_info2,
-                            ADF_desc2, leveldiff2, diff_graph2, ADF_info2,
-                            level_diff_state_2,
-                            ACF_desc2, ACF_graph2, ACF_info2,
-                            PACF_graph2, PACF_info2,
-                            ARIMA_p_2, ARIMA_q_2,
-                            ARIMA_desc2, ARIMA_info2, ARIMA_graph2, ARIMA_preds2,
-                            ARIMA_graph2_resids, ARIMA_resids2]
-            )
-
-            amb3.change(
-                fn = tab_ST_on_option_change,
-                inputs = [dataset_state, prov3, dep3, sec3, amb3, var3],
-                outputs = [dataset_filter_state_3, dataset_diff_state_3,
-                            tend3, 
+                            inicio3, final3, regs3, regsno3, tend3_area, 
                             STL_desc3, STL_graph3, STL_info3,
                             ADF_desc3, leveldiff3, diff_graph3, ADF_info3,
                             level_diff_state_3, 
@@ -3602,9 +3459,9 @@ with gr.Blocks(title="Análisis Educativo") as app:
 
             var1.change(
                 fn = tab_ST_on_option_change,
-                inputs = [dataset_state, prov1, dep1, sec1, amb1, var1],
+                inputs = [dataset_state_1, cult1, prov1, dep1, var1],
                 outputs = [dataset_filter_state_1, dataset_diff_state_1,
-                            tend1, 
+                            inicio1, final1, regs1, regsno1, tend1_area, 
                             STL_desc1, STL_graph1, STL_info1,
                             ADF_desc1, leveldiff1, diff_graph1, ADF_info1,
                             level_diff_state_1,
@@ -3617,9 +3474,9 @@ with gr.Blocks(title="Análisis Educativo") as app:
             
             var2.change(
                 fn = tab_ST_on_option_change,
-                inputs = [dataset_state, prov2, dep2, sec2, amb2, var2],
+                inputs = [dataset_state_2, cult2, prov2, dep2, var2],
                 outputs = [dataset_filter_state_2, dataset_diff_state_2,
-                            tend2,
+                            inicio2, final2, regs2, regsno2, tend2_area,
                             STL_desc2, STL_graph2, STL_info2,
                             ADF_desc2, leveldiff2, diff_graph2, ADF_info2,
                             level_diff_state_2,
@@ -3632,9 +3489,9 @@ with gr.Blocks(title="Análisis Educativo") as app:
 
             var3.change(
                 fn = tab_ST_on_option_change,
-                inputs = [dataset_state, prov3, dep3, sec3, amb3, var3],
+                inputs = [dataset_state_3, cult3, prov3, dep3, var3],
                 outputs = [dataset_filter_state_3, dataset_diff_state_3,
-                            tend3, 
+                            inicio3, final3, regs3, regsno3, tend3_area, 
                             STL_desc3, STL_graph3, STL_info3,
                             ADF_desc3, leveldiff3, diff_graph3, ADF_info3,
                             level_diff_state_3, 
@@ -3649,67 +3506,76 @@ with gr.Blocks(title="Análisis Educativo") as app:
                 fn = tab_ST_on_graph_change,
                 inputs = [dataset_filter_state_1, dataset_filter_state_2, dataset_filter_state_3,
                             var1, var2, var3, graph_serie, graph_mg, graph_tend, graph_mm, graph_sd],
-                outputs = [tend1, tend2, tend3]
+                outputs = [tend1_area, tend2_area, tend3_area, tend1, tend2, tend3]
             )
 
             graph_mg.change(
                 fn = tab_ST_on_graph_change,
                 inputs = [dataset_filter_state_1, dataset_filter_state_2, dataset_filter_state_3,
                             var1, var2, var3, graph_serie, graph_mg, graph_tend, graph_mm, graph_sd],
-                outputs = [tend1, tend2, tend3]
+                outputs = [tend1_area, tend2_area, tend3_area, tend1, tend2, tend3]
             )
             
             graph_tend.change(
                 fn = tab_ST_on_graph_change,
                 inputs = [dataset_filter_state_1, dataset_filter_state_2, dataset_filter_state_3,
                             var1, var2, var3, graph_serie, graph_mg, graph_tend, graph_mm, graph_sd],
-                outputs = [tend1, tend2, tend3]
+                outputs = [tend1_area, tend2_area, tend3_area, tend1, tend2, tend3]
             )
 
             graph_mm.change(
                 fn = tab_ST_on_graph_change,
                 inputs = [dataset_filter_state_1, dataset_filter_state_2, dataset_filter_state_3,
                             var1, var2, var3, graph_serie, graph_mg, graph_tend, graph_mm, graph_sd],
-                outputs = [tend1, tend2, tend3]
+                outputs = [tend1_area, tend2_area, tend3_area, tend1, tend2, tend3]
             )
 
             graph_sd.change(
                 fn = tab_ST_on_graph_change,
                 inputs = [dataset_filter_state_1, dataset_filter_state_2, dataset_filter_state_3,
                             var1, var2, var3, graph_serie, graph_mg, graph_tend, graph_mm, graph_sd],
-                outputs = [tend1, tend2, tend3]
+                outputs = [tend1_area, tend2_area, tend3_area, tend1, tend2, tend3]
             )
 
             tab_ST.select(
-                fn = tab_ST_on_mat_change,
-                inputs = [mat],
-                outputs = [dataset_state,
-                            prov1, dep1, sec1, amb1, var1, tend1,
-                            prov2, dep2, sec2, amb2, var2, tend2,
-                            prov3, dep3, sec3, amb3, var3, tend3,
-                            dataset_filter_state_1, dataset_filter_state_2, dataset_filter_state_3,
-                            dataset_diff_state_1, dataset_diff_state_2, dataset_diff_state_3,
-                            STL_desc1, STL_desc2, STL_desc3,
-                            STL_graph1, STL_graph2, STL_graph3,
-                            STL_info1, STL_info2, STL_info3,
-                            ADF_desc1, ADF_desc2, ADF_desc3,
-                            leveldiff1, leveldiff2, leveldiff3,
-                            level_diff_state_1, level_diff_state_2, level_diff_state_3,
-                            diff_graph1, diff_graph2, diff_graph3,
-                            ADF_info1, ADF_info2, ADF_info3,
-                            ACF_desc1, ACF_desc2, ACF_desc3,
-                            ACF_graph1, ACF_graph2, ACF_graph3,
-                            ACF_info1, ACF_info2, ACF_info3,
-                            PACF_graph1, PACF_graph2, PACF_graph3,
-                            PACF_info1, PACF_info2, PACF_info3,
-                            ARIMA_p_1, ARIMA_p_2, ARIMA_p_3,
-                            ARIMA_q_1, ARIMA_q_2, ARIMA_q_3,
-                            ARIMA_desc1, ARIMA_desc2, ARIMA_desc3,
-                            ARIMA_info1, ARIMA_info2, ARIMA_info3,
-                            ARIMA_graph1, ARIMA_graph2, ARIMA_graph3,
-                            ARIMA_preds1, ARIMA_preds2, ARIMA_preds3,
-                            ARIMA_graph1_resids, ARIMA_graph2_resids, ARIMA_graph3_resids,
-                            ARIMA_resids1, ARIMA_resids2, ARIMA_resids3]
+                fn = tab_ST_on_cult_change_all,
+                inputs = [cult1, cult2, cult3],
+                outputs = [dataset_state_1,
+                            cult1, prov1, dep1, var1, tend1_area,
+                            inicio1, final1, regs1, regsno1,
+                            dataset_filter_state_1, dataset_diff_state_1,
+                            STL_desc1, STL_graph1, STL_info1,
+                            ADF_desc1, leveldiff1, level_diff_state_1, 
+                            diff_graph1, ADF_info1,
+                            ACF_desc1, ACF_graph1, ACF_info1,
+                            PACF_graph1, PACF_info1,
+                            ARIMA_p_1, ARIMA_q_1, ARIMA_desc1,
+                            ARIMA_info1, ARIMA_graph1, ARIMA_preds1,
+                            ARIMA_graph1_resids, ARIMA_resids1,
+                            dataset_state_2,
+                            cult2, prov2, dep2, var2, tend2_area,
+                            inicio2, final2, regs2, regsno2,
+                            dataset_filter_state_2, dataset_diff_state_2,
+                            STL_desc2, STL_graph2, STL_info2,
+                            ADF_desc2, leveldiff2, level_diff_state_2, 
+                            diff_graph2, ADF_info2,
+                            ACF_desc2, ACF_graph2, ACF_info2,
+                            PACF_graph2, PACF_info2,
+                            ARIMA_p_2, ARIMA_q_2, ARIMA_desc2,
+                            ARIMA_info2, ARIMA_graph2, ARIMA_preds2,
+                            ARIMA_graph2_resids, ARIMA_resids2,
+                            dataset_state_3,
+                            cult3, prov3, dep3, var3, tend3_area,
+                            inicio3, final3, regs3, regsno3,
+                            dataset_filter_state_3, dataset_diff_state_3,
+                            STL_desc3, STL_graph3, STL_info3,
+                            ADF_desc3, leveldiff3, level_diff_state_3, 
+                            diff_graph3, ADF_info3,
+                            ACF_desc3, ACF_graph3, ACF_info3,
+                            PACF_graph3, PACF_info3,
+                            ARIMA_p_3, ARIMA_q_3, ARIMA_desc3,
+                            ARIMA_info3, ARIMA_graph3, ARIMA_preds3,
+                            ARIMA_graph3_resids, ARIMA_resids3]
                 )
 
             leveldiff1.change(
@@ -3739,11 +3605,17 @@ with gr.Blocks(title="Análisis Educativo") as app:
                             ARIMA_graph3_resids, ARIMA_resids3]
             )
 
-            graph_button.click(
+            tend_button.click(
                 fn = tab_ST_on_graph_change,
                 inputs = [dataset_filter_state_1, dataset_filter_state_2, dataset_filter_state_3,
                             var1, var2, var3, graph_serie, graph_mg, graph_tend, graph_mm, graph_sd],
-                outputs = [tend1, tend2, tend3]
+                outputs = [tend1_area, tend2_area, tend3_area, tend1, tend2, tend3]
+            )
+
+            imp1_button.click(
+                fn = tab_ST_on_imputacion_change,
+                inputs = [dataset_filter_state_1, imp1_option],
+                outputs = [dataset_filter_state_1, regs1, regsno1, imp1_button, noimp1_button]
             )
 
             STL_button.click(
@@ -3777,7 +3649,7 @@ with gr.Blocks(title="Análisis Educativo") as app:
 
             ARIMA_button.click(
                 fn = tab_ST_ARIMA_all,
-                inputs = [dataset_diff_state_1, dataset_diff_state_2, dataset_diff_state_3,
+                inputs = [dataset_filter_state_1, dataset_filter_state_2, dataset_filter_state_3,
                             var1, var2, var3,
                             ARIMA_p_1, ARIMA_p_2, ARIMA_p_3,
                             level_diff_state_1, level_diff_state_2, level_diff_state_3,

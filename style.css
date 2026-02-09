@@ -10,8 +10,8 @@
     --input-border-color: #D3D3D3;
     --text-color: #000000;
 
-    --font-title0: 40px;
-    --font-title1: 20px;
+    --font-title0: 50px;
+    --font-title1: 22px;
     --font-title2: 18px;
     --font-title3: 14px;
     --font-title4: 12px;
@@ -51,16 +51,16 @@
     border: none !important;
     box-shadow: var(--shadow-soft) !important;
     border-radius: 25px !important;
-    padding: 30px;
-    margin-bottom: 20px important!;
+    padding: 30px !important;
+    margin-bottom: 20px !important;
 }
 .portrait-bg-2 { /* Área derecha de la portada: fondo gris y subtítulo */
     background-color: var(--container-bg-color2) !important;
     border-radius: 25px !important;
-    padding: 10px !important;
+    padding-left: 10px !important;
     border: none !important;
     box-shadow: var(--shadow-soft) !important;
-    min-height: 450px !important;
+    min-height: 520px !important;
     display: flex !important;
     flex-direction: column !important;
     justify-content: flex-end !important;
@@ -69,7 +69,7 @@
     background-color: var(--container-bg-color) !important;
     position: relative;
     width: 100%;
-    min-height: 450px;
+    min-height:520px;
     overflow: hidden;
     border: none !important;
     box-shadow: var(--shadow-soft) !important;
@@ -79,8 +79,8 @@
 .video-bg { /* El video se posiciona de forma absoluta para quedar al fondo */
     /* Los tres parámetros siguientes ubican el video, según las dimensiones que posea */
     left: 0%; /* Punto de origen horizontal en el contenedor padre */
-    top: 20%; /* Punto de origen vertical en el contenedor padre */
-    transform: translate(-0%, -20%); /* Desplazamiento horizontal y vertical, como % de las dimensiones del video */
+    top: 0%; /* Punto de origen vertical en el contenedor padre */
+    transform: translate(0%, -12%); /* Desplazamiento horizontal y vertical, como % de las dimensiones del video */
     position: absolute;
     min-width: 100%;
     min-height: 100%;
@@ -98,7 +98,8 @@
     font-weight: bold !important;
     font-size: var(--font-title0) !important;
     text-align: left !important;
-    margin: 5px;
+    margin-top: -5px !important;
+    margin-left: 5px !important;
 }
 .portrait-subtitle, .portrait-subtitle * {
     font-size: var(--font-title2) !important;
@@ -121,27 +122,27 @@
 ------------------------------------------------ */
 .custom-tab {
     /* background-image: asignada en formato Base64 en app.py */
-    border-radius: 10px;
+    border-radius: 10px !important;
     border: none !important;
-    padding-top: 15px;
-    padding-left: 15px;
-    padding-right: 10px;
-    padding-bottom: 5px;
+    padding-top: 15px !important;
+    padding-left: 15px !important;
+    padding-right: 10px !important;
+    padding-bottom: 5px !important;
     box-shadow: var(--shadow-soft) !important;
     width: 100% !important;
     height: 100% !important;
 }
 .custom-tab-2 {
     /* background-image: asignada en formato Base64 en app.py */
-    border-radius: 10px;
+    border-radius: 10px !important;
     border: none !important;
-    padding-top: 0px;
-    padding-bottom: 6px;
+    /*padding-top: 0px !important;
+    padding-bottom: 0px !important;*/
     box-shadow: var(--shadow-soft) !important;
     width: 100% !important;
-    height: 100% !important;
-    margin-top: 30px;
-    margin-bottom: 5px;
+    /*height: 100% !important;*/
+    margin-top: 28px !important;
+    margin-bottom: 0px !important;
 }
 
 
@@ -197,7 +198,7 @@
     border: none !important;
     box-shadow: var(--shadow-soft) !important;
     border-radius: 8px !important;
-    height: 40px !important;
+    height: 50px !important;
     width: 100% !important;
     vertical-align: middle !important;
 }
@@ -206,16 +207,18 @@
     font-size: var(--font-title1) !important;
     color: var(--text-color) !important;
     text-align: left !important;
-    padding-top: 3px !important;
-    padding-left: 5px !important;
+    padding-top: 0px !important;
+    padding-left: 0px !important;
 }
 .subtitle-text {
     font-weight: bold !important;
     font-size: var(--font-subtitle1) !important;
     color: var(--text-color) !important;
     text-align: left !important;
-    padding-top: 3px !important;
-    padding-left: 5px !important;
+    margin-top: -1px !important;
+    margin-bottom: -1px !important;
+    /*padding-top: 0px !important;
+    padding-left: 0px !important;*/
 }
 .title-group {
     font-weight: bold !important;
@@ -223,8 +226,21 @@
     color: var(--text-color) !important;
     text-align: left !important;
     padding-top: 0px !important;
-    padding-left: 5px !important;
+    padding-left: 0px !important;
     padding-bottom: 0px !important;
+    margin-top: -5px !important;
+    margin-bottom: -5px !important;
+}
+.title-group-2 {
+    font-weight: bold !important;
+    font-size: var(--font-title3) !important;
+    color: var(--text-color) !important;
+    text-align: left !important;
+    padding-top: 0px !important;
+    padding-left: 0px !important;
+    padding-bottom: 0px !important;
+    margin-top: -5px !important;
+    margin-bottom: -5px !important;
 }
 
 
@@ -326,7 +342,19 @@
     padding-top: 0px !important;
     padding-bottom: 0px !important;
 }
-
+.radio-horizontal { /* Para ubicar la etiqueta en la misma fila que las opciones */
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: center !important;
+    gap: 15px !important;
+}
+.radio-horizontal .label-wrap {
+    margin-bottom: 0 !important;
+}
+.radio-horizontal .gr-input-row {
+    display: flex !important;
+    flex-direction: row !important;
+}
 
 
 /* ### CASILLA DE VERIFICACIÓN  
@@ -419,7 +447,7 @@
     box-shadow: var(--shadow-soft) !important;
     border-radius: 10px !important;
     font-weight: bold !important;
-    font-size: var(--font-title3) !important;
+    font-size: var(--font-title2) !important;
     color: var(--text-color) !important;
     text-align: center !important;
     transition: all 0.2s ease !important;
@@ -440,19 +468,14 @@
 
 
 
-/* ### TEXTO PARA CAMPO INFORMATIVO GRANDE  
+/* ### TEXTO PARA CAMPO INFORMATIVO 
 ------------------------------------------------ */
-.info-display-1 {
+.info-display-1 { /* Grande */
     font-weight: bold !important;
     font-size: var(--font-title2) !important;
     margin-top: -4px !important;
 }
-
-
-
-/* ### TEXTO PARA CAMPO INFORMATIVO PEQUEÑO  
------------------------------------------------- */
-.info-display-2 {
+.info-display-2 { /* Pequeño */
     font-weight: bold !important;
     font-size: var(--font-title3) !important;
     margin-bottom: 0px !important;
@@ -462,12 +485,7 @@
     font-size: var(--font-title3) !important;
     margin-bottom: 5px !important;
 }
-
-
-
-/* ### TEXTO PARA CAMPO INFORMATIVO INTERMEDIO  
------------------------------------------------- */
-.info-display-3 {
+.info-display-3 { /* Intermedio */
     font-weight: bold !important;
     font-size: var(--font-subtitle2) !important;
     margin-bottom: 0px !important;
@@ -475,6 +493,26 @@
     border-radius: 10px !important;
     padding: 5px !important;
 }
+.info-display-4 {
+    font-size: var(--font-title3) !important;
+    font-weight: bold !important;
+    margin-top: 0px !important;
+    margin-bottom: 0px !important;
+    padding: 0px !important;
+}
+.info-display-5 {
+    font-size: var(--font-title3) !important;
+    background-color: var(--input-bg-color) !important;
+    margin-top: 0px !important;
+    margin-bottom: 0px !important;
+    text-align: center !important;
+    margin-right: 0px !important;
+    padding-left: 0px !important;
+    padding-right: 0px !important;
+    padding-top: -2px !important;
+    padding-bottom: -2px !important;
+}
+
 
 
 
@@ -511,5 +549,5 @@ table th,
    -------------------------------------------------- */
 .custom-graph {
     height: 200px !important; 
-    overflow-y: auto;
+    overflow-y: auto !important;
 }
