@@ -907,15 +907,24 @@ def normalize_str(s):
 def tab_Dashboard_load_geojsons():
     try:
         p_path = "Datasets/ProvinciasArgentina.geojson"
-        d_path = "Datasets/DepartamentosArgentina.geojson"
-        prov = None
-        dept = None
         if os.path.exists(p_path):
             with open(p_path, "r", encoding="utf-8") as f:
                 prov = json.load(f)
-        if os.path.exists(d_path):
-            with open(d_path, "r", encoding="utf-8") as f:
-                dept = json.load(f)
+
+        # Inicio MAF: Carga de GeoJSON segmentado en 5 partes
+        dept = {"type": "FeatureCollection", "features": []}
+        for i in range(1, 6):
+            part_path = f"Datasets/DepartamentosArgentina_part{i}.geojson"
+            if os.path.exists(part_path):
+                with open(part_path, "r", encoding="utf-8") as f:
+                    part_data = json.load(f)
+                    if 'features' in part_data:
+                        dept['features'].extend(part_data['features'])
+        
+        if not dept['features']:
+            dept = None
+        # Fin MAF
+
         return prov, dept
     except Exception as e:
         print(f"Error cargando GeoJSONs: {e}")
