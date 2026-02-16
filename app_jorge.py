@@ -349,7 +349,7 @@ def tab_EDA_create_evolution_graph(df, indicador, serie=True, med_glob=True, ten
         if med_glob:
             media_v = y_data.mean()
             fig.add_hline(y=media_v, line_dash="dash", line_color="skyblue", 
-                          annotation_text="Media Global")
+                          annotation_text="Media")
 
         # Línea de Tendencia (Regresión Lineal)
         if tend:
@@ -372,28 +372,53 @@ def tab_EDA_create_evolution_graph(df, indicador, serie=True, med_glob=True, ten
             
             if sd_mov:
                 y_sd_mov = y_data.rolling(window=k, center=centro).std()
-                # Banda de variabilidad (Sombreado)
+                
+                # 1. Definir los límites superior e inferior
+                upper_bound = y_med_mov + y_sd_mov
+                lower_bound = y_med_mov - y_sd_mov
+                
+                # 2. Filtrar los valores NaN en ambos vectores simultáneamente
+                # Esto asegura que solo se grafique donde existan datos válidos para la ventana k
+                mask = upper_bound.notna() & lower_bound.notna()
+                
+                x_filtered = x_data[mask]
+                upper_filtered = upper_bound[mask]
+                lower_filtered = lower_bound[mask]
+                
+                # 3. Generar el trazado con los datos limpios
                 fig.add_trace(go.Scatter(
-                    x=pd.concat([x_data, x_data[::-1]]),
-                    y=pd.concat([y_med_mov + y_sd_mov, (y_med_mov - y_sd_mov)[::-1]]),
-                    fill='toself', fillcolor='rgba(148, 103, 189, 0.2)',
+                    x=pd.concat([x_filtered, x_filtered[::-1]]),
+                    y=pd.concat([upper_filtered, lower_filtered[::-1]]),
+                    fill='toself',
+                    fillcolor='rgba(148, 103, 189, 0.2)',
                     line=dict(color='rgba(255,255,255,0)'),
-                    name=f'Banda SD ({lab_m})', hoverinfo='skip'
+                    name=f'Banda SD ({lab_m})',
+                    hoverinfo='skip'
                 ))
 
         # Ajustes estéticos de Plotly
         fig.update_layout(
-            title=titulo,
+            title={
+                'text': f"<b>{titulo}</b>",
+                'y': 0.95,        # Posición vertical (0 a 1)
+                'x': 0.5,         # Posición horizontal (0.5 es centrado)
+                'xanchor': 'center',
+                'yanchor': 'top',
+                'font': {
+                    'family': "Arial",
+                    'size': 16,   # Nota: Plotly usa píxeles; 16px aprox. 12pt
+                    'color': "black"
+                }
+            },
             # xaxis_title="Año",
-            # yaxis_title="Estudiantes",
-            template="plotly_white",
+            # yaxis_title="Hectáreas",
             hovermode="x unified",
                         # Dimensiones del gráfico tratando de que se aproximen al figsize=(10, 4)
             # width=1000, 
             height=h_interactivo,
             xaxis=dict(
-                tickmode='linear',
-                tick0=2011, dtick=1, # range=[2010.5, 2024.5],
+                tickmode='auto', #linear',
+                # tick0=2011, dtick=1, # range=[2010.5, 2024.5],
                 showline=True, # Línea del eje X (borde inferior)
                 tickfont=dict(size=10, family="Arial, sans-serif", color="black"),
                 linewidth=1,
@@ -409,7 +434,18 @@ def tab_EDA_create_evolution_graph(df, indicador, serie=True, med_glob=True, ten
                 linecolor='black',
                 mirror=True # Para el recuadro del gráfico
             ),
-            legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
+            margin=dict(l=20, r=20, t=60, b=20), 
+            # Expansión y dimensiones
+            autosize=True,
+            template="plotly_white",
+            # Ajuste de Leyenda para que no reste espacio al gráfico
+            legend=dict(
+                orientation="h",
+                yanchor="bottom",
+                y=1.02,
+                xanchor="right",
+                x=1
+            )
         )
         return fig
 
@@ -756,7 +792,6 @@ def get_filtered_subset(df, cultivo, provincia, departamento, key_columns):
     # Limpieza final para Gradio
     # Gradio a veces tiene problemas con tipos de datos complejos o NaNs en la visualización
     final_df = final_df.fillna(0)
-    print(final_df)
     
     # Reordenar columnas para que las dimensiones precedan a las métricas
     final_cols = group_cols + numeric_cols
@@ -875,231 +910,43 @@ def tab_EDA_on_checkbox(dataset_type, provincia, departamento, sector, ambito, a
             gr.Checkbox(value=True), gr.Checkbox(value=True), gr.Checkbox(value=True), \
             gr.Checkbox(value=False), gr.Checkbox(value=False)
                           
-
 # endregion FUNCIONES PARA LA PESTAÑA "EDA"
 
 
 # region FUNCIONES PARA LA PESTAÑA "SERIES TEMPORALES"
 
-def tab_ST_on_cult_change_OBSOLETA(dataset_type):
+INTERACTIVO = True
+H_INTERACTIVO = 320
+
+def tab_ST_on_cult_change(dataset_type, serie, mg, tend, mm, sd):
     df, provincias = load_data(dataset_type)
 
     if df.empty:
         msg = "Sin datos"
         return (pd.DataFrame(), # Dataset vacío
-                ## Campos vacíos: Prov., Depto., Indicador, Tendencia
-                gr.update(choices=[], value=None), gr.update(choices=[], value=None),
-                gr.update(choices=[], value=None), gr.Plot(visible=False),
-                gr.update(choices=[], value=None), gr.update(choices=[], value=None),
-                gr.update(choices=[], value=None), gr.Plot(visible=False),
-                gr.update(choices=[], value=None), gr.update(choices=[], value=None),
-                gr.update(choices=[], value=None), gr.Plot(visible=False),
-                ## Info de las series: Inicio, Final, C/Rges, S/Regs
-                gr.update(value="-"), gr.update(value="-"), gr.update(value="-"), gr.update(value="-"),
-                gr.update(value="-"), gr.update(value="-"), gr.update(value="-"), gr.update(value="-"),
-                gr.update(value="-"), gr.update(value="-"), gr.update(value="-"), gr.update(value="-"),
-                ## Datasets filtrados se devuelven vacíos
-                pd.DataFrame(), pd.DataFrame(), pd.DataFrame(),
-                ## Datasets diferenciados se devuelven vacíos
-                pd.DataFrame(), pd.DataFrame(), pd.DataFrame(),
-                ## Sección Descomposición de las Series
-                # Descripción de filtros de las tres series
-                msg, msg, msg,
-                # Gráficos de descomposición de las tres series
-                gr.Plot(visible=False), gr.Plot(visible=False), gr.Plot(visible=False),
-                # Interpretación de la descomposición de las tres series
-                gr.update(visible=False), gr.update(visible=False), gr.update(visible=False),
-                ## Sección Diferenciación de las Series y Prueba ADF
-                # Descripción de filtros de las tres serie
-                msg, msg, msg, 
-                gr.update(visible=True, value=0), # Opciones de grado de dif. para Serie 1
-                gr.update(visible=True, value=0), # Opciones de grado de dif. para Serie 2
-                gr.update(visible=True, value=0), # Opciones de grado de dif. para Serie 3
-                gr.update(value=NO_EXISTE), # Variable 1 de estado para grado de diferenciación
-                gr.update(value=NO_EXISTE), # Variable 2 de estado para grado de diferenciación
-                gr.update(value=NO_EXISTE), # Variable 3 de estado para grado de diferenciación
-                # Gráficos de diferenciación, interpretación y resultado prueba ADF
-                gr.update(visible=False), gr.update(visible=False), gr.update(visible=False),
-                # Interpretación de la descomposición de las tres series
-                gr.update(visible=False), gr.update(visible=False), gr.update(visible=False),
-                ## Sección ACF y PACF
-                # Descripción de filtros de las tres series
-                msg, msg, msg, 
-                # Funciones ACF
-                gr.Plot(visible=False), gr.Plot(visible=False), gr.Plot(visible=False),
-                # Interpretaciones ACF
-                gr.update(visible=False), gr.update(visible=False), gr.update(visible=False),
-                # Funciones PACF
-                gr.Plot(visible=False), gr.Plot(visible=False), gr.Plot(visible=False),
-                # Interpretaciones PACF
-                gr.update(visible=False), gr.update(visible=False), gr.update(visible=False),
-                ## Sección ARIMA
-                # Variables de estado 'p' y 'q' para las tres series
-                gr.update(value=NO_EXISTE), gr.update(value=NO_EXISTE), gr.update(value=NO_EXISTE),
-                gr.update(value=NO_EXISTE), gr.update(value=NO_EXISTE), gr.update(value=NO_EXISTE),
-                # Descripción de filtros de las tres series
-                msg, msg, msg,
-                # Info de parámetros
-                gr.update(visible=False), gr.update(visible=False), gr.update(visible=False),
-                # Gráficos de predicciones
-                gr.Plot(visible=False), gr.Plot(visible=False), gr.Plot(visible=False),
-                # Tablas de predicciones
-                gr.update(visible=False), gr.update(visible=False), gr.update(visible=False),
-                # Gráficos de residuos
-                gr.Plot(visible=False), gr.Plot(visible=False), gr.Plot(visible=False),
-                # Info de residuos
-                gr.update(visible=False), gr.update(visible=False), gr.update(visible=False)
-                )
-
-    # Se arma el listado ordenado de provincias y se guarda la primera provincia
-    provincias_sorted = sorted([str(p) for p in provincias])
-    prov_first = provincias_sorted[0]
-
-    # Se arma el listado ordenado de departamentos de la primera provincia de la lista
-    # y se guarda el primer departamento de la lista
-    dptos = df[df['provincia'] == prov_first]['departamento'].unique()
-    dptos_sorted = sorted([str(d) for d in dptos if d is not None])
-    dpto_first = dptos_sorted[0]
-
-    # Listado de las variables numéricas del dataset, excluyendo "periodo"
-    # y se guarda la primera variable de la lista
-    numeric_cols = df.select_dtypes(include=['number']).columns.tolist()
-    cols_to_plot = [c for c in numeric_cols if c != 'periodo']
-    indicadores_originales = cols_to_plot
-    # Se renombran los indicadores (nombres de columnas numéricas) con los nombres cortos del diccionario
-    indicadores = [dict_ncortos.get(col, col) for col in indicadores_originales]
-    # Se guarda el nombre corto del primer indicador
-    indicador_first = indicadores[0]
-
-    # Se filtra el dataset de cultivo
-    filtered = get_filtered_subset(df, prov_first, dpto_first, KEY_COLUMNS)
-
-    # Se obtiene información de la serie
-    inicio = pd.to_numeric(filtered['periodo']).min()
-    final = pd.to_numeric(filtered['periodo']).max()
-    regs = filtered['periodo'].nunique()
-    regsno = (final - inicio + 1) - regs
-
-    # Al actualizar el dataset, se muestra la primera provincia, el primer departamento,
-    # el primer indicador y el gráfico correspodiente.
-    # Se hace para las tres series temporales
-    msg = ("<b>"
-           f"PROVINCIA: {prov_first.upper()}<br>"
-           f"DEPARTAMENTO: {dpto_first.upper()}<br>"
-           f"INDICADOR: {dict_nlargos[indicadores_originales[0]].upper()}"
-           "</b>")
-    return (df, # Dataset cargado de cultivo
-                ## Campos por defecto Serie 1: Prov., Depto., Indicador, Tendencia
-                gr.update(choices=provincias_sorted, value=prov_first),
-                gr.update(choices=dptos_sorted, value=dpto_first),
-                gr.update(choices=indicadores, value=indicador_first),
-                gr.Plot(visible=False),
-                ## Campos por defecto Serie 2: Prov., Depto., Indicador, Tendencia
-                gr.update(choices=provincias_sorted, value=prov_first),
-                gr.update(choices=dptos_sorted, value=dpto_first),
-                gr.update(choices=indicadores, value=indicador_first),
-                gr.Plot(visible=False),
-                ## Campos por defecto Serie 3: Prov., Depto., Indicador, Tendencia
-                gr.update(choices=provincias_sorted, value=prov_first),
-                gr.update(choices=dptos_sorted, value=dpto_first),
-                gr.update(choices=indicadores, value=indicador_first),
-                gr.Plot(visible=False),
-                ## Info de las series (inicialmente las tres series iguales)
-                inicio, final, regs, regsno,
-                inicio, final, regs, regsno,
-                inicio, final, regs, regsno,
-                # Datasets filtrados con campos por defecto
-                filtered, filtered, filtered,
-                ## Datasets diferenciados se devuelven vacíos
-                pd.DataFrame(), pd.DataFrame(), pd.DataFrame(),
-                ## Sección Descomposición de las Series
-                # Descripción de filtros de las tres series
-                msg, msg, msg,
-                # Gráficos de descomposición de las tres series
-                gr.Plot(visible=False), gr.Plot(visible=False), gr.Plot(visible=False),
-                # Interpretación de la descomposición de las tres series
-                gr.update(visible=False), gr.update(visible=False), gr.update(visible=False),
-                ## Sección Diferenciación de las Series y Prueba ADF
-                # Descripción de filtros de las tres seriess
-                msg, msg, msg,
-                gr.update(visible=True, value=0), # Opciones de grado de dif. para Serie 1
-                gr.update(visible=True, value=0), # Opciones de grado de dif. para Serie 2
-                gr.update(visible=True, value=0), # Opciones de grado de dif. para Serie 3
-                gr.update(value=NO_EXISTE), # Variable 1 de estado para grado de diferenciación
-                gr.update(value=NO_EXISTE), # Variable 2 de estado para grado de diferenciación
-                gr.update(value=NO_EXISTE), # Variable 3 de estado para grado de diferenciación
-                # Gráficos de diferenciación de las tres series
-                gr.update(visible=False), gr.update(visible=False), gr.update(visible=False),
-                # Resultados de la prueba ADF de las tres seris
-                gr.update(visible=False), gr.update(visible=False), gr.update(visible=False),
-                ## Sección ACF y PACF
-                # Descripción de filtros de las tres series
-                msg, msg, msg,
-                # Gráficos de ACF de las tres series
-                gr.Plot(visible=False), gr.Plot(visible=False), gr.Plot(visible=False),
-                # Interpretación de la ACF de las tres series
-                gr.update(visible=False), gr.update(visible=False), gr.update(visible=False),
-                # Gráficos de PACF de las tres series
-                gr.Plot(visible=False), gr.Plot(visible=False), gr.Plot(visible=False),
-                # Interpretación de la PACF de las tres series
-                gr.update(visible=False), gr.update(visible=False), gr.update(visible=False),
-                ## Sección ARIMA
-                # Variables de estado 'p' y 'q' para las tres series
-                gr.update(value=NO_EXISTE), gr.update(value=NO_EXISTE), gr.update(value=NO_EXISTE),
-                gr.update(value=NO_EXISTE), gr.update(value=NO_EXISTE), gr.update(value=NO_EXISTE),
-                # Descripción de filtros de las tres series
-                msg, msg, msg,
-                # Info de parámetros
-                gr.update(visible=False), gr.update(visible=False), gr.update(visible=False),
-                # Gráficos de predicciones
-                gr.Plot(visible=False), gr.Plot(visible=False), gr.Plot(visible=False),
-                # Tablas de predicciones
-                gr.update(visible=False), gr.update(visible=False), gr.update(visible=False),
-                # Gráficos de residuos
-                gr.Plot(visible=False), gr.Plot(visible=False), gr.Plot(visible=False),
-                # Info de residuos
-                gr.update(visible=False), gr.update(visible=False), gr.update(visible=False)
-                )
-
-def tab_ST_on_cult_change_all(cult1, cult2, cult3):
-
-    # Esta función se ejecuta cada vez que se entra a la pestaña "SERIES TEMPORALES";
-    # las series se reinician con el primer cultivo de la lista (se indica manualmente: ARROS)
-    # y con la primera provincia, la primera zona y la primera variable,
-    # eso lo hace automáticamente la función tab_ST_on_cult_change()
-
-    cult1 = "ARROZ"
-    cult2 = "ARROZ"
-    cult3 = "ARROZ"
-
-    dfa, a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13, a14, a15, a16, a17, a18, a19, a20, a21, a22, a23, a24, a25, a26, a27, a28, a29, a30, a31, a32 = tab_ST_on_cult_change(cult1)
-
-    dfb, b1, b2, b3, b4, b5, b6, b7, b8, b9, b10, b11, b12, b13, b14, b15, b16, b17, b18, b19, b20, b21, b22, b23, b24, b25, b26, b27, b28, b29, b30, b31, b32 = tab_ST_on_cult_change(cult2)
-
-    dfc, c1, c2, c3, c4, c5, c6, c7, c8, c9, c10, c11, c12, c13, c14, c15, c16, c17, c18, c19, c20, c21, c22, c23, c24, c25, c26, c27, c28, c29, c30, c31, c32 = tab_ST_on_cult_change(cult3)
-
-    return dfa, a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, \
-            a11, a12, a13, a14, a15, a16, a17, a18, a19, \
-            a20, a21, a22, a23, a24, a25, a26, a27, a28, a29, a30, a31, a32, \
-            dfb, b1, b2, b3, b4, b5, b6, b7, b8, b9, b10, \
-            b11, b12, b13, b14, b15, b16, b17, b18, b19, \
-            b20, b21, b22, b23, b24, b25, b26, b27, b28, b29, b30, b31, b32, \
-            dfc, c1, c2, c3, c4, c5, c6, c7, c8, c9, c10, \
-            c11, c12, c13, c14, c15, c16, c17, c18, c19, \
-            c20, c21, c22, c23, c24, c25, c26, c27, c28, c29, c30, c31, c32
-
-def tab_ST_on_cult_change(dataset_type):
-    df, provincias = load_data(dataset_type)
-
-    if df.empty:
-        msg = "Sin datos"
-        return (pd.DataFrame(), # Dataset vacío
-                ## Campos vacíos: Cultivo, Prov., Depto., Indicador, Tendencia
+                pd.DataFrame(), # Dataset filtrado vacío
+                pd.DataFrame(), # Dataset diferenciado vacío
+                ## Campos vacíos: Cultivo, Prov., Depto., Indicador
                 gr.update(choices=[], value=None), 
-                gr.update(choices=[], value=None), gr.update(choices=[], value=None),
-                gr.update(choices=[], value=None), gr.Plot(visible=False),
+                gr.update(choices=[], value=None),
+                gr.update(choices=[], value=None),
+                gr.update(choices=[], value=None), 
                 # Info de la serie
-                gr.update(value="-"), gr.update(value="-"), gr.update(value="-"), gr.update(value="-"),
+                gr.update(value="-"), gr.update(value="-"),
+                gr.update(value="-"), gr.update(value="-"),
+                # Botones de imputación y corte
+                gr.Button(interactive=False), gr.Button(interactive=False),
+                gr.update(value="Interpolación lineal"),
+                # Botón de restauración
+                gr.Button(interactive=False),
+                # Info de corte
+                gr.update(choices=[], value=None),
+                gr.update(choices=[], value=None),
+                None,
+                # Área del gráfico de tendencia
+                gr.update(visible=False),
+                # Gráfico de tendencia
+                gr.update(visible=False),
                 ## Dataset filtrado se devuelvn vacío
                 pd.DataFrame(),
                 ## Dataset diferenciado se devuelve vacío
@@ -1166,7 +1013,17 @@ def tab_ST_on_cult_change(dataset_type):
     final = pd.to_numeric(filtered['periodo']).max()
     regs = filtered['periodo'].nunique()
     regsno = (final - inicio + 1) - regs
+    years = sorted(pd.to_numeric(filtered['periodo']).unique())
+    years = [int(y) for y in years]
+    years_inv = years[::-1]
 
+    # Se realiza el gráfico de tendencia
+    ind_orig = next((k for k, v in dict_ncortos.items() if v == indicador_first), indicador_first)
+    mmov =  0 < mm < 4
+    tipo = mm + 1
+    graph = tab_EDA_create_evolution_graph(filtered, ind_orig, serie, mg, tend, mmov, sd, 
+                                            tipo, interactivo=INTERACTIVO, h_interactivo=H_INTERACTIVO)
+    
     # Al actualizar el dataset, se muestra la primera provincia, el primer departamento
     # y el primer indicador.
     msg = ("<b>"
@@ -1176,15 +1033,30 @@ def tab_ST_on_cult_change(dataset_type):
            f"INDICADOR: {dict_nlargos[indicadores_originales[0]].upper()}"
            "</b>")
 
-    return (df, # Dataset cargado de cultivo
-                ## Campos por defecto de la serie: Cultivo, Prov., Depto., Indicador, Tendencia
-                gr.update(value=dataset_type),
+    return (df, # Dataset cargado del cultivo
+                filtered, # Dataset filtrado del cultivo
+                pd.DataFrame(), # Dataset diferenciado vacío
+                ## Campos por defecto de la serie: Cultivo, Prov., Depto., Indicador
+                gr.update(choices=["ARROZ", "AVENA", "GIRASOL", "MAÍZ", "POROTO", "SOJA",
+                                    "SORGO", "TRIGO", "YERBA MATE"], value=dataset_type),
                 gr.update(choices=provincias_sorted, value=prov_first),
                 gr.update(choices=dptos_sorted, value=dpto_first),
                 gr.update(choices=indicadores, value=indicador_first),
-                gr.Plot(visible=False),
                 # Info de la serie
                 inicio, final, regs, regsno,
+                # Botones de imputación y corte
+                gr.Button(interactive=True), gr.Button(interactive=True),
+                gr.update(value="Interpolación lineal"),
+                # Botón de restauración
+                gr.Button(interactive=False),
+                # Info de corte
+                gr.update(choices=years, value=years[0]),
+                gr.update(choices=years_inv, value=years_inv[0]), 
+                None,
+                # Área del gráfico de tendencia
+                gr.update(visible=True),
+                # Gráfico de tendencia
+                gr.update(visible=True, value=graph),
                 ## Dataset filtrado
                 filtered,
                 ## Dataset diferenciads se devuelve vacío
@@ -1223,7 +1095,8 @@ def tab_ST_on_cult_change(dataset_type):
                 gr.Plot(visible=False), gr.update(visible=False)
                 )
 
-def tab_ST_on_prov_change(df, cultivo, provincia, indicador):
+def tab_ST_on_prov_change(df, cultivo, provincia, indicador,
+                                                serie, mg, tend, mm, sd):
     
     if not df.empty:
         # Se arma el listado ordenado de departamentos de la provincia
@@ -1246,8 +1119,18 @@ def tab_ST_on_prov_change(df, cultivo, provincia, indicador):
                 gr.update(choices=[], value=None),
                 # Info de la serie
                 gr.update(value="-"), gr.update(value="-"), gr.update(value="-"), gr.update(value="-"),
+                # Botones de imputación y corte
+                gr.Button(interactive=False), gr.Button(interactive=False),
+                # Botón de restauración
+                gr.Button(interactive=False),
+                # Info de corte
+                gr.update(choices=[], value=None),
+                gr.update(choices=[], value=None),
+                None,
+                # Área del gráfico de tendencia
+                gr.update(visible=False),
                 # Gráfico de tendencia
-                gr.Plot(visible=False), 
+                gr.update(visible=False),
                 ## Sección de Descomposición de la Serie
                 # Información de filtros
                 gr.update(visible=False),
@@ -1287,7 +1170,17 @@ def tab_ST_on_prov_change(df, cultivo, provincia, indicador):
     final = pd.to_numeric(filtered['periodo']).max()
     regs = filtered['periodo'].nunique()
     regsno = (final - inicio + 1) - regs
+    years = sorted(pd.to_numeric(filtered['periodo']).unique())
+    years = [int(y) for y in years]
+    years_inv = years[::-1]
 
+    # Se realiza el gráfico de tendencia
+    ind_orig = next((k for k, v in dict_ncortos.items() if v == indicador), indicador)
+    mmov =  0 < mm < 4
+    tipo = mm + 1
+    graph = tab_EDA_create_evolution_graph(filtered, ind_orig, serie, mg, tend, mmov, sd, 
+                                            tipo, interactivo=INTERACTIVO, h_interactivo=H_INTERACTIVO)
+    
     msg = ("<b>"
            f"CULTIVO: {cultivo.upper()}<br>"
            f"PROVINCIA: {provincia.upper()}<br>DEPARTAMENTO: {dpto_first.upper()}<br>"
@@ -1298,8 +1191,18 @@ def tab_ST_on_prov_change(df, cultivo, provincia, indicador):
                 gr.update(choices=dptos_sorted, value=dpto_first),
                 # Info de la serie
                 inicio, final, regs, regsno,
+                # Botones de imputación y corte
+                gr.Button(interactive=True), gr.Button(interactive=True),
+                # Botón de restauración
+                gr.Button(interactive=False),
+                # Info de corte
+                gr.update(choices=years, value=years[0]),
+                gr.update(choices=years_inv, value=years_inv[0]), 
+                None,
+                # Área del gráfico de tendencia
+                gr.update(visible=True),
                 # Gráfico de tendencia
-                gr.Plot(visible=False), 
+                gr.update(visible=True, value=graph),
                 ## Sección de Descomposición de la Serie
                 # Información de filtros
                 msg,
@@ -1334,7 +1237,8 @@ def tab_ST_on_prov_change(df, cultivo, provincia, indicador):
                 gr.Plot(visible=False), gr.update(visible=False)
                 )
 
-def tab_ST_on_option_change(df, cultivo, provincia, departamento, indicador):
+def tab_ST_on_option_change(df, cultivo, provincia, departamento, indicador,
+                                                            serie, mg, tend, mm, sd):
 
     # Como el parámetro "indicador" se recibe con el nombre descriptivo corto
     # se debe convertir a su nombre original
@@ -1347,9 +1251,20 @@ def tab_ST_on_option_change(df, cultivo, provincia, departamento, indicador):
     if df.empty or filtered.empty:
         return (pd.DataFrame(), pd.DataFrame(),
                 # Info de la serie
-                gr.update(value="-"), gr.update(value="-"), gr.update(value="-"), gr.update(value="-"),
+                gr.update(value="-"), gr.update(value="-"),
+                gr.update(value="-"), gr.update(value="-"),
+                # Botones de imputación y corte
+                gr.Button(interactive=False), gr.Button(interactive=False),
+                # Botón de restauración
+                gr.Button(interactive=False),
+                # Info de corte
+                gr.update(choices=[], value=None),
+                gr.update(choices=[], value=None),
+                None,
+                # Área del gráfico de tendencia
+                gr.update(visible=False),
                 # Gráfico de tendencia
-                gr.Plot(visible=False), 
+                gr.update(visible=False),
                 ## Sección de Descomposición de la Serie
                 # Información de filtros
                 gr.update(visible=False),
@@ -1389,7 +1304,17 @@ def tab_ST_on_option_change(df, cultivo, provincia, departamento, indicador):
     final = pd.to_numeric(filtered['periodo']).max()
     regs = filtered['periodo'].nunique()
     regsno = (final - inicio + 1) - regs
+    years = sorted(pd.to_numeric(filtered['periodo']).unique())
+    years = [int(y) for y in years]
+    years_inv = years[::-1]
 
+    # Se realiza el gráfico de tendencia
+    ind_orig = next((k for k, v in dict_ncortos.items() if v == indicador), indicador)
+    mmov =  0 < mm < 4
+    tipo = mm + 1
+    graph = tab_EDA_create_evolution_graph(filtered, ind_orig, serie, mg, tend, mmov, sd, 
+                                            tipo, interactivo=INTERACTIVO, h_interactivo=H_INTERACTIVO)
+    
     msg = ("<b>"
            f"CULTIVO: {cultivo.upper()}<br>"
            f"PROVINCIA: {provincia.upper()}<br>"
@@ -1399,8 +1324,18 @@ def tab_ST_on_option_change(df, cultivo, provincia, departamento, indicador):
     return (filtered, pd.DataFrame(),
                 # Info de la serie
                 inicio, final, regs, regsno,
+                # Botones de imputación y corte
+                gr.Button(interactive=True), gr.Button(interactive=True),
+                # Botón de restauración
+                gr.Button(interactive=False),
+                # Info de corte
+                gr.update(choices=years, value=years[0]),
+                gr.update(choices=years_inv, value=years_inv[0]), 
+                None,
+                # Área del gráfico de tendencia
+                gr.update(visible=True),
                 # Gráfico de tendencia
-                gr.Plot(visible=False), 
+                gr.update(visible=True, value=graph),
                 ## Sección de Descomposición de la Serie
                 # Información de filtros
                 msg,
@@ -1452,11 +1387,11 @@ def tab_ST_on_graph_change(filtered1, filtered2, filtered3, ind1, ind2, ind3,
     tipo = mm + 1
 
     graph1 = tab_EDA_create_evolution_graph(filtered1, ind_orig1, serie, mg, tend, mmov, sd, 
-                                            tipo, interactivo=False, h_estatico=5.15)
+                                        tipo, interactivo=INTERACTIVO, h_interactivo=H_INTERACTIVO)
     graph2 = tab_EDA_create_evolution_graph(filtered2, ind_orig2, serie, mg, tend, mmov, sd, 
-                                            tipo, interactivo=False, h_estatico=5.15)
+                                        tipo, interactivo=INTERACTIVO, h_interactivo=H_INTERACTIVO)
     graph3 = tab_EDA_create_evolution_graph(filtered3, ind_orig3, serie, mg, tend, mmov, sd, 
-                                            tipo, interactivo=False, h_estatico=5.15)
+                                        tipo, interactivo=INTERACTIVO, h_interactivo=H_INTERACTIVO)
 
     return gr.update(visible=True), gr.update(visible=True), gr.update(visible=True), \
                 graph1, graph2, graph3
@@ -1581,6 +1516,13 @@ def tab_ST_stl_decomp(df, indicador):
 
 def tab_ST_stl_decomp_all(df1, df2, df3, var1, var2, var3):
 
+    if df1.empty or df2.empty or df3.empty:
+        msg = ("FALTA DEFINIR ALGUNA DE LAS SERIES.<br>"
+                "DEBEN SELECCIONARSE TRES SERIES PARA LA COMPARACIÓN")
+        return gr.update(), gr.update(value = msg, visible = True), \
+                gr.update(), gr.update(value = msg, visible = True), \
+                gr.update(), gr.update(value = msg, visible = True)
+   
     fig1, desc1 = tab_ST_stl_decomp(df1, var1)
     fig2, desc2 = tab_ST_stl_decomp(df2, var2)
     fig3, desc3 = tab_ST_stl_decomp(df3, var3)
@@ -2468,102 +2410,325 @@ def tab_ST_ARIMA(df, indicador, p, d, q, n):
 
 def tab_ST_serie_complete(df, metodo):
     """
-    Completa años faltantes dentro de un rango, generando los valores 
-    para las columnas numéricas correspondientes, en base al método 
-    de imputación indicado.
-    Argumentos:
-    - df: dataframe con columnas: cultivo, periodo, provincia, departamento 
-          y 4 variables numéricas.
-    - método: 1 - interpolación lineal;
-              2 - interpolacion polinómica;
-              3 - media móvil (k = 2 hacia atrás);
-              4 - media móvil (k = 3 hacia atrás);
-              5 - media móvila (k = 3 centrado).
+    Completa años faltantes en una serie temporal para una provincia y departamento específicos.
+    df           -- DataFrame filtrado por provincia y departamento
+    metodo       -- Entero (1 a 5) para la técnica de imputación
     """
-    print(df)
-
-    # 1. Identificación dinámica de columnas y rango
-    cols_fijas = ['cultivo', 'periodo', 'provincia', 'departamento']
-    # Identificamos las variables numéricas por exclusión
-    cols_num = [c for c in df.columns if c not in cols_fijas]
     
-    anio_min = int(df['periodo'].min())
-    anio_max = int(df['periodo'].max())
+    # 1. Filtrado y preparación de tipos
+    # df_filtered = df[(df['provincia'] == provincia) & 
+    #                  (df['departamento'] == departamento)].copy()
+    df_filtered = df.copy()
+
+    if df_filtered.empty:
+        return pd.DataFrame(), 0, 0
+
+    cols_fijas = ['cultivo', 'periodo', 'provincia', 'departamento']
+    cols_num = [c for c in df_filtered.columns if c not in cols_fijas]
+    
+    df_filtered['periodo'] = df_filtered['periodo'].astype(int)
+    
+    anio_min = df_filtered['periodo'].min()
+    anio_max = df_filtered['periodo'].max()
     rango_completo = np.arange(anio_min, anio_max + 1)
 
-    # 2. Reindexación y expansión de la serie
-    # Ordenamos para asegurar que la interpolación sea cronológica
-    df_res = df.sort_values(['provincia', 'departamento', 'periodo'])
-    
-    # Creamos un nuevo DataFrame con todas las combinaciones posibles de años por grupo
+    # 2. Reindexación (Expansión de la serie)
     df_res = (
-        df_res.set_index(['provincia', 'departamento', 'periodo'])
-        .groupby(level=['provincia', 'departamento'])
-        .apply(lambda x: x.reindex(pd.MultiIndex.from_product(
-            [x.index.get_level_values(0).unique(), 
-             x.index.get_level_values(1).unique(), 
-             rango_completo],
-            names=['provincia', 'departamento', 'periodo']
-        )))
-        .reset_index(level=[0, 1], drop=True)
+        df_filtered.set_index('periodo')
+        .reindex(rango_completo)
         .reset_index()
+        .rename(columns={'index': 'periodo'})
     )
 
-    # 3. Propagación de etiquetas constantes (incluye el cultivo redundante)
+    # 3. Propagación de etiquetas cualitativas
     df_res[['cultivo', 'provincia', 'departamento']] = (
-        df_res.groupby(['provincia', 'departamento'])[['cultivo', 'provincia', 'departamento']]
-        .ffill().bfill()
+        df_res[['cultivo', 'provincia', 'departamento']].ffill().bfill()
     )
-    print(df)   
-    # 4. Lógica de Imputación por grupos
-    grupos = df_res.groupby(['provincia', 'departamento'])
 
-    if metodo == 1: # Interpolación lineal
-        df_res[cols_num] = grupos[cols_num].transform(lambda x: x.interpolate(method='linear'))
-        
-    elif metodo == 2: # Interpolación polinómica (orden 2)
-        df_res[cols_num] = grupos[cols_num].transform(
-            lambda x: x.interpolate(method='polynomial', order=2) if x.count() > 2 else x.interpolate(method='linear')
-        )
-        
-    elif metodo == 3: # Media móvil k=2 (ventana 3)
-        df_res[cols_num] = df_res[cols_num].fillna(grupos[cols_num].transform(
-            lambda x: x.rolling(window=3, min_periods=1).mean())
-        )
-        
-    elif metodo == 4: # Media móvil k=3 (ventana 4)
-        df_res[cols_num] = df_res[cols_num].fillna(grupos[cols_num].transform(
-            lambda x: x.rolling(window=4, min_periods=1).mean())
-        )
-        
-    elif metodo == 5: # Media móvil k=3 centrada
-        df_res[cols_num] = df_res[cols_num].fillna(grupos[cols_num].transform(
-            lambda x: x.rolling(window=3, center=True, min_periods=1).mean())
-        )
+    # 4. Lógica de Imputación
+    if metodo == 1:
+        df_res[cols_num] = df_res[cols_num].interpolate(method='linear')
+    elif metodo == 2:
+        if df_filtered.shape[0] > 2:
+            df_res[cols_num] = df_res[cols_num].interpolate(method='polynomial', order=2)
+        else:
+            df_res[cols_num] = df_res[cols_num].interpolate(method='linear')
+    elif metodo in [3, 4, 5]:
+        window_size = 3 if metodo in [3, 5] else 4
+        is_centered = (metodo == 5)
+        ma_values = df_res[cols_num].rolling(window=window_size, center=is_centered, min_periods=1).mean()
+        df_res[cols_num] = df_res[cols_num].fillna(ma_values)
 
-    # 5. Extrapolación final para cubrir los extremos (bordes de la serie)
-    df_res[cols_num] = grupos[cols_num].transform(lambda x: x.ffill().bfill())
+    # 5. Extrapolación de bordes
+    df_res[cols_num] = df_res[cols_num].ffill().bfill()
+    
+    # 6. Cálculo de registros que aún faltan (Remanentes)
+    # Se considera un registro "faltante" si tiene valores NaN en sus columnas numéricas
+    # después de haber intentado todas las técnicas de imputación.
+    regs_faltantes_final = df_res[cols_num].isnull().any(axis=1).sum()
+    
+    # Reordenamiento final
+    orden_final = ['cultivo', 'periodo', 'provincia', 'departamento'] + cols_num
+    df_res = df_res[orden_final]
+
+    return df_res, anio_min, anio_max, len(df_res), regs_faltantes_final
+
+def tab_ST_imputar_df(df, imp_option, indicador, serie, mg, tend, mm, sd):
+
+    df_imput, inicio, fin, regs, regsno = tab_ST_serie_complete(df, imp_option)
+
+    # Se arman las listas desplegables de los años con los años imputados
+    start_year = int(inicio)
+    end_year = int(fin)
+    years = list(range(start_year, end_year + 1))
+    years_inv = years[::-1]
+
+    # "indicador" se convierte de nombre descriptivo corto a su nombre original
+    ind_orig = next((k for k, v in dict_ncortos.items() if v == indicador), indicador)
+    
+    mmov =  0 < mm < 4
+    tipo = mm + 1
+    graph = tab_EDA_create_evolution_graph(df_imput, ind_orig, serie, mg, tend, mmov, sd, 
+                                        tipo, interactivo=INTERACTIVO, h_interactivo=H_INTERACTIVO)
+    
+    return (df_imput, 
+                # Cantidad de registros
+                regs, regsno,
+                # Campos de listado de años y mensaje de error
+                gr.update(choices=years, value=start_year),
+                gr.update(choices=years_inv, value=end_year),
+                None,
+                # Botones imputar, cortar, restaurar
+                gr.update(interactive=False), gr.update(interactive=True),
+                gr.update(visible=True), 
+                # Gráfico de tendencia
+                graph,
+                ## Sección de Descomposición de la Serie
+                # Información de filtros
+                gr.update(),
+                # Gráfico de descomposición e interpretación
+                gr.Plot(visible=False), gr.update(visible=False),
+                ## Sección de Diferenciación y Prueba ADF
+                # Información de filtros
+                gr.update(),
+                # Grado de diferenciación
+                gr.update(value=0, visible=True),
+                # Gráfico de diferenciación
+                gr.Plot(visible=False),
+                # Resultado prueba ADF
+                gr.update(visible=False),
+                # Variable de estado de grados de diferenciación
+                gr.update(value=NO_EXISTE),
+                ## Sección de ACF y PACF
+                # Información de filtros
+                gr.update(),
+                # Gráfico e interpretación de ACF
+                gr.Plot(visible=False), gr.update(visible=False),
+                # Gráfico e interpretación de PACF
+                gr.Plot(visible=False), gr.update(visible=False),
+                ## Sección ARIMA
+                # Variables de estado 'p' y 'q'
+                gr.update(value=NO_EXISTE), gr.update(value=NO_EXISTE),
+                # Información de filtros y parámetros de ARIMA
+                gr.update(), gr.update(visible=False),
+                # Gráfico de predicciones y tabla de predicciones
+                gr.Plot(visible=False), gr.update(visible=False),
+                # Gráficos de residuos e info de residuos
+                gr.Plot(visible=False), gr.update(visible=False)
+            )
+
+def tab_ST_restaurar_df(df, cultivo, provincia, departamento,
+                                  indicador, serie, mg, tend, mm, sd):
+
+    # Se filtra el dataset de cultivo
+    if not df.empty:
+        filtered = get_filtered_subset(df, cultivo, provincia, departamento, KEY_COLUMNS)
 
     # Se obtiene información de la serie
-    inicio = pd.to_numeric(df_res['periodo']).min()
-    final = pd.to_numeric(df_res['periodo']).max()
-    regs = df_res['periodo'].nunique()
+    inicio = pd.to_numeric(filtered['periodo']).min()
+    final = pd.to_numeric(filtered['periodo']).max()
+    regs = filtered['periodo'].nunique()
+    regsno = (final - inicio + 1) - regs
+    inicio = int(inicio)
+    final = int(final)
+
+    # "indicador" se convierte de nombre descriptivo corto a su nombre original
+    ind_orig = next((k for k, v in dict_ncortos.items() if v == indicador), indicador)
+    
+    mmov =  0 < mm < 4
+    tipo = mm + 1
+    graph = tab_EDA_create_evolution_graph(filtered, ind_orig, serie, mg, tend, mmov, sd, 
+                                        tipo, interactivo=INTERACTIVO, h_interactivo=H_INTERACTIVO)
+    
+    return (filtered, # Dataset filtrado original
+                # Campos de registros
+                inicio, final, regs, regsno,
+                # Listado de años y mensaje de error
+                inicio, final, None,
+                # Botones imputar, cortar, restaurar
+                gr.Button(interactive=True), gr.Button(interactive=True),
+                gr.Button(interactive=False),
+                # Área y gráfico de tendencia
+                gr.update(visible=True), graph,
+                ## Sección de Descomposición de la Serie
+                # Información de filtros
+                gr.update(),
+                # Gráfico de descomposición e interpretación
+                gr.Plot(visible=False), gr.update(visible=False),
+                ## Sección de Diferenciación y Prueba ADF
+                # Información de filtros
+                gr.update(),
+                # Grado de diferenciación
+                gr.update(value=0, visible=True),
+                # Gráfico de diferenciación
+                gr.Plot(visible=False),
+                # Resultado prueba ADF
+                gr.update(visible=False),
+                # Variable de estado de grados de diferenciación
+                gr.update(value=NO_EXISTE),
+                ## Sección de ACF y PACF
+                # Información de filtros
+                gr.update(),
+                # Gráfico e interpretación de ACF
+                gr.Plot(visible=False), gr.update(visible=False),
+                # Gráfico e interpretación de PACF
+                gr.Plot(visible=False), gr.update(visible=False),
+                ## Sección ARIMA
+                # Variables de estado 'p' y 'q'
+                gr.update(value=NO_EXISTE), gr.update(value=NO_EXISTE),
+                # Información de filtros y parámetros de ARIMA
+                gr.update(), gr.update(visible=False),
+                # Gráfico de predicciones y tabla de predicciones
+                gr.Plot(visible=False), gr.update(visible=False),
+                # Gráficos de residuos e info de residuos
+                gr.Plot(visible=False), gr.update(visible=False)
+                )
+
+def tab_ST_cortar_df(df, indicador, yinicial, yfinal, serie, mg, tend, mm, sd):
+
+    df_cut, inicio, final, regs, regsno, error = tab_ST_serie_cut(df, yinicial, yfinal)
+
+    # Como el parámetro "indicador" se recibe con el nombre descriptivo corto
+    # se debe convertir a su nombre original
+    ind_orig = next((k for k, v in dict_ncortos.items() if v == indicador), indicador)
+    
+    if error:
+        return (df_cut, # Dataframe sin cortar
+                # Campos de registros
+                inicio, final, regs, regsno,
+                # Campos de listado de años y mensaje de error
+                yinicial, yfinal, error,
+                # Botones cortar, restaurar
+                gr.Button(interactive=True), gr.update(),
+                # Area y gráfico de tendencia
+                gr.update(), gr.update(),
+                ## Sección de Descomposición de la Serie
+                # Información de filtros
+                gr.update(),
+                # Gráfico de descomposición e interpretación
+                gr.Plot(visible=False), gr.update(visible=False),
+                ## Sección de Diferenciación y Prueba ADF
+                # Información de filtros
+                gr.update(),
+                # Grado de diferenciación
+                gr.update(value=0, visible=True),
+                # Gráfico de diferenciación
+                gr.Plot(visible=False),
+                # Resultado prueba ADF
+                gr.update(visible=False),
+                # Variable de estado de grados de diferenciación
+                gr.update(value=NO_EXISTE),
+                ## Sección de ACF y PACF
+                # Información de filtros
+                gr.update(),
+                # Gráfico e interpretación de ACF
+                gr.Plot(visible=False), gr.update(visible=False),
+                # Gráfico e interpretación de PACF
+                gr.Plot(visible=False), gr.update(visible=False),
+                ## Sección ARIMA
+                # Variables de estado 'p' y 'q'
+                gr.update(value=NO_EXISTE), gr.update(value=NO_EXISTE),
+                # Información de filtros y parámetros de ARIMA
+                gr.update(), gr.update(visible=False),
+                # Gráfico de predicciones y tabla de predicciones
+                gr.Plot(visible=False), gr.update(visible=False),
+                # Gráficos de residuos e info de residuos
+                gr.Plot(visible=False), gr.update(visible=False)
+                )
+
+
+    mmov =  0 < mm < 4
+    tipo = mm + 1
+    graph = tab_EDA_create_evolution_graph(df_cut, ind_orig, serie, mg, tend, mmov, sd, 
+                                        tipo, interactivo=INTERACTIVO, h_interactivo=H_INTERACTIVO)
+
+    return (df_cut, # Dataframe cortado
+                # Campos de registros
+                inicio, final, regs, regsno,
+                # Campos de listado de años y mensaje de error
+                yinicial, yfinal, error,
+                # Botones cortar, restaurar
+                gr.Button(interactive=False), gr.Button(interactive=True),
+                # Area y gráfico de tendencia
+                gr.update(visible=True), graph,
+                ## Sección de Descomposición de la Serie
+                # Información de filtros
+                gr.update(),
+                # Gráfico de descomposición e interpretación
+                gr.Plot(visible=False), gr.update(visible=False),
+                ## Sección de Diferenciación y Prueba ADF
+                # Información de filtros
+                gr.update(),
+                # Grado de diferenciación
+                gr.update(value=0, visible=True),
+                # Gráfico de diferenciación
+                gr.Plot(visible=False),
+                # Resultado prueba ADF
+                gr.update(visible=False),
+                # Variable de estado de grados de diferenciación
+                gr.update(value=NO_EXISTE),
+                ## Sección de ACF y PACF
+                # Información de filtros
+                gr.update(),
+                # Gráfico e interpretación de ACF
+                gr.Plot(visible=False), gr.update(visible=False),
+                # Gráfico e interpretación de PACF
+                gr.Plot(visible=False), gr.update(visible=False),
+                ## Sección ARIMA
+                # Variables de estado 'p' y 'q'
+                gr.update(value=NO_EXISTE), gr.update(value=NO_EXISTE),
+                # Información de filtros y parámetros de ARIMA
+                gr.update(), gr.update(visible=False),
+                # Gráfico de predicciones y tabla de predicciones
+                gr.Plot(visible=False), gr.update(visible=False),
+                # Gráficos de residuos e info de residuos
+                gr.Plot(visible=False), gr.update(visible=False)
+                )
+
+def tab_ST_serie_cut(df, yinicial, yfinal):
+
+    if yinicial >= yfinal:
+        msg = "RANGO INCORRECTO"
+        return df, gr.update(), gr.update(), gr.update(), gr.update(), msg
+    
+    if (yfinal - yinicial + 1) < 30:
+        msg = "RANGO < 30 AÑOS"
+        return df, gr.update(), gr.update(), gr.update(), gr.update(), msg
+
+    # Se recorta el df
+    df['periodo'] = pd.to_numeric(df['periodo'], errors='coerce')
+    df_cut = df[(df['periodo'] >= yinicial) & (df['periodo'] <= yfinal)].copy()
+    df_cut = df_cut.sort_values('periodo')
+
+    # Sobre el df cortado se calculan los nuevos datos
+    inicio = pd.to_numeric(df_cut['periodo']).min()
+    final = pd.to_numeric(df_cut['periodo']).max()
+    regs = df_cut['periodo'].nunique()
     regsno = (final - inicio + 1) - regs
 
-    return df_res, regs, regsno
-
-def tab_ST_on_imputacion_change(df, imp_option):
-
-    df_imput, num1, num2 = tab_ST_serie_complete(df, imp_option)
-
-    return df_imput, num1, num2, \
-            gr.Button(interactive=False), \
-            gr.Button(interactive=True)
-
-
+    return df_cut, inicio, final, regs, regsno, None
 
 # endregion FUNCIONES PARA LA PESTAÑA "SERIES TEMPORALES"
-
 
 # region FUNCIONES PARA IMAGENES/VIDEOS EN BASE64 E INCLUSIÓN EN CÓDIGO CSS
 # Función para convertir imagen/video a Base64
@@ -2943,388 +3108,443 @@ with gr.Blocks(title="Análisis de Cultivos") as app:
             )
         """
 
-        ###### PESTAÑA SERIES TEMPORALES
+        ###### PESTAÑA COMPARACIÓN DE SERIES TEMPORALES
         with gr.Tab("Series Temporales") as tab_ST:
             with gr.Row(elem_classes="title-tab"):
                 gr.HTML("&nbsp;&nbsp;COMPARACIÓN DE SERIES TEMPORALES", elem_classes="title-text")
             
-
             # region SECCIÓN 1: SELECCIÓN DE LAS TRES SERIES TEMPORALES
-            ### SECCIÓN 1: SELECCIÓN DE LAS TRES SERIES TEMPORALES A COMPARAR
-            with gr.Row():
-                with gr.Column(elem_classes="custom-tab-2", scale=20):    
-                    gr.HTML("&nbsp;&nbsp;1. SELECCIÓN DE LAS SERIES TEMPORALES A COMPARAR", 
-                            elem_classes="subtitle-text")
-                with gr.Column(min_width=150):
-                    tend_button = gr.Button("Graficar", variant="primary", visible=True, 
-                                               elem_classes="custom-button3")
-            
-            with gr.Row():
-                with gr.Column():
-                    with gr.Row(elem_classes="custom-tab", min_height=350):
-                        with gr.Column(min_width=250):
+            with gr.Tab("Selección de las Series") as subtab_sel_series:
+               
+                with gr.Row():
+                    with gr.Column(elem_classes="custom-tab-2"):    
+                        gr.HTML("&nbsp;&nbsp;1. SELECCIÓN DE LAS SERIES TEMPORALES A COMPARAR", 
+                                elem_classes="subtitle-text")
+                
+                with gr.Row():
+                    with gr.Column():
+                        ### CULTIVO 1
+                        with gr.Column(elem_classes="custom-tab"):
                             with gr.Row():
-                                gr.HTML("CULTIVO", elem_classes="info-display-4")
-                                cult1 = gr.Dropdown(label="", 
-                                                    choices=["ARROZ", "AVENA", "GIRASOL", "MAÍZ", "POROTO",
-                                                    "SOJA", "SORGO", "TRIGO", "YERBA MATE"],
-                                                    value="ARROZ", elem_classes="custom-dropdown-small")
+                                with gr.Column(min_width=250):
+                                    with gr.Row():
+                                        gr.HTML("CULTIVO", elem_classes="info-display-4")
+                                        cult1 = gr.Dropdown(label="", 
+                                                            choices=["Elegir cultivo...", "ARROZ", "AVENA", "GIRASOL", "MAÍZ", "POROTO",
+                                                            "SOJA", "SORGO", "TRIGO", "YERBA MATE"],
+                                                            value="Elegir cultivo...", elem_classes="custom-dropdown-small")
+                                    with gr.Row():
+                                        gr.HTML("PROVINCIA", elem_classes="info-display-4")
+                                        prov1 = gr.Dropdown(label="", choices=[], elem_classes="custom-dropdown-small")
+                                    with gr.Row():
+                                        gr.HTML("ZONA", elem_classes="info-display-4")
+                                        dep1 = gr.Dropdown(label="", choices=[], elem_classes="custom-dropdown-small")
+                                    with gr.Row():
+                                        gr.HTML("INDICADOR", elem_classes="info-display-4")
+                                        var1 = gr.Dropdown(label="", choices=[], elem_classes="custom-dropdown-small")
+                                    with gr.Row():
+                                        gr.HTML("Inicio", elem_classes="info-display-4")
+                                        inicio1 = gr.HTML(elem_classes="info-display-5")
+                                        gr.HTML("Final", elem_classes="info-display-4")
+                                        final1 = gr.HTML(elem_classes="info-display-5")
+                                    with gr.Row():
+                                        gr.HTML("C/regs.", elem_classes="info-display-4")
+                                        regs1 = gr.HTML(elem_classes="info-display-5")
+                                        gr.HTML("S/regs.", elem_classes="info-display-4")
+                                        regsno1 = gr.HTML(elem_classes="info-display-5")
+
+                                with gr.Column(scale=20):
+                                    with gr.Row(visible=False, min_height=H_INTERACTIVO) as tend1_area:
+                                        tend1 = gr.Plot(show_label=False)
+
                             with gr.Row():
-                                gr.HTML("PROVINCIA", elem_classes="info-display-4")
-                                prov1 = gr.Dropdown(label="", choices=[], elem_classes="custom-dropdown-small")
-                            with gr.Row():
-                                gr.HTML("ZONA", elem_classes="info-display-4")
-                                dep1 = gr.Dropdown(label="", choices=[], elem_classes="custom-dropdown-small")
-                            with gr.Row():
-                                gr.HTML("INDICADOR", elem_classes="info-display-4")
-                                var1 = gr.Dropdown(label="", choices=[], elem_classes="custom-dropdown-small")
-                            with gr.Row():
-                                gr.HTML("Inicio", elem_classes="info-display-4")
-                                inicio1 = gr.HTML(elem_classes="info-display-5")
-                                gr.HTML("Final", elem_classes="info-display-4")
-                                final1 = gr.HTML(elem_classes="info-display-5")
-                            with gr.Row():
-                                gr.HTML("C/regs.", elem_classes="info-display-4")
-                                regs1 = gr.HTML(elem_classes="info-display-5")
-                                gr.HTML("S/regs.", elem_classes="info-display-4")
-                                regsno1 = gr.HTML(elem_classes="info-display-5")
-                            with gr.Row():
-                                imp1_button = gr.Button("Imputar", variant="primary", visible=True, 
-                                            elem_classes="custom-button3")
-                                noimp1_button = gr.Button("No Imputar", variant="primary", visible=True, 
-                                            elem_classes="custom-button3", interactive=False)
-                            with gr.Row():
-                                imp1_option = gr.Radio(label="Imputación",
+                                with gr.Column(min_width=80):
+                                    imp1_button = gr.Button("Imputar", variant="primary", visible=True, 
+                                            elem_classes="custom-button4", min_width=50)
+                                with gr.Column(min_width=80):
+                                    cut1_button = gr.Button("Cortar", variant="primary", visible=True, 
+                                            elem_classes="custom-button4", min_width=50)
+                                with gr.Column(scale=8):
+                                    imp1_option = gr.Radio(label="Imputación",
                                                 choices=["Interpolación lineal", 
                                                 "Interpolación polinómica",
                                                 "Media móvil (k=2)",
-                                                "Media móvil (k=3 atrás)",
-                                                "Meida móvil (k=3 cent.)"],
+                                                "Media móvil (k=3 hacia atrás)",
+                                                "Media móvil (k=3 centrada)"],
                                                 value="Interpolación lineal", type="index", 
                                                 show_label=False,
-                                                elem_classes="custom-radio")
-                        with gr.Column(scale=20):
-                            with gr.Row(visible=False) as tend1_area:
-                                tend1 = gr.Plot(show_label=False)
+                                                elem_classes=["custom-radio", "radio-horizontal", "special-margin1"])
+                            with gr.Row():
+                                with gr.Column(min_width=250):
+                                    rest1_button = gr.Button("Restaurar Serie", variant="primary", visible=True, 
+                                            elem_classes="custom-button5", min_width=50, 
+                                            interactive=False)
+                                with gr.Column(scale=8):
+                                    with gr.Row():
+                                        gr.HTML("Año inicial de la serie", elem_classes="info-display-4")
+                                        yinic1 = gr.Dropdown(show_label=False, choices=[], 
+                                                            elem_classes="custom-dropdown-small",
+                                                            interactive=True)
+                                        gr.HTML("Año final de la serie", elem_classes="info-display-4")
+                                        yfin1 = gr.Dropdown(show_label=False, choices=[], 
+                                                            elem_classes="custom-dropdown-small",
+                                                            interactive=True)
+                                        err1 = gr.HTML("<span>&nbsp;&nbsp;&nbsp;&nbsp;</span>",
+                                                    elem_classes="info-display-6")
+                        
+                        ### CULTIVO 2                
+                        with gr.Column(elem_classes="custom-tab"):
+                            with gr.Row():
+                                with gr.Column(min_width=250):
+                                    with gr.Row():
+                                        gr.HTML("CULTIVO", elem_classes="info-display-4")
+                                        cult2 = gr.Dropdown(label="", 
+                                                            choices=["Elegir cultivo...", "ARROZ", "AVENA", "GIRASOL", "MAÍZ", "POROTO",
+                                                            "SOJA", "SORGO", "TRIGO", "YERBA MATE"],
+                                                            value="Elegir cultivo...", elem_classes="custom-dropdown-small")
+                                    with gr.Row():
+                                        gr.HTML("PROVINCIA", elem_classes="info-display-4")
+                                        prov2 = gr.Dropdown(label="", choices=[], elem_classes="custom-dropdown-small")
+                                    with gr.Row():
+                                        gr.HTML("ZONA", elem_classes="info-display-4")
+                                        dep2 = gr.Dropdown(label="", choices=[], elem_classes="custom-dropdown-small")
+                                    with gr.Row():
+                                        gr.HTML("INDICADOR", elem_classes="info-display-4")
+                                        var2 = gr.Dropdown(label="", choices=[], elem_classes="custom-dropdown-small")
+                                    with gr.Row():
+                                        gr.HTML("Inicio", elem_classes="info-display-4")
+                                        inicio2 = gr.HTML(elem_classes="info-display-5")
+                                        gr.HTML("Final", elem_classes="info-display-4")
+                                        final2 = gr.HTML(elem_classes="info-display-5")
+                                    with gr.Row():
+                                        gr.HTML("C/regs.", elem_classes="info-display-4")
+                                        regs2 = gr.HTML(elem_classes="info-display-5")
+                                        gr.HTML("S/regs.", elem_classes="info-display-4")
+                                        regsno2 = gr.HTML(elem_classes="info-display-5")
+                                with gr.Column(scale=20):
+                                    with gr.Row(visible=False) as tend2_area:
+                                        tend2 = gr.Plot(show_label=False)
 
-                    with gr.Row(elem_classes="custom-tab", min_height=350):
-                        with gr.Column(min_width=250):
                             with gr.Row():
-                                gr.HTML("CULTIVO", elem_classes="info-display-4")
-                                cult2 = gr.Dropdown(label="", 
-                                                    choices=["ARROZ", "AVENA", "GIRASOL", "MAÍZ", "POROTO",
-                                                    "SOJA", "SORGO", "TRIGO", "YERBA MATE"],
-                                                    value="ARROZ", elem_classes="custom-dropdown-small")
+                                with gr.Column(min_width=80):
+                                    imp2_button = gr.Button("Imputar", variant="primary", visible=True, 
+                                            elem_classes="custom-button4", min_width=50)
+                                with gr.Column(min_width=80):
+                                    cut2_button = gr.Button("Cortar", variant="primary", visible=True, 
+                                            elem_classes="custom-button4", interactive=True, min_width=50)
+                                with gr.Column(scale=8):
+                                    imp2_option = gr.Radio(label="Imputación",
+                                                choices=["Interpolación lineal", 
+                                                "Interpolación polinómica",
+                                                "Media móvil (k=2)",
+                                                "Media móvil (k=3 hacia atrás)",
+                                                "Media móvil (k=3 centrada)"],
+                                                value="Interpolación lineal", type="index", 
+                                                show_label=False,
+                                                elem_classes=["custom-radio", "radio-horizontal", "special-margin1"])
                             with gr.Row():
-                                gr.HTML("PROVINCIA", elem_classes="info-display-4")
-                                prov2 = gr.Dropdown(label="", choices=[], elem_classes="custom-dropdown-small")
-                            with gr.Row():
-                                gr.HTML("ZONA", elem_classes="info-display-4")
-                                dep2 = gr.Dropdown(label="", choices=[], elem_classes="custom-dropdown-small")
-                            with gr.Row():
-                                gr.HTML("INDICADOR", elem_classes="info-display-4")
-                                var2 = gr.Dropdown(label="", choices=[], elem_classes="custom-dropdown-small")
-                            with gr.Row():
-                                gr.HTML("Inicio", elem_classes="info-display-4")
-                                inicio2 = gr.HTML(elem_classes="info-display-5")
-                                gr.HTML("Final", elem_classes="info-display-4")
-                                final2 = gr.HTML(elem_classes="info-display-5")
-                            with gr.Row():
-                                gr.HTML("C/regs.", elem_classes="info-display-4")
-                                regs2 = gr.HTML(elem_classes="info-display-5")
-                                gr.HTML("S/regs.", elem_classes="info-display-4")
-                                regsno2 = gr.HTML(elem_classes="info-display-5")
-                        with gr.Column(scale=20):
-                            with gr.Row(visible=False) as tend2_area:
-                                tend2 = gr.Plot(show_label=False)
+                                with gr.Column(min_width=250):
+                                    rest2_button = gr.Button("Restaurar Serie", variant="primary", visible=True, 
+                                            elem_classes="custom-button5", min_width=50, 
+                                            interactive=False)
+                                with gr.Column(scale=8):
+                                    with gr.Row():
+                                        gr.HTML("Año inicial de la serie", elem_classes="info-display-4")
+                                        yinic2 = gr.Dropdown(show_label=False, choices=[], 
+                                                            elem_classes="custom-dropdown-small",
+                                                            interactive=True)
+                                        gr.HTML("Año final de la serie", elem_classes="info-display-4")
+                                        yfin2 = gr.Dropdown(show_label=False, choices=[], 
+                                                            elem_classes="custom-dropdown-small",
+                                                            interactive=True)
+                                        err2 = gr.HTML("<span>&nbsp;&nbsp;&nbsp;&nbsp;</span>",
+                                                    elem_classes="info-display-6")
 
-                    with gr.Row(elem_classes="custom-tab", min_height=350):
-                        with gr.Column(min_width=250):
+                        ### CULTIVO 3
+                        with gr.Column(elem_classes="custom-tab"):
                             with gr.Row():
-                                gr.HTML("CULTIVO", elem_classes="info-display-4")
-                                cult3 = gr.Dropdown(label="", 
-                                                    choices=["ARROZ", "AVENA", "GIRASOL", "MAÍZ", "POROTO",
-                                                    "SOJA", "SORGO", "TRIGO", "YERBA MATE"],
-                                                    value="ARROZ", elem_classes="custom-dropdown-small")
-                            with gr.Row():
-                                gr.HTML("PROVINCIA", elem_classes="info-display-4")
-                                prov3 = gr.Dropdown(label="", choices=[], elem_classes="custom-dropdown-small")
-                            with gr.Row():
-                                gr.HTML("ZONA", elem_classes="info-display-4")
-                                dep3 = gr.Dropdown(label="", choices=[], elem_classes="custom-dropdown-small")
-                            with gr.Row():
-                                gr.HTML("INDICADOR", elem_classes="info-display-4")
-                                var3 = gr.Dropdown(label="", choices=[], elem_classes="custom-dropdown-small")
-                            with gr.Row():
-                                gr.HTML("Inicio", elem_classes="info-display-4")
-                                inicio3 = gr.HTML(elem_classes="info-display-5")
-                                gr.HTML("Final", elem_classes="info-display-4")
-                                final3 = gr.HTML(elem_classes="info-display-5")
-                            with gr.Row():
-                                gr.HTML("C/regs.", elem_classes="info-display-4")
-                                regs3 = gr.HTML(elem_classes="info-display-5")
-                                gr.HTML("S/regs.", elem_classes="info-display-4")
-                                regsno3 = gr.HTML(elem_classes="info-display-5")
-                        with gr.Column(scale=20):
-                            with gr.Row(visible=False) as tend3_area:
-                                tend3 = gr.Plot(show_label=False)
+                                with gr.Column(min_width=250):
+                                    with gr.Row():
+                                        gr.HTML("CULTIVO", elem_classes="info-display-4")
+                                        cult3 = gr.Dropdown(label="", 
+                                                            choices=["Elegir cultivo...", "ARROZ", "AVENA", "GIRASOL", "MAÍZ", "POROTO",
+                                                            "SOJA", "SORGO", "TRIGO", "YERBA MATE"],
+                                                            value="Elegir cultivo...", elem_classes="custom-dropdown-small")
+                                    with gr.Row():
+                                        gr.HTML("PROVINCIA", elem_classes="info-display-4")
+                                        prov3 = gr.Dropdown(label="", choices=[], elem_classes="custom-dropdown-small")
+                                    with gr.Row():
+                                        gr.HTML("ZONA", elem_classes="info-display-4")
+                                        dep3 = gr.Dropdown(label="", choices=[], elem_classes="custom-dropdown-small")
+                                    with gr.Row():
+                                        gr.HTML("INDICADOR", elem_classes="info-display-4")
+                                        var3 = gr.Dropdown(label="", choices=[], elem_classes="custom-dropdown-small")
+                                    with gr.Row():
+                                        gr.HTML("Inicio", elem_classes="info-display-4")
+                                        inicio3 = gr.HTML(elem_classes="info-display-5")
+                                        gr.HTML("Final", elem_classes="info-display-4")
+                                        final3 = gr.HTML(elem_classes="info-display-5")
+                                    with gr.Row():
+                                        gr.HTML("C/regs.", elem_classes="info-display-4")
+                                        regs3 = gr.HTML(elem_classes="info-display-5")
+                                        gr.HTML("S/regs.", elem_classes="info-display-4")
+                                        regsno3 = gr.HTML(elem_classes="info-display-5")
 
-                    with gr.Row(elem_classes="custom-tab"):
-                        with gr.Column():
+                                with gr.Column(scale=20):
+                                    with gr.Row(visible=False) as tend3_area:
+                                        tend3 = gr.Plot(show_label=False)
+
                             with gr.Row():
-                                with gr.Column(min_width=20):
-                                    gr.HTML("Opciones de gráficos:", elem_classes="title-group-2")
-                                with gr.Column(min_width=45):
-                                    graph_serie = gr.Checkbox(label="Serie", value=True, 
+                                with gr.Column(min_width=80):
+                                    imp3_button = gr.Button("Imputar", variant="primary", visible=True, 
+                                            elem_classes="custom-button4", min_width=50)
+                                with gr.Column(min_width=80):
+                                    cut3_button = gr.Button("Cortar", variant="primary", visible=True, 
+                                            elem_classes="custom-button4", interactive=True, min_width=50)
+                                with gr.Column(scale=8):
+                                    imp3_option = gr.Radio(label="Imputación",
+                                                choices=["Interpolación lineal", 
+                                                "Interpolación polinómica",
+                                                "Media móvil (k=2)",
+                                                "Media móvil (k=3 hacia atrás)",
+                                                "Media móvil (k=3 centrada)"],
+                                                value="Interpolación lineal", type="index", 
+                                                show_label=False,
+                                                elem_classes=["custom-radio", "radio-horizontal", "special-margin1"])
+                            with gr.Row():
+                                with gr.Column(min_width=250):
+                                    rest3_button = gr.Button("Restaurar Serie", variant="primary", visible=True, 
+                                            elem_classes="custom-button5", min_width=50, 
+                                            interactive=False)
+                                with gr.Column(scale=8):
+                                    with gr.Row():
+                                        gr.HTML("Año inicial de la serie", elem_classes="info-display-4")
+                                        yinic3 = gr.Dropdown(show_label=False, choices=[], 
+                                                            elem_classes="custom-dropdown-small",
+                                                            interactive=True)
+                                        gr.HTML("Año final de la serie", elem_classes="info-display-4")
+                                        yfin3 = gr.Dropdown(show_label=False, choices=[], 
+                                                            elem_classes="custom-dropdown-small",
+                                                            interactive=True)
+                                        err3 = gr.HTML("<span>&nbsp;&nbsp;&nbsp;&nbsp;</span>",
+                                                    elem_classes="info-display-6")
+
+                        with gr.Row(elem_classes="custom-tab"):
+                            with gr.Column():
+                                with gr.Row():
+                                    with gr.Column(min_width=20):
+                                        gr.HTML("Opciones de gráficos:", elem_classes="title-group-2")
+                                    with gr.Column(min_width=45):
+                                        graph_serie = gr.Checkbox(label="Serie", value=True, 
+                                                            elem_classes="custom-checkbox")
+                                    with gr.Column(min_width=45):
+                                        graph_mg = gr.Checkbox(label="Media", value=False, 
                                                         elem_classes="custom-checkbox")
-                                with gr.Column(min_width=45):
-                                    graph_mg = gr.Checkbox(label="Media", value=False, 
-                                                    elem_classes="custom-checkbox")
-                                with gr.Column(min_width=45):
-                                    graph_tend = gr.Checkbox(label="Tendencia", value=True, 
+                                    with gr.Column(min_width=45):
+                                        graph_tend = gr.Checkbox(label="Tendencia", value=True, 
+                                                            elem_classes="custom-checkbox")
+                                    with gr.Column(scale=5):
+                                        graph_mm = gr.Radio(label="Media Móvil:", choices=["No", "k = 2 atrás",
+                                                                "k = 3 atrás", "k = 3 centrado"],
+                                                                value="No", type="index", 
+                                                                elem_classes=["custom-radio", "radio-horizontal"])
+                                    with gr.Column(min_width=45):
+                                        graph_sd = gr.Checkbox(label="SD Móvil", value=False, 
                                                         elem_classes="custom-checkbox")
-                                with gr.Column(scale=5):
-                                    graph_mm = gr.Radio(label="Media Móvil:", choices=["No", "k = 2 atrás",
-                                                            "k = 3 atrás", "k = 3 centrado"],
-                                                            value="No", type="index", 
-                                                            elem_classes=["custom-radio", "radio-horizontal"])
-                                with gr.Column(min_width=45):
-                                    graph_sd = gr.Checkbox(label="SD Móvil", value=False, 
-                                                    elem_classes="custom-checkbox")
-                            
             # endregion SECCIÓN 1: SELECCIÓN DE LAS TRES SERIES TEMPORALES
 
-            # region SECCION 2: DESCOMPOSICIÓN DE LAS TRES SERIES TEMPORALES
-            ### SECCIÓN 2: DESCOMPOSICIÓN DE LAS TRES SERIES TEMPORALES APLICANDO EL MÉTODO STL
-            with gr.Row():
-                with gr.Column(elem_classes="custom-tab-2", scale=20):    
-                    gr.HTML("&nbsp;&nbsp;2. DESCOMPOSICIÓN DE LAS SERIES - MÉTODO STL (SEASONAL-TREND DECOMPOSITION USING LOESS) PARA SERIES CORTAS", 
-                            elem_classes="subtitle-text")
-                with gr.Column(min_width=150):
-                    STL_button = gr.Button("Calcular", variant="primary", visible=True, 
-                                               elem_classes="custom-button3")
-            
-            with gr.Row(elem_classes="custom-tab"):
-                with gr.Column():
-                    with gr.Row():
-                        STL_desc1 = gr.HTML("Descomposición de la Serie 1", elem_classes="info-display-3")
-                    with gr.Row():
-                        with gr.Column():                        
-                            STL_graph1 = gr.Plot(show_label=False, visible=False)
-                            STL_info1 = gr.HTML("Interpretación", visible=False)
+            # region SECCION 2: DESCOMPOSICIÓN DE LAS TRES SERIES TEMPORALES (MÉTODO STL)
+            with gr.Tab("Descomposición de las Series") as subtab_desc_series:
+                with gr.Row():
+                    with gr.Column(elem_classes="custom-tab-2", scale=20):    
+                        gr.HTML("&nbsp;&nbsp;2. DESCOMPOSICIÓN DE LAS SERIES - MÉTODO STL (SEASONAL-TREND DECOMPOSITION USING LOESS) PARA SERIES CORTAS", 
+                                elem_classes="subtitle-text")
+                    with gr.Column(min_width=150):
+                        STL_button = gr.Button("Calcular", variant="primary", visible=True, 
+                                                elem_classes="custom-button3")
+                
+                with gr.Row(elem_classes="custom-tab"):
+                    with gr.Column():
+                        with gr.Row():
+                            STL_desc1 = gr.HTML("Descomposición de la Serie 1", elem_classes="info-display-3")
+                        with gr.Row():
+                            with gr.Column():                        
+                                STL_graph1 = gr.Plot(show_label=False, visible=False)
+                                STL_info1 = gr.HTML("Interpretación", visible=False)
 
-                with gr.Column():
-                    with gr.Row():
-                        STL_desc2 = gr.HTML("Descomposición de la Serie 2", elem_classes="info-display-3")
-                    with gr.Row():
-                        with gr.Column():
-                            STL_graph2 = gr.Plot(show_label=False, visible=False)
-                            STL_info2 = gr.HTML("Interpretación", visible=False)
+                    with gr.Column():
+                        with gr.Row():
+                            STL_desc2 = gr.HTML("Descomposición de la Serie 2", elem_classes="info-display-3")
+                        with gr.Row():
+                            with gr.Column():
+                                STL_graph2 = gr.Plot(show_label=False, visible=False)
+                                STL_info2 = gr.HTML("Interpretación", visible=False)
 
-                with gr.Column():
-                    with gr.Row():
-                        STL_desc3 = gr.HTML("Descomposición de la Serie 3", elem_classes="info-display-3")
-                    with gr.Row():
-                        with gr.Column():
-                            STL_graph3 = gr.Plot(show_label=False, visible=False)
-                            STL_info3 = gr.HTML("Interpretación", visible=False)
+                    with gr.Column():
+                        with gr.Row():
+                            STL_desc3 = gr.HTML("Descomposición de la Serie 3", elem_classes="info-display-3")
+                        with gr.Row():
+                            with gr.Column():
+                                STL_graph3 = gr.Plot(show_label=False, visible=False)
+                                STL_info3 = gr.HTML("Interpretación", visible=False)
             # endregion SECCION 2: DESCOMPOSICIÓN DE LAS TRES SERIES TEMPORALES
 
             # region SECCIÓN 3: DIFERENCIACIÓN DE LAS SERIES Y PRUEBA ADF
-            ### CÁLCULO DEL TEST ADF PARA ESTACIONARIEDAD DE LAS TRES SERIES TEMPORALES
-            ### APLICANDO PREVIAMENTE LOS GRADOS DE DIFERENCIACIÓN INDICADOS
-            with gr.Row():
-                with gr.Column(elem_classes="custom-tab-2", scale=20):    
-                    gr.HTML("&nbsp;&nbsp;3. DIFERENCIACIÓN DE LAS SERIES Y PRUEBA DE DICKEY-FÜLLER AUMENTADA (ADF) PARA VERIFICAR ESTACIONARIEDAD", 
-                            elem_classes="subtitle-text")
-                with gr.Column(min_width=150):
-                    ADF_button = gr.Button("Calcular", variant="primary", visible=True, 
-                                               elem_classes="custom-button3")
+            with gr.Tab("Diferenciación de las Series") as subtab_dif_series:
+                with gr.Row():
+                    with gr.Column(elem_classes="custom-tab-2", scale=20):    
+                        gr.HTML("&nbsp;&nbsp;3. DIFERENCIACIÓN DE LAS SERIES Y PRUEBA DE DICKEY-FÜLLER AUMENTADA (ADF) PARA VERIFICAR ESTACIONARIEDAD", 
+                                elem_classes="subtitle-text")
+                    with gr.Column(min_width=150):
+                        ADF_button = gr.Button("Calcular", variant="primary", visible=True, 
+                                                elem_classes="custom-button3")
 
-            with gr.Row(elem_classes="custom-tab"):
-                with gr.Column():
-                    with gr.Row():
-                        ADF_desc1 = gr.HTML("Prueba ADF para la Serie 1", elem_classes="info-display-3")
-                    with gr.Row():
-                        leveldiff1 = gr.Radio(label="Grado de Diferenciación", choices=[0, 1, 2, 3, 4], value=0, visible=False)
-                    with gr.Row():
-                        diff_graph1 = gr.Plot(show_label=False, visible=False)
-                    with gr.Row():
-                        with gr.Column():                        
-                            ADF_info1 = gr.HTML("Interpretación", visible=False)
+                with gr.Row(elem_classes="custom-tab"):
+                    with gr.Column():
+                        with gr.Row():
+                            ADF_desc1 = gr.HTML("Prueba ADF para la Serie 1", elem_classes="info-display-3")
+                        with gr.Row():
+                            leveldiff1 = gr.Radio(label="Grado de Diferenciación", choices=[0, 1, 2, 3, 4], value=0, visible=False)
+                        with gr.Row():
+                            diff_graph1 = gr.Plot(show_label=False, visible=False)
+                        with gr.Row():
+                            with gr.Column():                        
+                                ADF_info1 = gr.HTML("Interpretación", visible=False)
 
-                with gr.Column():
-                    with gr.Row():
-                        ADF_desc2 = gr.HTML("Prueba ADF para la Serie 2", elem_classes="info-display-3")
-                    with gr.Row():
-                        leveldiff2 = gr.Radio(label="Grado de Diferenciación", choices=[0, 1, 2, 3, 4], value=0, visible=False)
-                    with gr.Row():
-                        diff_graph2 = gr.Plot(show_label=False, visible=False)                    
-                    with gr.Row():
-                        with gr.Column():
-                            ADF_info2 = gr.HTML("Interpretación", visible=False)
+                    with gr.Column():
+                        with gr.Row():
+                            ADF_desc2 = gr.HTML("Prueba ADF para la Serie 2", elem_classes="info-display-3")
+                        with gr.Row():
+                            leveldiff2 = gr.Radio(label="Grado de Diferenciación", choices=[0, 1, 2, 3, 4], value=0, visible=False)
+                        with gr.Row():
+                            diff_graph2 = gr.Plot(show_label=False, visible=False)                    
+                        with gr.Row():
+                            with gr.Column():
+                                ADF_info2 = gr.HTML("Interpretación", visible=False)
 
-                with gr.Column():
-                    with gr.Row():
-                        ADF_desc3 = gr.HTML("Prueba ADF para la Serie 3", elem_classes="info-display-3")
-                    with gr.Row():
-                        leveldiff3 = gr.Radio(label="Grado de Diferenciación", choices=[0, 1, 2, 3, 4], value=0, visible=False)
-                    with gr.Row():
-                        diff_graph3 = gr.Plot(show_label=False, visible=False)
-                    with gr.Row():
-                        with gr.Column():
-                            ADF_info3 = gr.HTML("Interpretación", visible=False)
+                    with gr.Column():
+                        with gr.Row():
+                            ADF_desc3 = gr.HTML("Prueba ADF para la Serie 3", elem_classes="info-display-3")
+                        with gr.Row():
+                            leveldiff3 = gr.Radio(label="Grado de Diferenciación", choices=[0, 1, 2, 3, 4], value=0, visible=False)
+                        with gr.Row():
+                            diff_graph3 = gr.Plot(show_label=False, visible=False)
+                        with gr.Row():
+                            with gr.Column():
+                                ADF_info3 = gr.HTML("Interpretación", visible=False)
             # endregion SECCIÓN 3: DIFERENCIACIÓN DE LAS SERIES Y PRUEBA ADF
 
             # region SECCIÓN 4: CÁLCULO DE AUTOCORRELACIONES DE LAS SERIES
-            ### SECCIÓN 4: CÁLCULO DE AUTOCORRELACIONES DE LAS TRES SERIES TEMPORALES
-            with gr.Row():
-                with gr.Column(elem_classes="custom-tab-2", scale=20):    
-                    gr.HTML("&nbsp;&nbsp;4. FUNCIONES DE AUTOCORRELACIÓN (ACF) Y DE AUTOCORRELACIÓN PARCIAL (PACF) DE LAS SERIES (DEBEN SER ESTACIONARIAS)", 
-                            elem_classes="subtitle-text")
-                with gr.Column(min_width=150):
-                    ACF_PACF_button = gr.Button("Calcular", variant="primary", visible=True, 
-                                               elem_classes="custom-button3")
+            with gr.Tab("ACF y PACF de las Series") as subtab_ACF_PACF:
+                with gr.Row():
+                    with gr.Column(elem_classes="custom-tab-2", scale=20):    
+                        gr.HTML("&nbsp;&nbsp;4. FUNCIONES DE AUTOCORRELACIÓN (ACF) Y DE AUTOCORRELACIÓN PARCIAL (PACF) DE LAS SERIES (DEBEN SER ESTACIONARIAS)", 
+                                elem_classes="subtitle-text")
+                    with gr.Column(min_width=150):
+                        ACF_PACF_button = gr.Button("Calcular", variant="primary", visible=True, 
+                                                elem_classes="custom-button3")
 
-            with gr.Row(elem_classes="custom-tab"):
-                with gr.Column():
-                    with gr.Row():
-                        ACF_desc1 = gr.HTML("Autocorrelación de la Serie 1", elem_classes="info-display-3")
-                    with gr.Row():
-                        with gr.Column():                        
-                            ACF_graph1 = gr.Plot(show_label=False, visible=False)
-                            ACF_info1 = gr.HTML("Interpretación ACF", visible=False)
-                            PACF_graph1 = gr.Plot(show_label=False, visible=False)
-                            PACF_info1 = gr.HTML("Interpretación PACF", visible=False)
+                with gr.Row(elem_classes="custom-tab"):
+                    with gr.Column():
+                        with gr.Row():
+                            ACF_desc1 = gr.HTML("Autocorrelación de la Serie 1", elem_classes="info-display-3")
+                        with gr.Row():
+                            with gr.Column():                        
+                                ACF_graph1 = gr.Plot(show_label=False, visible=False)
+                                ACF_info1 = gr.HTML("Interpretación ACF", visible=False)
+                                PACF_graph1 = gr.Plot(show_label=False, visible=False)
+                                PACF_info1 = gr.HTML("Interpretación PACF", visible=False)
 
-                with gr.Column():
-                    with gr.Row():
-                        ACF_desc2 = gr.HTML("Autocorrelación de la Serie 2", elem_classes="info-display-3")
-                    with gr.Row():
-                        with gr.Column():
-                            ACF_graph2 = gr.Plot(show_label=False, visible=False)
-                            ACF_info2 = gr.HTML("Interpretación ACF", visible=False)
-                            PACF_graph2 = gr.Plot(show_label=False, visible=False)
-                            PACF_info2 = gr.HTML("Interpretación PACF", visible=False)
+                    with gr.Column():
+                        with gr.Row():
+                            ACF_desc2 = gr.HTML("Autocorrelación de la Serie 2", elem_classes="info-display-3")
+                        with gr.Row():
+                            with gr.Column():
+                                ACF_graph2 = gr.Plot(show_label=False, visible=False)
+                                ACF_info2 = gr.HTML("Interpretación ACF", visible=False)
+                                PACF_graph2 = gr.Plot(show_label=False, visible=False)
+                                PACF_info2 = gr.HTML("Interpretación PACF", visible=False)
 
-                with gr.Column():
-                    with gr.Row():
-                        ACF_desc3 = gr.HTML("AutocorrelacióN de la Serie 3", elem_classes="info-display-3")
-                    with gr.Row():
-                        with gr.Column():
-                            ACF_graph3 = gr.Plot(show_label=False, visible=False)
-                            ACF_info3 = gr.HTML("Interpretación ACF", visible=False)
-                            PACF_graph3 = gr.Plot(show_label=False, visible=False)
-                            PACF_info3 = gr.HTML("Interpretación PACF", visible=False)
+                    with gr.Column():
+                        with gr.Row():
+                            ACF_desc3 = gr.HTML("AutocorrelacióN de la Serie 3", elem_classes="info-display-3")
+                        with gr.Row():
+                            with gr.Column():
+                                ACF_graph3 = gr.Plot(show_label=False, visible=False)
+                                ACF_info3 = gr.HTML("Interpretación ACF", visible=False)
+                                PACF_graph3 = gr.Plot(show_label=False, visible=False)
+                                PACF_info3 = gr.HTML("Interpretación PACF", visible=False)
             # endregion SECCIÓN 4: CÁLCULO DE AUTOCORRELACIONES DE LAS SERIES
 
             # region SECCIÓN 5: APLICACIÓN DEL MODELO ARIMA
-            with gr.Row():
-                with gr.Column(elem_classes="custom-tab-2", scale=20): 
-                    gr.HTML("&nbsp;&nbsp;5. APLICACIÓN DEL MODELO PREDICTIVO ARIMA",
-                            elem_classes="subtitle-text")
-                with gr.Column(min_width=150):
-                    ARIMA_button = gr.Button("Calcular", variant="primary", visible=True, 
-                                               elem_classes="custom-button3")
-                    
-            with gr.Row(elem_classes="custom-tab"):
-                gr.HTML("El modelo ARIMA(p, d, q) es adecuado para series con tendencia clara o que requieren "
-                        "diferenciación para ser estacionarias. Usa el PACF para el componente autoregresivo (p); "
-                        "el grado de diferenciación para el parámetro (d) y la ACF para el componente "
-                        "de media móvil (q). Si solo el primer o segundo retardo (lag) en ACF y PACF son significativos "
-                        "luego de la diferenciación, el modelo más adecuado es ARIMA(p, d, q).",
-                        elem_classes="info-display-2a")
-           
-            with gr.Row(elem_classes="custom-tab"):
-                with gr.Column():
-                    with gr.Row():
-                        ARIMA_desc1 = gr.HTML("ARIMA de la Serie 1", elem_classes="info-display-3")
-                    with gr.Row():
-                        with gr.Column():                        
-                            ARIMA_info1 = gr.HTML("Parámetros y Estadísticos de ARIMA", visible=False)
-                            ARIMA_graph1 = gr.Plot(show_label=False, visible=False)
-                            ARIMA_preds1 = gr.HTML("Tabla de Valores Predichos", visible=False)
-                            ARIMA_graph1_resids = gr.Plot(show_label=False, visible=False)
-                            ARIMA_resids1 = gr.HTML("Prueba Ljung-Box de Residuos", visible=False)
+            with gr.Tab("Modelo ARIMA") as subtab_ARIMA:
+                with gr.Row():
+                    with gr.Column(elem_classes="custom-tab-2", scale=20): 
+                        gr.HTML("&nbsp;&nbsp;5. APLICACIÓN DEL MODELO PREDICTIVO ARIMA",
+                                elem_classes="subtitle-text")
+                    with gr.Column(min_width=150):
+                        ARIMA_button = gr.Button("Calcular", variant="primary", visible=True, 
+                                                elem_classes="custom-button3")
+                        
+                with gr.Row(elem_classes="custom-tab"):
+                    gr.HTML("El modelo ARIMA(p, d, q) es adecuado para series con tendencia clara o que requieren "
+                            "diferenciación para ser estacionarias. Usa el PACF para el componente autoregresivo (p); "
+                            "el grado de diferenciación para el parámetro (d) y la ACF para el componente "
+                            "de media móvil (q). Si solo el primer o segundo retardo (lag) en ACF y PACF son significativos "
+                            "luego de la diferenciación, el modelo más adecuado es ARIMA(p, d, q).",
+                            elem_classes="info-display-2a")
+            
+                with gr.Row(elem_classes="custom-tab"):
+                    with gr.Column():
+                        with gr.Row():
+                            ARIMA_desc1 = gr.HTML("ARIMA de la Serie 1", elem_classes="info-display-3")
+                        with gr.Row():
+                            with gr.Column():                        
+                                ARIMA_info1 = gr.HTML("Parámetros y Estadísticos de ARIMA", visible=False)
+                                ARIMA_graph1 = gr.Plot(show_label=False, visible=False)
+                                ARIMA_preds1 = gr.HTML("Tabla de Valores Predichos", visible=False)
+                                ARIMA_graph1_resids = gr.Plot(show_label=False, visible=False)
+                                ARIMA_resids1 = gr.HTML("Prueba Ljung-Box de Residuos", visible=False)
 
-                with gr.Column():
-                    with gr.Row():
-                        ARIMA_desc2 = gr.HTML("ARIMA de la Serie 2", elem_classes="info-display-3")
-                    with gr.Row():
-                        with gr.Column():
-                            ARIMA_info2 = gr.HTML("Parámetros y Estadísticos de ARIMA", visible=False)
-                            ARIMA_graph2 = gr.Plot(show_label=False, visible=False)
-                            ARIMA_preds2 = gr.HTML("Tabla de Valores Predichos", visible=False)
-                            ARIMA_graph2_resids = gr.Plot(show_label=False, visible=False)
-                            ARIMA_resids2 = gr.HTML("Prueba Ljung-Box de Residuos", visible=False)
+                    with gr.Column():
+                        with gr.Row():
+                            ARIMA_desc2 = gr.HTML("ARIMA de la Serie 2", elem_classes="info-display-3")
+                        with gr.Row():
+                            with gr.Column():
+                                ARIMA_info2 = gr.HTML("Parámetros y Estadísticos de ARIMA", visible=False)
+                                ARIMA_graph2 = gr.Plot(show_label=False, visible=False)
+                                ARIMA_preds2 = gr.HTML("Tabla de Valores Predichos", visible=False)
+                                ARIMA_graph2_resids = gr.Plot(show_label=False, visible=False)
+                                ARIMA_resids2 = gr.HTML("Prueba Ljung-Box de Residuos", visible=False)
 
-                with gr.Column():
-                    with gr.Row():
-                        ARIMA_desc3 = gr.HTML("ARIMA de la Serie 3", elem_classes="info-display-3")
-                    with gr.Row():
-                        with gr.Column():
-                            ARIMA_info3 = gr.HTML("Parámetros y Estadísticos de ARIMA", visible=False)
-                            ARIMA_graph3 = gr.Plot(show_label=False, visible=False)
-                            ARIMA_preds3 = gr.HTML("Tabla de Valores Predichos", visible=False)
-                            ARIMA_graph3_resids = gr.Plot(show_label=False, visible=False)
-                            ARIMA_resids3 = gr.HTML("Prueba Ljung-Box de Residuos", visible=False)
-                            
-
+                    with gr.Column():
+                        with gr.Row():
+                            ARIMA_desc3 = gr.HTML("ARIMA de la Serie 3", elem_classes="info-display-3")
+                        with gr.Row():
+                            with gr.Column():
+                                ARIMA_info3 = gr.HTML("Parámetros y Estadísticos de ARIMA", visible=False)
+                                ARIMA_graph3 = gr.Plot(show_label=False, visible=False)
+                                ARIMA_preds3 = gr.HTML("Tabla de Valores Predichos", visible=False)
+                                ARIMA_graph3_resids = gr.Plot(show_label=False, visible=False)
+                                ARIMA_resids3 = gr.HTML("Prueba Ljung-Box de Residuos", visible=False)
             # endregion SECCIÓN 5: APLICACIÓN DEL MODELO ARIMA
 
+            # region SECCIÓN 6: TRANSFORMADAS DE FOURIER
+            with gr.Tab("Transformadas de Fourier") as subtab_fourier:
+                with gr.Row(elem_classes="custom-tab-2"):    
+                    gr.HTML("&nbsp;&nbsp;7. TRANSFORMADA DE FOURIER PARA LAS SERIES TEMPORALES A COMPARAR", elem_classes="subtitle-text")              
+            # enderegion SECCIÓN 6: TRANSFORMADAS DE FOURIER
 
 
-            with gr.Row(elem_classes="custom-tab-2"):    
-                gr.HTML("&nbsp;&nbsp;6. PREDICCIÓN DE LAS SERIES", elem_classes="subtitle-text")
-           
-            with gr.Row(elem_classes="custom-tab-2"):    
-                gr.HTML("&nbsp;&nbsp;7. TRANSFORMADA DE FOURIER PARA LAS SERIES TEMPORALES A COMPARAR", elem_classes="subtitle-text")              
-
-
-
-
-            """
-            cult.change(
-                fn = tab_ST_on_cult_change,
-                inputs = [cult],
-                outputs = [dataset_state,
-                            prov1, dep1, var1, tend1_area,
-                            prov2, dep2, var2, tend2_area,
-                            prov3, dep3, var3, tend3_area,
-                            inicio1, final1, regs1, regsno1,
-                            inicio2, final2, regs2, regsno2,
-                            inicio3, final3, regs3, regsno3,
-                            dataset_filter_state_1, dataset_filter_state_2, dataset_filter_state_3,
-                            dataset_diff_state_1, dataset_diff_state_2, dataset_diff_state_3,
-                            STL_desc1, STL_desc2, STL_desc3,
-                            STL_graph1, STL_graph2, STL_graph3,
-                            STL_info1, STL_info2, STL_info3,
-                            ADF_desc1, ADF_desc2, ADF_desc3,
-                            leveldiff1, leveldiff2, leveldiff3,
-                            level_diff_state_1, level_diff_state_2, level_diff_state_3,
-                            diff_graph1, diff_graph2, diff_graph3,
-                            ADF_info1, ADF_info2, ADF_info3,
-                            ACF_desc1, ACF_desc2, ACF_desc3,
-                            ACF_graph1, ACF_graph2, ACF_graph3,
-                            ACF_info1, ACF_info2, ACF_info3,
-                            PACF_graph1, PACF_graph2, PACF_graph3,
-                            PACF_info1, PACF_info2, PACF_info3,
-                            ARIMA_p_1, ARIMA_p_2, ARIMA_p_3,
-                            ARIMA_q_1, ARIMA_q_2, ARIMA_q_3,
-                            ARIMA_desc1, ARIMA_desc2, ARIMA_desc3,
-                            ARIMA_info1, ARIMA_info2, ARIMA_info3,
-                            ARIMA_graph1, ARIMA_graph2, ARIMA_graph3,
-                            ARIMA_preds1, ARIMA_preds2, ARIMA_preds3,
-                            ARIMA_graph1_resids, ARIMA_graph2_resids, ARIMA_graph3_resids,
-                            ARIMA_resids1, ARIMA_resids2, ARIMA_resids3]
-            )
-            """
             cult1.change(
                 fn = tab_ST_on_cult_change,
-                inputs = [cult1],
-                outputs = [dataset_state_1,
-                            cult1, prov1, dep1, var1, tend1_area,
+                inputs = [cult1, graph_serie, graph_mg, graph_tend, graph_mm, graph_sd],
+                outputs = [dataset_state_1, dataset_filter_state_1, dataset_diff_state_1,
+                            cult1, prov1, dep1, var1,
                             inicio1, final1, regs1, regsno1,
+                            imp1_button, cut1_button, imp1_option, 
+                            rest1_button, yinic1, yfin1, err1,
+                            tend1_area, tend1,
                             dataset_filter_state_1, dataset_diff_state_1,
                             STL_desc1, STL_graph1, STL_info1,
                             ADF_desc1, leveldiff1, level_diff_state_1, diff_graph1, ADF_info1,
@@ -3337,10 +3557,13 @@ with gr.Blocks(title="Análisis de Cultivos") as app:
 
             cult2.change(
                 fn = tab_ST_on_cult_change,
-                inputs = [cult2],
-                outputs = [dataset_state_2,
-                            cult2, prov2, dep2, var2, tend2_area,
+                inputs = [cult2, graph_serie, graph_mg, graph_tend, graph_mm, graph_sd],
+                outputs = [dataset_state_2, dataset_filter_state_2, dataset_diff_state_2,
+                            cult2, prov2, dep2, var2,
                             inicio2, final2, regs2, regsno2,
+                            imp2_button, cut2_button, imp2_option, 
+                            rest2_button, yinic2, yfin2, err2, 
+                            tend2_area, tend2,
                             dataset_filter_state_2, dataset_diff_state_2,
                             STL_desc2, STL_graph2, STL_info2,
                             ADF_desc2, leveldiff2, level_diff_state_2, diff_graph2, ADF_info2,
@@ -3353,10 +3576,13 @@ with gr.Blocks(title="Análisis de Cultivos") as app:
 
             cult3.change(
                 fn = tab_ST_on_cult_change,
-                inputs = [cult3],
-                outputs = [dataset_state_3,
-                            cult3, prov3, dep3, var3, tend3_area,
+                inputs = [cult3, graph_serie, graph_mg, graph_tend, graph_mm, graph_sd],
+                outputs = [dataset_state_3, dataset_filter_state_3, dataset_diff_state_3,
+                            cult3, prov3, dep3, var3,
                             inicio3, final3, regs3, regsno3,
+                            imp3_button, cut3_button, imp3_option, 
+                            rest3_button, yinic3, yfin3, err3,
+                            tend3_area, tend3,
                             dataset_filter_state_3, dataset_diff_state_3,
                             STL_desc3, STL_graph3, STL_info3,
                             ADF_desc3, leveldiff3, level_diff_state_3, diff_graph3, ADF_info3,
@@ -3369,9 +3595,13 @@ with gr.Blocks(title="Análisis de Cultivos") as app:
 
             prov1.change(
                 fn = tab_ST_on_prov_change,
-                inputs = [dataset_state_1, cult1, prov1, var1],
+                inputs = [dataset_state_1, cult1, prov1, var1,
+                            graph_serie, graph_mg, graph_tend, graph_mm, graph_sd],
                 outputs = [dataset_filter_state_1, dataset_diff_state_1,
-                            dep1, inicio1, final1, regs1, regsno1, tend1_area,
+                            dep1, inicio1, final1, regs1, regsno1,
+                            imp1_button, cut1_button, rest1_button, 
+                            yinic1, yfin1, err1,
+                            tend1_area, tend1,
                             STL_desc1, STL_graph1, STL_info1,
                             ADF_desc1, leveldiff1, diff_graph1, ADF_info1,
                             level_diff_state_1,
@@ -3384,9 +3614,13 @@ with gr.Blocks(title="Análisis de Cultivos") as app:
 
             prov2.change(
                 fn = tab_ST_on_prov_change,
-                inputs = [dataset_state_2, cult2, prov2, var2],
+                inputs = [dataset_state_2, cult2, prov2, var2,
+                            graph_serie, graph_mg, graph_tend, graph_mm, graph_sd],
                 outputs = [dataset_filter_state_2, dataset_diff_state_2,
-                            dep2, inicio2, final2, regs2, regsno2, tend2_area, 
+                            dep2, inicio2, final2, regs2, regsno2,
+                            imp2_button, cut2_button, rest2_button, 
+                            yinic2, yfin2, err2,
+                            tend2_area, tend2,
                             STL_desc2, STL_graph2, STL_info2,
                             ADF_desc2, leveldiff2, diff_graph2, ADF_info2,
                             level_diff_state_2,
@@ -3399,9 +3633,13 @@ with gr.Blocks(title="Análisis de Cultivos") as app:
             
             prov3.change(
                 fn = tab_ST_on_prov_change,
-                inputs = [dataset_state_3, cult3, prov3, var3],
+                inputs = [dataset_state_3, cult3, prov3, var3,
+                            graph_serie, graph_mg, graph_tend, graph_mm, graph_sd],
                 outputs = [dataset_filter_state_3, dataset_diff_state_3,
-                            dep3, inicio3, final3, regs3, regsno3, tend3_area, 
+                            dep3, inicio3, final3, regs3, regsno3, 
+                            imp3_button, cut3_button, rest3_button, 
+                            yinic3, yfin3, err3,
+                            tend3_area, tend3,
                             STL_desc3, STL_graph3, STL_info3,
                             ADF_desc3, leveldiff3, diff_graph3, ADF_info3,
                             level_diff_state_3,
@@ -3414,9 +3652,13 @@ with gr.Blocks(title="Análisis de Cultivos") as app:
             
             dep1.change(
                 fn = tab_ST_on_option_change,
-                inputs = [dataset_state_1, cult1, prov1, dep1, var1],
+                inputs = [dataset_state_1, cult1, prov1, dep1, var1,
+                            graph_serie, graph_mg, graph_tend, graph_mm, graph_sd],
                 outputs = [dataset_filter_state_1, dataset_diff_state_1,
-                            inicio1, final1, regs1, regsno1, tend1_area, 
+                            inicio1, final1, regs1, regsno1, 
+                            imp1_button, cut1_button, rest1_button, 
+                            yinic1, yfin1, err1,
+                            tend1_area, tend1,
                             STL_desc1, STL_graph1, STL_info1,
                             ADF_desc1, leveldiff1, diff_graph1, ADF_info1,
                             level_diff_state_1,
@@ -3429,9 +3671,13 @@ with gr.Blocks(title="Análisis de Cultivos") as app:
 
             dep2.change(
                 fn = tab_ST_on_option_change,
-                inputs = [dataset_state_2, cult2, prov2, dep2, var2],
+                inputs = [dataset_state_2, cult2, prov2, dep2, var2,
+                            graph_serie, graph_mg, graph_tend, graph_mm, graph_sd],
                 outputs = [dataset_filter_state_2, dataset_diff_state_2, 
-                            inicio2, final2, regs2, regsno2, tend2_area,
+                            inicio2, final2, regs2, regsno2, 
+                            imp2_button, cut2_button, rest2_button, 
+                            yinic2, yfin2, err2,
+                            tend2_area, tend2,
                             STL_desc2, STL_graph2, STL_info2,
                             ADF_desc2, leveldiff2, diff_graph2, ADF_info2,
                             level_diff_state_2,
@@ -3444,9 +3690,13 @@ with gr.Blocks(title="Análisis de Cultivos") as app:
 
             dep3.change(
                 fn = tab_ST_on_option_change,
-                inputs = [dataset_state_3, cult3, prov3, dep3, var3],
+                inputs = [dataset_state_3, cult3, prov3, dep3, var3,
+                            graph_serie, graph_mg, graph_tend, graph_mm, graph_sd],
                 outputs = [dataset_filter_state_3, dataset_diff_state_3, 
-                            inicio3, final3, regs3, regsno3, tend3_area, 
+                            inicio3, final3, regs3, regsno3, 
+                            imp3_button, cut3_button, rest3_button, 
+                            yinic3, yfin3, err3,
+                            tend3_area, tend3,
                             STL_desc3, STL_graph3, STL_info3,
                             ADF_desc3, leveldiff3, diff_graph3, ADF_info3,
                             level_diff_state_3, 
@@ -3459,9 +3709,13 @@ with gr.Blocks(title="Análisis de Cultivos") as app:
 
             var1.change(
                 fn = tab_ST_on_option_change,
-                inputs = [dataset_state_1, cult1, prov1, dep1, var1],
+                inputs = [dataset_state_1, cult1, prov1, dep1, var1,
+                            graph_serie, graph_mg, graph_tend, graph_mm, graph_sd],
                 outputs = [dataset_filter_state_1, dataset_diff_state_1,
-                            inicio1, final1, regs1, regsno1, tend1_area, 
+                            inicio1, final1, regs1, regsno1, 
+                            imp1_button, cut1_button, rest1_button, 
+                            yinic1, yfin1, err1,
+                            tend1_area, tend1,
                             STL_desc1, STL_graph1, STL_info1,
                             ADF_desc1, leveldiff1, diff_graph1, ADF_info1,
                             level_diff_state_1,
@@ -3474,9 +3728,13 @@ with gr.Blocks(title="Análisis de Cultivos") as app:
             
             var2.change(
                 fn = tab_ST_on_option_change,
-                inputs = [dataset_state_2, cult2, prov2, dep2, var2],
+                inputs = [dataset_state_2, cult2, prov2, dep2, var2,
+                            graph_serie, graph_mg, graph_tend, graph_mm, graph_sd],
                 outputs = [dataset_filter_state_2, dataset_diff_state_2,
-                            inicio2, final2, regs2, regsno2, tend2_area,
+                            inicio2, final2, regs2, regsno2, 
+                            imp2_button, cut2_button, rest2_button, 
+                            yinic2, yfin2, err2,
+                            tend2_area, tend2,
                             STL_desc2, STL_graph2, STL_info2,
                             ADF_desc2, leveldiff2, diff_graph2, ADF_info2,
                             level_diff_state_2,
@@ -3489,9 +3747,13 @@ with gr.Blocks(title="Análisis de Cultivos") as app:
 
             var3.change(
                 fn = tab_ST_on_option_change,
-                inputs = [dataset_state_3, cult3, prov3, dep3, var3],
+                inputs = [dataset_state_3, cult3, prov3, dep3, var3,
+                            graph_serie, graph_mg, graph_tend, graph_mm, graph_sd],
                 outputs = [dataset_filter_state_3, dataset_diff_state_3,
-                            inicio3, final3, regs3, regsno3, tend3_area, 
+                            inicio3, final3, regs3, regsno3, 
+                            imp3_button, cut3_button, rest3_button, 
+                            yinic3, yfin3, err3,
+                            tend3_area, tend3,
                             STL_desc3, STL_graph3, STL_info3,
                             ADF_desc3, leveldiff3, diff_graph3, ADF_info3,
                             level_diff_state_3, 
@@ -3537,47 +3799,6 @@ with gr.Blocks(title="Análisis de Cultivos") as app:
                 outputs = [tend1_area, tend2_area, tend3_area, tend1, tend2, tend3]
             )
 
-            tab_ST.select(
-                fn = tab_ST_on_cult_change_all,
-                inputs = [cult1, cult2, cult3],
-                outputs = [dataset_state_1,
-                            cult1, prov1, dep1, var1, tend1_area,
-                            inicio1, final1, regs1, regsno1,
-                            dataset_filter_state_1, dataset_diff_state_1,
-                            STL_desc1, STL_graph1, STL_info1,
-                            ADF_desc1, leveldiff1, level_diff_state_1, 
-                            diff_graph1, ADF_info1,
-                            ACF_desc1, ACF_graph1, ACF_info1,
-                            PACF_graph1, PACF_info1,
-                            ARIMA_p_1, ARIMA_q_1, ARIMA_desc1,
-                            ARIMA_info1, ARIMA_graph1, ARIMA_preds1,
-                            ARIMA_graph1_resids, ARIMA_resids1,
-                            dataset_state_2,
-                            cult2, prov2, dep2, var2, tend2_area,
-                            inicio2, final2, regs2, regsno2,
-                            dataset_filter_state_2, dataset_diff_state_2,
-                            STL_desc2, STL_graph2, STL_info2,
-                            ADF_desc2, leveldiff2, level_diff_state_2, 
-                            diff_graph2, ADF_info2,
-                            ACF_desc2, ACF_graph2, ACF_info2,
-                            PACF_graph2, PACF_info2,
-                            ARIMA_p_2, ARIMA_q_2, ARIMA_desc2,
-                            ARIMA_info2, ARIMA_graph2, ARIMA_preds2,
-                            ARIMA_graph2_resids, ARIMA_resids2,
-                            dataset_state_3,
-                            cult3, prov3, dep3, var3, tend3_area,
-                            inicio3, final3, regs3, regsno3,
-                            dataset_filter_state_3, dataset_diff_state_3,
-                            STL_desc3, STL_graph3, STL_info3,
-                            ADF_desc3, leveldiff3, level_diff_state_3, 
-                            diff_graph3, ADF_info3,
-                            ACF_desc3, ACF_graph3, ACF_info3,
-                            PACF_graph3, PACF_info3,
-                            ARIMA_p_3, ARIMA_q_3, ARIMA_desc3,
-                            ARIMA_info3, ARIMA_graph3, ARIMA_preds3,
-                            ARIMA_graph3_resids, ARIMA_resids3]
-                )
-
             leveldiff1.change(
                 fn = tab_ST_on_level_change,
                 outputs = [diff_graph1, ADF_info1, level_diff_state_1,
@@ -3605,17 +3826,166 @@ with gr.Blocks(title="Análisis de Cultivos") as app:
                             ARIMA_graph3_resids, ARIMA_resids3]
             )
 
-            tend_button.click(
-                fn = tab_ST_on_graph_change,
-                inputs = [dataset_filter_state_1, dataset_filter_state_2, dataset_filter_state_3,
-                            var1, var2, var3, graph_serie, graph_mg, graph_tend, graph_mm, graph_sd],
-                outputs = [tend1_area, tend2_area, tend3_area, tend1, tend2, tend3]
+            imp1_button.click(
+                fn = tab_ST_imputar_df,
+                inputs = [dataset_filter_state_1, imp1_option, var1, 
+                            graph_serie, graph_mg, graph_tend, graph_mm, graph_sd],
+                outputs = [dataset_filter_state_1, regs1, regsno1, 
+                            yinic1, yfin1, err1,
+                            imp1_button, rest1_button,
+                            tend1_area, tend1,
+                            STL_desc1, STL_graph1, STL_info1,
+                            ADF_desc1, leveldiff1, diff_graph1, ADF_info1,
+                            level_diff_state_1,
+                            ACF_desc1, ACF_graph1, ACF_info1,
+                            PACF_graph1, PACF_info1,
+                            ARIMA_p_1, ARIMA_q_1,
+                            ARIMA_desc1, ARIMA_info1, ARIMA_graph1, ARIMA_preds1,
+                            ARIMA_graph1_resids, ARIMA_resids1]
             )
 
-            imp1_button.click(
-                fn = tab_ST_on_imputacion_change,
-                inputs = [dataset_filter_state_1, imp1_option],
-                outputs = [dataset_filter_state_1, regs1, regsno1, imp1_button, noimp1_button]
+            imp2_button.click(
+                fn = tab_ST_imputar_df,
+                inputs = [dataset_filter_state_2, imp2_option, var2, 
+                            graph_serie, graph_mg, graph_tend, graph_mm, graph_sd],
+                outputs = [dataset_filter_state_2, regs2, regsno2, 
+                            yinic2, yfin2, err2,
+                            imp2_button, rest2_button,
+                            tend2_area, tend2,
+                            STL_desc2, STL_graph2, STL_info2,
+                            ADF_desc2, leveldiff2, diff_graph2, ADF_info2,
+                            level_diff_state_2,
+                            ACF_desc2, ACF_graph2, ACF_info2,
+                            PACF_graph2, PACF_info2,
+                            ARIMA_p_2, ARIMA_q_2,
+                            ARIMA_desc2, ARIMA_info2, ARIMA_graph2, ARIMA_preds2,
+                            ARIMA_graph2_resids, ARIMA_resids2]
+            )
+
+            imp3_button.click(
+                fn = tab_ST_imputar_df,
+                inputs = [dataset_filter_state_3, imp3_option, var3, 
+                            graph_serie, graph_mg, graph_tend, graph_mm, graph_sd],
+                outputs = [dataset_filter_state_3, regs3, regsno3, 
+                            yinic3, yfin3, err3,
+                            imp3_button, rest3_button,
+                            tend3_area, tend3,
+                            STL_desc3, STL_graph3, STL_info3,
+                            ADF_desc3, leveldiff3, diff_graph3, ADF_info3,
+                            level_diff_state_3, 
+                            ACF_desc3, ACF_graph3, ACF_info3,
+                            PACF_graph3, PACF_info3,
+                            ARIMA_p_3, ARIMA_q_3,
+                            ARIMA_desc3, ARIMA_info3, ARIMA_graph3, ARIMA_preds3,
+                            ARIMA_graph3_resids, ARIMA_resids3]
+            )
+
+            rest1_button.click(
+                fn = tab_ST_restaurar_df,
+                inputs = [dataset_state_1, cult1, prov1, dep1, var1, 
+                            graph_serie, graph_mg, graph_tend, graph_mm, graph_sd],
+                outputs = [dataset_filter_state_1,
+                            inicio1, final1, regs1, regsno1, yinic1, yfin1, err1,
+                            imp1_button, cut1_button, rest1_button, 
+                            tend1_area, tend1,
+                            STL_desc1, STL_graph1, STL_info1,
+                            ADF_desc1, leveldiff1, diff_graph1, ADF_info1,
+                            level_diff_state_1,
+                            ACF_desc1, ACF_graph1, ACF_info1,
+                            PACF_graph1, PACF_info1,
+                            ARIMA_p_1, ARIMA_q_1,
+                            ARIMA_desc1, ARIMA_info1, ARIMA_graph1, ARIMA_preds1,
+                            ARIMA_graph1_resids, ARIMA_resids1]
+            )
+
+            rest2_button.click(
+                fn = tab_ST_restaurar_df,
+                inputs = [dataset_state_2, cult2, prov2, dep2, var2, 
+                            graph_serie, graph_mg, graph_tend, graph_mm, graph_sd],
+                outputs = [dataset_filter_state_2,
+                            inicio2, final2, regs2, regsno2, yinic2, yfin2, err2,
+                            imp2_button, cut2_button, rest2_button,
+                            tend2_area, tend2,
+                            STL_desc2, STL_graph2, STL_info2,
+                            ADF_desc2, leveldiff2, diff_graph2, ADF_info2,
+                            level_diff_state_2,
+                            ACF_desc2, ACF_graph2, ACF_info2,
+                            PACF_graph2, PACF_info2,
+                            ARIMA_p_2, ARIMA_q_2,
+                            ARIMA_desc2, ARIMA_info2, ARIMA_graph2, ARIMA_preds2,
+                            ARIMA_graph2_resids, ARIMA_resids2]
+            )
+
+            rest3_button.click(
+                fn = tab_ST_restaurar_df,
+                inputs = [dataset_state_3, cult3, prov3, dep3, var3, 
+                            graph_serie, graph_mg, graph_tend, graph_mm, graph_sd],
+                outputs = [dataset_filter_state_3,
+                            inicio3, final3, regs3, regsno3, yinic3, yfin3, err3,
+                            imp3_button, cut3_button, rest3_button,
+                            tend3_area, tend3,
+                            STL_desc3, STL_graph3, STL_info3,
+                            ADF_desc3, leveldiff3, diff_graph3, ADF_info3,
+                            level_diff_state_3, 
+                            ACF_desc3, ACF_graph3, ACF_info3,
+                            PACF_graph3, PACF_info3,
+                            ARIMA_p_3, ARIMA_q_3,
+                            ARIMA_desc3, ARIMA_info3, ARIMA_graph3, ARIMA_preds3,
+                            ARIMA_graph3_resids, ARIMA_resids3]
+            )
+
+            cut1_button.click(
+                fn = tab_ST_cortar_df,
+                inputs = [dataset_filter_state_1, var1, yinic1, yfin1,
+                            graph_serie, graph_mg, graph_tend, graph_mm, graph_sd],
+                outputs = [dataset_filter_state_1, inicio1, final1, regs1, regsno1,
+                            yinic1, yfin1, err1,
+                            cut1_button, rest1_button,
+                            tend1_area, tend1,
+                            STL_desc1, STL_graph1, STL_info1,
+                            ADF_desc1, leveldiff1, diff_graph1, ADF_info1,
+                            level_diff_state_1,
+                            ACF_desc1, ACF_graph1, ACF_info1,
+                            PACF_graph1, PACF_info1,
+                            ARIMA_p_1, ARIMA_q_1,
+                            ARIMA_desc1, ARIMA_info1, ARIMA_graph1, ARIMA_preds1,
+                            ARIMA_graph1_resids, ARIMA_resids1]
+            )
+            
+            cut2_button.click(
+                fn = tab_ST_cortar_df,
+                inputs = [dataset_filter_state_2, var2, yinic2, yfin2,
+                            graph_serie, graph_mg, graph_tend, graph_mm, graph_sd],
+                outputs = [dataset_filter_state_2, inicio2, final2, regs2, regsno2,
+                            yinic2, yfin2, err2,
+                            cut2_button, rest2_button,
+                            tend2_area, tend2,
+                            STL_desc2, STL_graph2, STL_info2,
+                            ADF_desc2, leveldiff2, diff_graph2, ADF_info2,
+                            level_diff_state_2,
+                            ACF_desc2, ACF_graph2, ACF_info2,
+                            PACF_graph2, PACF_info2,
+                            ARIMA_p_2, ARIMA_q_2,
+                            ARIMA_desc2, ARIMA_info2, ARIMA_graph2, ARIMA_preds2,
+                            ARIMA_graph2_resids, ARIMA_resids2]
+            )
+
+            cut3_button.click(
+                fn = tab_ST_cortar_df,
+                inputs = [dataset_filter_state_3, var3, yinic3, yfin3,
+                            graph_serie, graph_mg, graph_tend, graph_mm, graph_sd],
+                outputs = [dataset_filter_state_3, inicio3, final3, regs3, regsno3,
+                            yinic3, yfin3, err3,
+                            cut3_button, rest3_button,
+                            tend3_area, tend3,
+                            STL_desc3, STL_graph3, STL_info3,
+                            ADF_desc3, leveldiff3, diff_graph3, ADF_info3,
+                            level_diff_state_3, 
+                            ACF_desc3, ACF_graph3, ACF_info3,
+                            PACF_graph3, PACF_info3,
+                            ARIMA_p_3, ARIMA_q_3,
+                            ARIMA_desc3, ARIMA_info3, ARIMA_graph3, ARIMA_preds3,
+                            ARIMA_graph3_resids, ARIMA_resids3]
             )
 
             STL_button.click(
