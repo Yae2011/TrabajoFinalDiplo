@@ -14,6 +14,7 @@ from statsmodels.tsa.stattools import adfuller # Test de Dickey-Fuller Aumentado
 from statsmodels.tsa.arima.model import ARIMA # Modelo ARIMA
 from statsmodels.stats.diagnostic import acorr_ljungbox # Prueba Ljung-Box para verificar: residuos = ruido blanco
 import statsmodels.api as sm # Modelos estadísticos
+import pmdarima as pm # Modelo AUTO-ARIMA
 import scipy.stats as stats
 import seaborn as sns
 
@@ -982,7 +983,14 @@ def tab_ST_on_cult_change(dataset_type, serie, mg, tend, mm, sd):
                 # Gráfico de predicciones y tabla de predicciones
                 gr.Plot(visible=False), gr.update(visible=False),
                 # Gráficos de residuos e info de residuos
-                gr.Plot(visible=False), gr.update(visible=False)
+                gr.Plot(visible=False), gr.update(visible=False),
+                ## Sección AUTO-ARIMA
+                # Información de filtros y parámetros de AUTO-ARIMA
+                gr.update(visible=False), gr.update(visible=False),
+                # Gráfico de predicciones y tabla de predicciones
+                gr.Plot(visible=False), gr.update(visible=False),
+                # Info de residuos
+                gr.update(visible=False)
                 )
 
     # Se arma el listado ordenado de provincias y se guarda la primera provincia
@@ -1092,7 +1100,14 @@ def tab_ST_on_cult_change(dataset_type, serie, mg, tend, mm, sd):
                 # Gráfico de predicciones y tabla de predicciones
                 gr.Plot(visible=False), gr.update(visible=False),
                 # Gráficos de residuos e info de residuos
-                gr.Plot(visible=False), gr.update(visible=False)
+                gr.Plot(visible=False), gr.update(visible=False),
+                ## Sección AUTO-ARIMA
+                # Información de filtros y parámetros de AUTO-ARIMA
+                msg, gr.update(visible=False),
+                # Gráfico de predicciones y tabla de predicciones
+                gr.Plot(visible=False), gr.update(visible=False),
+                # Info de residuos
+                gr.update(visible=False)
                 )
 
 def tab_ST_on_prov_change(df, cultivo, provincia, indicador,
@@ -1162,7 +1177,14 @@ def tab_ST_on_prov_change(df, cultivo, provincia, indicador,
                 # Gráfico de predicciones y tabla de predicciones
                 gr.Plot(visible=False), gr.update(visible=False),
                 # Gráficos de residuos e info de residuos
-                gr.Plot(visible=False), gr.update(visible=False)
+                gr.Plot(visible=False), gr.update(visible=False),
+                ## Sección AUTO-ARIMA
+                # Información de filtros y parámetros de AUTO-ARIMA
+                gr.update(visible=False), gr.update(visible=False),
+                # Gráfico de predicciones y tabla de predicciones
+                gr.Plot(visible=False), gr.update(visible=False),
+                # Info de residuos
+                gr.update(visible=False)
                 )
     
     # Se obtiene información de la serie
@@ -1234,7 +1256,14 @@ def tab_ST_on_prov_change(df, cultivo, provincia, indicador,
                 # Gráfico de predicciones y tabla de predicciones
                 gr.Plot(visible=False), gr.update(visible=False),
                 # Gráficos de residuos e info de residuos
-                gr.Plot(visible=False), gr.update(visible=False)
+                gr.Plot(visible=False), gr.update(visible=False),
+                ## Sección AUTO-ARIMA
+                # Información de filtros y parámetros de AUTO-ARIMA
+                msg, gr.update(visible=False),
+                # Gráfico de predicciones y tabla de predicciones
+                gr.Plot(visible=False), gr.update(visible=False),
+                # Info de residuos
+                gr.update(visible=False)
                 )
 
 def tab_ST_on_option_change(df, cultivo, provincia, departamento, indicador,
@@ -1296,7 +1325,14 @@ def tab_ST_on_option_change(df, cultivo, provincia, departamento, indicador,
                 # Gráfico de predicciones y tabla de predicciones
                 gr.Plot(visible=False), gr.update(visible=False),
                 # Gráficos de residuos e info de residuos
-                gr.Plot(visible=False), gr.update(visible=False)
+                gr.Plot(visible=False), gr.update(visible=False),
+                ## Sección AUTO-ARIMA
+                # Información de filtros y parámetros de AUTO-ARIMA
+                gr.update(visible=False), gr.update(visible=False),
+                # Gráfico de predicciones y tabla de predicciones
+                gr.Plot(visible=False), gr.update(visible=False),
+                # Info de residuos
+                gr.update(visible=False)
                 )
     
     # Se obtiene información de la serie
@@ -1367,7 +1403,14 @@ def tab_ST_on_option_change(df, cultivo, provincia, departamento, indicador,
                 # Gráfico de predicciones y tabla de predicciones
                 gr.Plot(visible=False), gr.update(visible=False),
                 # Gráficos de residuos e info de residuos
-                gr.Plot(visible=False), gr.update(visible=False)
+                gr.Plot(visible=False), gr.update(visible=False),
+                ## Sección AUTO-ARIMA
+                # Información de filtros y parámetros de AUTO-ARIMA
+                msg, gr.update(visible=False),
+                # Gráfico de predicciones y tabla de predicciones
+                gr.Plot(visible=False), gr.update(visible=False),
+                # Info de residuos
+                gr.update(visible=False)
                 )
 
 def tab_ST_on_graph_change(filtered1, filtered2, filtered3, ind1, ind2, ind3,
@@ -1415,6 +1458,15 @@ def tab_ST_stl_decomp(df, indicador):
     - indicador: nombre corto del indicador
     """
     
+    if df.empty:
+        reporte = """
+            <div style="padding:15px; border:2px solid #ffa000; background-color:#fff9c4; border-radius:8px;">
+                <strong style="color:#f57c00;"> ERROR EN EL ANÁLISIS:</strong><br>
+                No se seleccionó una serie temporal.
+            </div>
+            """
+        return None, reporte
+
     # Se convierte el nombre corto del  "indicador" a su nombre original
     ind_orig = next((k for k, v in dict_ncortos.items() if v == indicador), indicador)
 
@@ -1516,25 +1568,19 @@ def tab_ST_stl_decomp(df, indicador):
 
 def tab_ST_stl_decomp_all(df1, df2, df3, var1, var2, var3):
 
-    if df1.empty or df2.empty or df3.empty:
-        msg = ("FALTA DEFINIR ALGUNA DE LAS SERIES.<br>"
-                "DEBEN SELECCIONARSE TRES SERIES PARA LA COMPARACIÓN")
-        return gr.update(), gr.update(value = msg, visible = True), \
-                gr.update(), gr.update(value = msg, visible = True), \
-                gr.update(), gr.update(value = msg, visible = True)
-   
     fig1, desc1 = tab_ST_stl_decomp(df1, var1)
     fig2, desc2 = tab_ST_stl_decomp(df2, var2)
     fig3, desc3 = tab_ST_stl_decomp(df3, var3)
 
-    return gr.update(value = fig1, visible = True), \
-            gr.update(value = desc1, visible = True), \
-            gr.update(value = fig2, visible = True), \
-            gr.update(value = desc2, visible = True), \
-            gr.update(value = fig3, visible = True), \
+    return (gr.update(value = fig1, visible = fig1 is not None),
+            gr.update(value = desc1, visible = True),
+            gr.update(value = fig2, visible = fig2 is not None),
+            gr.update(value = desc2, visible = True),
+            gr.update(value = fig3, visible = fig3 is not None),
             gr.update(value = desc3, visible = True)
+            )
 
-def tab_ST_ACF(df, indicador, grado_dif):
+def tab_ST_ACF_old(df, indicador, grado_dif):
     """
     Calcula la función de autocorrelación (ACF),
     genera un gráfico interactivo y analiza la ciclicidad.
@@ -1568,8 +1614,7 @@ def tab_ST_ACF(df, indicador, grado_dif):
     serie = df[ind_orig].dropna()
 
     n_obs = len(df)
-    # lags = 6 # Desfases (lags); para 14 datos, lags=6 para mantener potencia estadística
-    lags = int((n_obs / 2)) - 1
+    lags = int((n_obs / 2)) - 1 # Los lags son la mitad del tamaño de la muestra
     valores_acf = acf(serie, nlags=lags)
     conf_interval = 1.96 / np.sqrt(n_obs)
 
@@ -1644,7 +1689,7 @@ def tab_ST_ACF(df, indicador, grado_dif):
     
     return fig, reporte, q_sugerido
 
-def tab_ST_PACF(df, indicador, grado_dif):
+def tab_ST_PACF_old(df, indicador, grado_dif):
     """
     Calcula la función de autocorrelación parcial (PACF), genera un gráfico interactivo
     y analiza la influencia directa de los retardos.
@@ -1762,6 +1807,200 @@ def tab_ST_PACF(df, indicador, grado_dif):
 
     return fig, reporte, p_sugerido
 
+def tab_ST_ACF(df, indicador, grado_dif):
+    """
+    Calcula la ACF optimizada para series anuales de cultivos,
+    genera un gráfico interactivo y analiza la ciclicidad.
+    - df: dataset ya diferenciado con columnas con nombres originales ['periodo', indicadores]
+    - indicador: nombre corto del indicador
+    - grado_dif: grado de diferenciación (0 = no diferenciada; 1, 2, 3, 4 = grado de dif.; NO_EXISTE = sin prueba ADF)
+    IMPORTANTE: la serie debe ser estacionaria!!!
+    Nota: el valor sugerido de 'q' no puede ser mayor a 5 para no quitar muchos GL
+          al modelo ARIMA. El límite 'max_horizonte' igual a 5 sirve para aplicar
+          el Principio de Parsimonia para datos anuales.
+    """
+
+    # Se verifica que el dataframe con la serie diferenciada ya exista
+    if df.empty:
+        reporte = """
+            <div style="padding:15px; border:2px solid #ffa000; background-color:#fff9c4; border-radius:8px;">
+                <strong style="color:#f57c00;"> ERROR EN EL ANÁLISIS:</strong><br>
+                La serie aún no fue diferenciada. Debe aplicarse la diferenciación (si corresponde) y 
+                la prueba ADF para verificar estacionariedad, para luego graficar
+                la FUNCIÓN DE AUTOCORRELACIÓN.</b></div>
+            """
+        return None, reporte, NO_EXISTE
+    
+    # Se verifica que la serie sea estacionaria (NO_EXISTE = sin prueba ADF, no se verificó estacionariedad)
+    if grado_dif == NO_EXISTE:
+        reporte = """
+            <div style="padding:15px; border:2px solid #ffa000; background-color:#fff9c4; border-radius:8px;">
+                <strong style="color:#f57c00;"> ERROR EN EL ANÁLISIS:</strong><br>
+                La serie debe ser estacionaria para que la función de AUTOCORRELACIÓN tenga relevancia estadística.
+                Debe aplicarse previamente la prueba ADF para verificar estacionariedad 
+                y diferenciar la serie si corresponde.</div>
+            """
+        return None, reporte, NO_EXISTE
+
+    # Se convierte el nombre corto del  "indicador" a su nombre original
+    ind_orig = next((k for k, v in dict_ncortos.items() if v == indicador), indicador)
+    serie = df.sort_values('periodo')[ind_orig].dropna()
+    n_obs = len(serie)
+    
+    # Lags a calcular: máximo 50% de la muestra, pero sugerencia limitada
+    lags_a_calcular = int(n_obs / 2) - 1
+    valores_acf = acf(serie, nlags=lags_a_calcular)
+    conf_interval = 1.96 / np.sqrt(n_obs)
+    
+    # Se verifica que los retardos sean proporcionales al número de observaciones
+    # La restricción es nlags < n_obs / 2
+    if lags_a_calcular >= int(n_obs / 2) or lags_a_calcular < 1:
+        reporte = (f"<div style='font-size: 16px !important; color: #FF0000; font-weight: bold;'>"
+                    f"El tamaño de la serie ({n_obs} observaciones) es demasiado pequeño "
+                    f"para calcular la FUNCIÓN DE AUTOCORRELACIÓN.</div>")
+        return None, reporte, NO_EXISTE
+
+    # En agricultura anual, un proceso MA superior a 5 años es improbable.
+    max_horizonte = 5 
+    lags_significativos = np.where(np.abs(valores_acf[1:]) > conf_interval)[0] + 1
+    
+    # Se filtran solo lags dentro de un horizonte razonable (parsimonia)
+    lags_validos = [l for l in lags_significativos if l <= max_horizonte]
+    q_sugerido = int(lags_validos[-1]) if len(lags_validos) > 0 else 0
+
+    # Gráfico Plotly
+    fig = go.Figure()
+    fig.add_trace(go.Bar(x=list(range(lags_a_calcular + 1)), y=valores_acf, name='ACF'))
+    fig.add_hline(y=conf_interval, line_dash="dash", line_color="orange")
+    fig.add_hline(y=-conf_interval, line_dash="dash", line_color="orange")
+    
+    fig.update_xaxes(
+        # tick0=0, 
+        # dtick=1, 
+        tickfont=dict(size=10, color='black', family='Arial Black'),
+        tickformat='d',
+        tickmode='auto', # 'linear',
+        nticks=10, # Número máximo de etiquetas en el eje x
+        tickangle=0,
+    )
+    fig.update_yaxes(
+        tickfont=dict(size=10, color='black', family='Arial Black'),
+    )
+    fig.update_layout(
+        # title=f"{dict_nlargos[ind_orig].upper()}",
+        title="Función de Autocorrelación (ACF)",
+        height=400,
+        autosize=True, # Para que el gráfico responda al contenedor
+        margin=dict(l=10, r=10, t=50, b=10, pad=0),
+        xaxis_title="Desplazamiento (Años)",
+        # yaxis_title="Coeficiente de Correlación",
+        template="plotly_white"
+    )
+
+    reporte = (
+        f"<b>Valor sugerido para q (ARIMA): {q_sugerido}</b><br>"
+        f"<i>Nota: Aunque se calcularon {lags_a_calcular} lags, se limita la sugerencia a los primeros {max_horizonte} "
+        f"años para evitar sobreajuste en series anuales de {n_obs} datos.</i>"
+    )
+    
+    return fig, reporte, q_sugerido
+
+def tab_ST_PACF(df, indicador, grado_dif):
+    """
+    Calcula la función de autocorrelación parcial (PACF) optimizada
+    para series anuales de cultivos. Utiliza el método 'ywm' para 
+    estabilidad en muestras pequeñas.
+    - df: dataset ya diferenciado con columnas con nombres originales ['periodo', indicadores]
+    - indicador: nombre corto del indicador
+    - grado_dif: grado de diferenciación (0 = no diferenciada; 1, 2, 3, 4 = grado de dif.; NO_EXISTE = sin prueba ADF)
+    IMPORTANTE: la serie debe ser estacionaria!!!    
+    """
+
+    # Se verifica que el dataframe con la serie diferenciada ya exista
+    if df.empty:
+        reporte = """
+            <div style="padding:15px; border:2px solid #ffa000; background-color:#fff9c4; border-radius:8px;">
+                <strong style="color:#f57c00;"> ERROR EN EL ANÁLISIS:</strong><br>
+                "La serie aún no fue diferenciada. Debe aplicarse la diferenciación (si corresponde) y "
+                "la prueba ADF para verificar estacionariedad, para luego graficar "
+                "la FUNCIÓN DE AUTOCORRELACIÓN PARCIAL.</b></div>"
+            """
+        return None, reporte, NO_EXISTE
+    
+    # Se verifica que la serie sea estacionaria (NO_EXISTE = sin prueba ADF, no se verificó estacionariedad)
+    if grado_dif == NO_EXISTE:
+        reporte = """
+            <div style="padding:15px; border:2px solid #ffa000; background-color:#fff9c4; border-radius:8px;">
+                <strong style="color:#f57c00;"> ERROR EN EL ANÁLISIS:</strong><br>
+                La serie debe ser estacionaria para que la función de AUTOCORRELACIÓN PARCIAL tenga relevancia estadística.
+                Debe aplicarse previamente la prueba ADF para verificar estacionariedad 
+                y diferenciar la serie si corresponde.</div>
+            """
+        return None, reporte, NO_EXISTE
+    
+    # Modificaciones similares a las aplicadas para ACF
+    ind_orig = next((k for k, v in dict_ncortos.items() if v == indicador), indicador)
+    serie = df.sort_values('periodo')[ind_orig].dropna()
+    n_obs = len(serie)
+    
+    # Lags para PACF deben ser menores a n_obs/2
+    lags_a_calcular = max(1, (n_obs // 2) - 1)
+
+    # Se verifica que los retardos sean proporcionales al número de observaciones
+    # Statsmodels requiere que nlags < n_obs // 2
+    if lags_a_calcular >= (n_obs / 2) or n_obs < 4:
+        reporte = (f"<div style='font-size: 16px !important; color: #FF0000; font-weight: bold;'>"
+                    f"Muestra insuficiente: {n_obs} observaciones. "
+                    f"No se puede calcular la FUNCIÓN DE AUTOCORRELACIÓN PARCIAL.</div>")
+        return None, reporte, NO_EXISTE
+    
+    # ywm = Yule-Walker modificado, ideal para series cortas
+    valores_pacf = pacf(serie, nlags=lags_a_calcular, method='ywm')
+    conf_interval = 1.96 / np.sqrt(n_obs)
+    
+    # En agricultura anual, un proceso AR superior a 5 años es improbable.
+    max_horizonte = 5
+    lags_significativos = np.where(np.abs(valores_pacf[1:]) > conf_interval)[0] + 1
+    
+    # Seleccionamos el último lag significativo dentro del rango lógico
+    lags_validos = [l for l in lags_significativos if l <= max_horizonte]
+    p_sugerido = int(lags_validos[-1]) if len(lags_validos) > 0 else 0
+
+    # Gráfico Plotly
+    fig = go.Figure()
+    fig.add_trace(go.Bar(x=list(range(lags_a_calcular + 1)), y=valores_pacf, marker_color='orange'))
+    fig.add_hline(y=conf_interval, line_dash="dash", line_color="black", annotation_text="IC 95%")
+    fig.add_hline(y=-conf_interval, line_dash="dash", line_color="black", annotation_text="IC 95%")
+    
+    fig.update_xaxes(
+        # tick0=0, 
+        # dtick=1, 
+        tickfont=dict(size=10, color='black', family='Arial Black'),
+        tickformat='d',
+        tickmode='auto', # 'linear',
+        nticks=10, # Número máximo de etiquetas en el eje x
+        tickangle=0,
+    )
+    fig.update_yaxes(
+        tickfont=dict(size=10, color='black', family='Arial Black'),
+    )
+    fig.update_layout(
+        height=400,
+        autosize=True,
+        margin=dict(l=10, r=10, t=50, b=10, pad=0),
+        template="plotly_white",
+        title="Función de Autocorrelación Parcial (PACF)",
+        xaxis_title="Desplazamiento (Años)",
+    )
+
+    reporte = (
+        f"<b>Valor sugerido para p (ARIMA): {p_sugerido}</b><br>"
+        f"<i>El coeficiente p indica la influencia directa de años previos. En superficies sembradas, "
+        f"valores de p > 3 suelen indicar una tendencia mal corregida más que un patrón AR real.</i>"
+    )
+    
+    return fig, reporte, p_sugerido
+
 def tab_ST_ACF_PACF_all(df1, df2, df3, var1, var2, var3, level1, level2, level3):
 
     ### IMPORTANTE: las series var1, var2 y var3 deben ser estacionarias
@@ -1812,6 +2051,16 @@ def tab_ST_diff_ADF(df, indicador, grado, graficar=True, diferenciar=True, aplic
     - diferenciar: True para diferenciar, False para integrar
     - aplicar_adf: True para ejecutar el test de Dickey-Fuller Aumentado
     """
+    
+    if df.empty:
+        reporte = """
+            <div style="padding:15px; border:2px solid #ffa000; background-color:#fff9c4; border-radius:8px;">
+                <strong style="color:#f57c00;"> ERROR EN EL ANÁLISIS:</strong><br>
+                No se seleccionó una serie temporal.
+            </div>
+            """
+        return (pd.DataFrame(), None, reporte, NO_EXISTE)
+
 
     # Se asume antes de la prueba que la serie no es estacionaria
     level = NO_EXISTE
@@ -1900,11 +2149,11 @@ def tab_ST_diff_ADF(df, indicador, grado, graficar=True, diferenciar=True, aplic
         # Verificación de serie constante
         if n_obs > 1 and np.all(serie_test == serie_test.iloc[0]):
             html_output = """
-            <div style="padding:15px; border:2px solid #ffa000; background-color:#fff9c4; border-radius:8px;">
-                <strong style="color:#f57c00;"> Error en el Análisis:</strong><br>
-                La serie temporal es constante. La varianza es 0, lo que impide calcular el estadístico ADF.
-            </div>
-            """
+                <div style="padding:15px; border:2px solid #ffa000; background-color:#fff9c4; border-radius:8px;">
+                    <strong style="color:#f57c00;"> ERROR EN EL ANÁLISIS:</strong><br>
+                    La serie temporal es constante. La varianza es 0, lo que impide calcular el estadístico ADF.
+                </div>
+                """
         elif n_obs > 4: # Mínimo de observaciones para una prueba con lags
             res = adfuller(serie_test, autolag='AIC')
             test_stat, p_value, lags_used, crit_values = res[0], res[1], res[2], res[4]
@@ -1952,10 +2201,7 @@ def tab_ST_diff_ADF(df, indicador, grado, graficar=True, diferenciar=True, aplic
             html_output = "<div>Datos insuficientes para realizar el test ADF.</div>"
 
     # Retorno de los tres elementos para la interfaz
-    return df_result, \
-            (gr.update(value=fig, visible=True) if fig else gr.update(visible=False)), \
-            (gr.update(value=html_output, visible=True) if aplicar_adf else gr.update(visible=False)), \
-            level
+    return df_result, fig, html_output, level
 
 def tab_ST_diff_ADF_all(df1, df2, df3, var1, var2, var3, level1, level2, level3):
     """
@@ -1972,9 +2218,13 @@ def tab_ST_diff_ADF_all(df1, df2, df3, var1, var2, var3, level1, level2, level3)
     dfdiff3, fig3, desc3, difflevel3 = tab_ST_diff_ADF(df3, var3, level3, 
                                            graficar=True, diferenciar=True, aplicar_adf=True)
 
-    return dfdiff1, fig1, desc1, difflevel1, \
-            dfdiff2, fig2, desc2, difflevel2, \
-            dfdiff3, fig3, desc3, difflevel3
+    return (dfdiff1, gr.update(value = fig1, visible = fig1 is not None),
+            gr.update(value=desc1, visible=True), difflevel1,
+            dfdiff2, gr.update(value = fig2, visible = fig2 is not None),
+            gr.update(value=desc2, visible=True), difflevel2,
+            dfdiff3, gr.update(value = fig3, visible = fig3 is not None),
+            gr.update(value=desc3, visible=True), difflevel3
+            )
 
 def tab_ST_on_level_change():
     
@@ -2007,23 +2257,26 @@ def tab_ST_ARIMA_all(df1, df2, df3, var1, var2, var3, p1, p2, p3, d1, d2, d3, q1
     - p1, p2, p3: obtenidos en la función de autocorrelación parcial PACF
     '''
 
-    desc1, fig1a, predic1, fig1b, resid1 = tab_ST_ARIMA(df1, var1, p1, d1, q1, n = 5)
-    desc2, fig2a, predic2, fig2b, resid2 = tab_ST_ARIMA(df2, var2, p2, d2, q2, n = 5)
-    desc3, fig3a, predic3, fig3b, resid3 = tab_ST_ARIMA(df3, var3, p3, d3, q3, n = 5)
+    df_final1, desc1, fig1a, predic1, fig1b, resid1 = tab_ST_ARIMA(df1, var1, p1, d1, q1, n = 5)
+    df_final2, desc2, fig2a, predic2, fig2b, resid2 = tab_ST_ARIMA(df2, var2, p2, d2, q2, n = 5)
+    df_final3, desc3, fig3a, predic3, fig3b, resid3 = tab_ST_ARIMA(df3, var3, p3, d3, q3, n = 5)
 
-    return (# ARIMA de la Serie 1: valores de (q, d, p), gráfico principal, gráficos de residuos
+    return (# ARIMA de la Serie 1
+            df_final1,
             gr.update(value = desc1, visible = True),
             gr.update(value = fig1a, visible = fig1a is not None),
             gr.update(value = predic1, visible = True),
             gr.update(value = fig1b, visible = fig1b is not None),
             gr.update(value = resid1, visible = True),
-            # ARIMA de la Serie 2: valores de (q, d, p), gráfico principal, gráficos de residuos
+            # ARIMA de la Serie 2
+            df_final2,
             gr.update(value = desc2, visible = True),
             gr.update(value = fig2a, visible = fig2a is not None),
             gr.update(value = predic2, visible = True),
             gr.update(value = fig2b, visible = fig2b is not None),
             gr.update(value = resid2, visible = True),
-            # ARIMA de la Serie 3: valores de (q, d, p), gráfico principal, gráficos de residuos
+            # ARIMA de la Serie 3
+            df_final3,
             gr.update(value = desc3, visible = True),
             gr.update(value = fig3a, visible = fig3a is not None),
             gr.update(value = predic3, visible = True),
@@ -2065,23 +2318,36 @@ def tab_ST_ARIMA(df, indicador, p, d, q, n):
       porque los componentes AR y MA trabajan juntos para explicar la estructura de la serie.
     """
 
+    if df.empty:
+        reporte = """
+            <div style="padding:15px; border:2px solid #ffa000; background-color:#fff9c4; border-radius:8px;">
+                <strong style="color:#f57c00;"> ERROR EN EL ANÁLISIS:</strong><br>
+                No se seleccionó una serie temporal.
+            </div>
+            """
+        return pd.DataFrame(), reporte, None, None, None, None
+
     # Se verifica que la serie sea estacionaria (NO_EXISTE = sin prueba ADF, no se verificó estacionariedad)
     if d == NO_EXISTE:
-        reporte = ("<div style='font-size: 16px !important; color: #FF0000; font-weight: bold;'>"
-                    "La serie debe ser estacionaria para aplicar el modelo ARIMA. "
-                    "Debe aplicarse la diferenciación (si corresponde) y "
-                    "la prueba ADF para verificar ESTACIONARIEDAD.</div>"
-                    )
-        return reporte, None, None, None, None
+        reporte = """
+            <div style="padding:15px; border:2px solid #ffa000; background-color:#fff9c4; border-radius:8px;">
+                <strong style="color:#f57c00;"> ERROR EN EL ANÁLISIS:</strong><br>
+                La serie debe ser estacionaria para aplicar el modelo ARIMA.
+                Debe aplicarse la diferenciación (si corresponde) y 
+                la prueba ADF para verificar ESTACIONARIEDAD.</div>
+            """
+        return pd.DataFrame(), reporte, None, None, None, None
     
     # Se verifica que el dataframe con la serie diferenciada ya exista
     if p == NO_EXISTE or q == NO_EXISTE:
-        reporte = ("<div style='font-size: 16px !important; color: #FF0000 !important; font-weight: bold !important;'>"
-                    "Faltan parámetros para el modelo ARIMA. El coeficiente "
-                    "<i style='color: #FF0000;'>p</i> se obtiene con la FUNCIÓN DE AUTOCORRELACIÓN (ACF) y "
-                    "el coeficiente <i style='color: #FF0000;'>q</i> con la FUNCIÓN DE AUTOCORRELACIÓN PARCIAL (PACF).</div>"
-                    )
-        return reporte, None, None, None, None
+        reporte = """
+            <div style="padding:15px; border:2px solid #ffa000; background-color:#fff9c4; border-radius:8px;">
+                <strong style="color:#f57c00;"> ERROR EN EL ANÁLISIS:</strong><br>
+                Faltan parámetros para el modelo ARIMA. El coeficiente
+                <i style='color: #FF0000;'>p</i> se obtiene con la FUNCIÓN DE AUTOCORRELACIÓN (ACF) y
+                el coeficiente <i style='color: #FF0000;'>q</i> con la FUNCIÓN DE AUTOCORRELACIÓN PARCIAL (PACF).</div>
+            """
+        return pd.DataFrame(), reporte, None, None, None, None
     
     # Se convierte el nombre corto del  "indicador" a su nombre original
     ind_orig = next((k for k, v in dict_ncortos.items() if v == indicador), indicador)
@@ -2089,13 +2355,16 @@ def tab_ST_ARIMA(df, indicador, p, d, q, n):
     # Se convierte 'periodo' a formato datetime y establecerlo como índice con frecuencia,
     # porque así lo requiere el modelo ARIMA
     df = df.copy()
-    # 1. Convertir a datetime
-    df['periodo'] = pd.to_datetime(df['periodo'])
+    
+    # Si 'periodo' son años (int o str), forzamos la conversión a datetime especificando el formato %Y
+    # Esto evita que se interpreten como milisegundos/nanosegundos (época 1970)
+    df['periodo'] = pd.to_datetime(df['periodo'].astype(str), format='%Y', errors='coerce')
+    
     df = df.sort_values('periodo').set_index('periodo')
     
-    # 2. Convertir a PeriodIndex para manejar frecuencias sin día específico
-    # Esto elimina el ValueWarning de statsmodels
-    df.index = pd.DatetimeIndex(df.index).to_period() 
+    # Convertimos a PeriodIndex con frecuencia ANUAL ('Y') explícita
+    # Esto es lo que statsmodels necesita para entender que cada salto es 1 año
+    df.index = df.index.to_period('Y') 
     
     serie = df[ind_orig].dropna()
 
@@ -2186,7 +2455,7 @@ def tab_ST_ARIMA(df, indicador, p, d, q, n):
 
     reporte = f"""
         <div style='font-family: Arial; font-size: 14px; overflow-x: auto;'>
-            <h4 style='color: #000000;'>Robustez y Coeficientes ARIMA: <i>p</i> = {p}, <i>d</i> = {d}, <i>q</i> = {q}</h4>
+            <h4 style='color: #000000;'>Coeficientes ARIMA: <i>p</i> = {p}, <i>d</i> = {d}, <i>q</i> = {q}</h4>
             
             <table style='width: 100%; border-collapse: collapse; margin-bottom: 20px; border: 1px solid black;'>
                 <tr style='background-color: #F2F4F4;'>
@@ -2227,12 +2496,30 @@ def tab_ST_ARIMA(df, indicador, p, d, q, n):
         </div>
         """
 
+
     # Ejecución de la prueba de Ljung-Box sobre los residuos
+    # Los residuos se obtienen del modelo ajustado
     residuos = resultado.resid
-    lb_test = acorr_ljungbox(residuos, lags=[10], return_df=True)
+
+    # Definición de rezagos a evaluar: 
+    # Generalmente se evalúan varios o un valor basado en la longitud de la serie (n_obs)
+    lag_val = min(10, len(residuos) // 5) 
+
+    # Es vital pasar model_df = p + q para ajustar los grados de libertad.
+    # Esto resta los parámetros del modelo ARIMA de la distribución Chi-cuadrado.
+    lb_test = acorr_ljungbox(
+        residuos, 
+        lags=[lag_val], 
+        return_df=True, 
+        model_df=(p + q)
+    )
+
     p_value_lb = lb_test['lb_pvalue'].iloc[0]
 
+
     # Determinación del estado de ruido blanco
+    # H0: Los residuos están distribuidos independientemente (Ruido Blanco)
+    # Ha: Los residuos presentan autocorrelación (Modelo insuficiente)
     es_ruido_blanco = p_value_lb > 0.05
     color_status = "#28B463" if es_ruido_blanco else "#CB4335"
     mensaje_lb = "Residuos independientes (Ruido Blanco)" if es_ruido_blanco else "Residuos Autocorrelacionados"
@@ -2244,32 +2531,46 @@ def tab_ST_ARIMA(df, indicador, p, d, q, n):
         Estado: <b style='color: {color_status};'>{mensaje_lb}</b>
         <p style='font-size: 12px; color: #566573;'>
             <i>Nota: Un p-value > 0.05 indica que los residuos son independientes, 
-            lo cual es un requisito para un modelo ARIMA robusto.</i><br>
+            lo cual es un requisito para un modelo ARIMA robusto.</i><br><br>
         </p>
     </div>
     """
+
+    # Determinación del estado de ruido blanco
+    # H0: Los residuos están distribuidos independientemente (Ruido Blanco)
+    # Ha: Los residuos presentan autocorrelación (Modelo insuficiente)
+    es_ruido_blanco = p_value_lb > 0.05
+    color_status = "#28B463" if es_ruido_blanco else "#CB4335"
+    mensaje_lb = "Residuos independientes (Ruido Blanco)" if es_ruido_blanco else "Residuos Autocorrelacionados"
+
+    # Interpretación técnica para el reporte
+    nota_tecnica = (
+        "Los residuos no muestran patrones sistemáticos." 
+        if es_ruido_blanco else 
+        "El modelo no capturó toda la estructura; deben ajustarse p o q."
+    )
+
+    mensaje_lb = mensaje_lb + nota_tecnica
+
 
     # Predicción de 'n' pasos futuros
     forecast_obj = resultado.get_forecast(steps=n)
     pronostico = forecast_obj.predicted_mean
     intervalos = forecast_obj.conf_int()
 
-    anios_hist = [str(anio) for anio in range(YEAR_MIN, YEAR_MAX + 1)]
-    anios_fut = [str(YEAR_MAX + i) for i in range(1, n+1)]
-
-    """
-    # Extraemos los años directamente del índice de la serie (que ya es PeriodIndex)
-    # Esto garantiza que len(anios_hist) == len(serie)
+    # extraemos los años directamente del índice de la serie filtrada y limpia.
     anios_hist = serie.index.astype(str).tolist()
-    # Para los años futuros, partimos del último año presente en la serie
-    ultimo_anio = int(anios_hist[-1])
-    anios_fut = [str(ultimo_anio + i) for i in range(1, n + 1)]
-    """
 
+    # Para los años futuros (predicción), partimos del último periodo de la serie
+    ultimo_periodo = serie.index[-1]
+    anios_fut = [str(ultimo_periodo + i) for i in range(1, n + 1)]
+
+    # Ahora ambas estructuras tendrán garantizada la misma longitud
     df_plot_hist = pd.DataFrame({
         'Año': anios_hist, 
         'Valor': serie.values.flatten()
     })
+
     df_plot_pred = pd.DataFrame({
         'Año': anios_fut,
         'Valor': pronostico.values.flatten(),
@@ -2280,27 +2581,33 @@ def tab_ST_ARIMA(df, indicador, p, d, q, n):
     # Se agrega al df histórico el primer dato del df predicho para que no quede un salto en el gráfico
     # Se extrae la primera fila df_plot_pred con [[:1]] para mantenerlo como DataFrame
     primer_dato_pred = df_plot_pred.iloc[0:1].copy()
-    # Se concatena al final de df_plot_hist (solo las columnas 'Año' y 'Valor')
+
+    # Se guarda un dataframe que tiene concatenados el histórico con el predicho
+    df_final = pd.concat([df_plot_hist, df_plot_pred[['Año', 'Valor']]], axis=0).reset_index(drop=True)
+
     df_plot_hist = pd.concat([
         df_plot_hist, 
         primer_dato_pred[['Año', 'Valor']]
-    ], ignore_index=True) # Para que no mantenga el índice 0 original y tome el índice que corresponda
+    ], ignore_index=True)
 
 
     fig_prediccion = go.Figure()
 
+    # --- Trazado de datos históricos ---
     fig_prediccion.add_trace(go.Scatter(
         x=df_plot_hist['Año'], y=df_plot_hist['Valor'],
-        mode='lines+markers', name='Histórico (2011-2024)',
+        mode='lines+markers', name='Histórico',
         line=dict(color='#1f77b4', width=3), showlegend=False
     ))
 
+    # --- Trazado de predicción ---
     fig_prediccion.add_trace(go.Scatter(
         x=df_plot_pred['Año'], y=df_plot_pred['Valor'],
-        mode='lines+markers', name='Predicción (2025+)',
+        mode='lines+markers', name='Predicción',
         line=dict(color='#FF7F0E', width=3), showlegend=False
     ))
 
+    # --- Intervalo de confianza ---
     fig_prediccion.add_trace(go.Scatter(
         x=df_plot_pred['Año'].tolist() + df_plot_pred['Año'].tolist()[::-1],
         y=df_plot_pred['Sup'].tolist() + df_plot_pred['Inf'].tolist()[::-1],
@@ -2308,34 +2615,62 @@ def tab_ST_ARIMA(df, indicador, p, d, q, n):
         line=dict(color='rgba(255,255,255,0)'), hoverinfo="skip", showlegend=False
     ))
 
+    # --- Configuración de Ejes ---
     fig_prediccion.update_xaxes(
-        tickmode='linear', tick0=0, dtick=1, 
-        tickfont=dict(size=12, color='black', family='Arial'), tickformat='d',
+        tickmode='auto', #'linear',
+        nticks=10, # Número máximo de etiquetas en el eje x
+        tickangle=0,
+        tickfont=dict(size=10, color='black', family='Arial Black'),
+        tickformat='d',
     )
-    fig_prediccion.update_yaxes(tickfont=dict(size=12, color='black', family='Arial Black'))
-    
-    titulo = f"CULTIVO: {dict_nlargos[ind_orig].upper()}"
+
+    fig_prediccion.update_yaxes(
+        tickfont=dict(size=12, color='black', family='Arial Black'),
+        automargin=True,
+        separatethousands=False  # Elimina la coma de miles en el eje Y si se desea consistencia
+    )
+
+    # --- Configuración de Layout ---
+    titulo = f"{dict_nlargos[ind_orig].upper()}"
     fig_prediccion.update_layout(
-        title={'text': f"<b>{titulo}</b>", 'font': {'size': 14, 'color': 'black'}, 'xanchor': 'left'},
-        height=400, autosize=True, margin=dict(l=10, r=10, t=50, b=10, pad=0),
-        xaxis=dict(type='category', tickangle=-45), template="plotly_white", hovermode="x unified"
+        title={'text': f"<b>{titulo}</b>", 'font': {'size': 14, 'color': 'black'}, 'x': 0.01},
+        height=400,
+        autosize=True,
+        margin=dict(l=5, r=5, t=40, b=5), 
+        template="plotly_white",
+        hovermode="x unified"
     )
 
+    # 1. Aseguramos que la columna 'Año' contenga solo el string de 4 dígitos
+    # (Esto ya debería venir así del paso anterior, pero lo garantizamos)
+    df_plot_pred['Año'] = df_plot_pred['Año'].astype(str).str[:4]
+
+    # 2. Generamos el HTML con los formateadores específicos
+    # Nota: Se usa "{:.2f}" para evitar la coma de miles que produce "{:,.2f}"
     tabla_pred_html = df_plot_pred.to_html(
-        classes='table_arima', border=0, index=False, justify='center',
-        formatters={'Predicción': lambda x: f"{x:,.2f}", 'Inf': lambda x: f"{x:,.2f}", 'Sup': lambda x: f"{x:,.2f}"}
+        classes='table_arima', 
+        border=0, 
+        index=False, 
+        justify='center',
+        formatters={
+            'Año': lambda x: f"{x}",
+            'Valor': lambda x: f"{x:.2f}", 
+            'Inf': lambda x: f"{x:.2f}", 
+            'Sup': lambda x: f"{x:.2f}"
+        }
     )
 
+    # 3. Estructura final de la tabla con el estilo CSS
     tabla_pred = f"""
         <div style='font-family: Arial; font-size: 14px; overflow-x: auto; margin-top: 20px;'>
-            <h4 style='color: #000000;'>Valores Pronosticados (2025 en adelante)</h4>
+            <h4 style='color: #000000;'>Valores Pronosticados ({df_plot_pred['Año'].iloc[0]} en adelante)</h4>
             <style>
                 .table_arima {{ width: 100%; border-collapse: collapse; margin-top: 10px; background-color: #FFFFFF !important; }}
                 .table_arima th {{ background-color: #F2F4F4 !important; color: #000000 !important; padding: 12px; text-align: center; border: 1px solid black; font-size: 15px; font-weight: bold; }}
                 .table_arima td {{ background-color: #FFFFFF !important; color: #000000 !important; padding: 10px; border: 1px solid black; text-align: right; font-family: Arial, sans-serif; font-size: 16px; font-weight: bold; }}
                 .table_arima tr:hover {{ background-color: #F2F4F4 !important; }}
             </style>
-            {tabla_pred_html}
+            {tabla_pred_html}<br><br>
         </div>
     """
 
@@ -2406,7 +2741,275 @@ def tab_ST_ARIMA(df, indicador, p, d, q, n):
         linecolor='gray', mirror=True
     )
 
-    return reporte, fig_prediccion, tabla_pred, fig_residuos, reporte_lb
+    # 1. Ejecución de la comparativa
+    df_comparativa = comparar_modelos_ARIMA(serie, p, d, q)
+
+    # 2. Identificación del mejor modelo
+    mejor_orden_aic = df_comparativa.iloc[0]['Orden (p,d,q)']
+    es_optimo = mejor_orden_aic == str((p, d, q))
+
+    # 3. Construcción de las filas HTML (Debe ir ANTES de armar el reporte final)
+    filas_comp_html = ""
+    for _, fila in df_comparativa.iterrows():
+        # Resaltar en verde la fila que tenga el mejor AIC
+        estilo_fila = "background-color: #D4EFDF;" if fila['Orden (p,d,q)'] == mejor_orden_aic else ""
+        filas_comp_html += f"""
+            <tr style='{estilo_fila}'>
+                <td style='padding: 8px; border: 1px solid black; font-weight: bold;'>{fila['Orden (p,d,q)']}</td>
+                <td style='padding: 8px; border: 1px solid black; text-align: right;'>{fila['AIC']:.2f}</td>
+                <td style='padding: 8px; border: 1px solid black; text-align: right;'>{fila['BIC']:.2f}</td>
+            </tr>
+        """
+
+    # 4. Definición del mensaje de eficiencia basado en la bandera 'es_optimo'
+    if es_optimo:
+        mensaje_eficiencia = (
+            f"<div style='color: #000000; font-weight: bold; margin-bottom: 10px;'>"
+            f"✓ El modelo actual {mejor_orden_aic} es el más eficiente según el criterio AIC.</div>"
+        )
+    else:
+        mensaje_eficiencia = (
+            f"<div style='color: #000000; font-weight: bold; margin-bottom: 10px;'>"
+            f"El modelo {mejor_orden_aic} presenta un menor AIC. Deben ajustarse los parámetros.</div>"
+        )
+
+    # 5. Construcción del Reporte Final (Versión consolidada y única)
+    reporte_comparativo = f"""
+    <div style='margin-top: 20px; font-family: Arial; padding: 15px; border: 1px solid #D5DBDB; border-radius: 8px; background-color: #FBFCFC;'>
+        <b style='color: #000000; font-size: 16px;'>Comparativa de Eficiencia (AIC y BIC)</b>
+        <hr style='border: 0; border-top: 1px solid #D5DBDB; margin: 10px 0;'>
+        {mensaje_eficiencia}
+        <table style='width: 100%; border-collapse: collapse; border: 1px solid black; font-size: 14px;'>
+            <thead style='background-color: #EBEDEF;'>
+                <tr>
+                    <th style='border: 1px solid black; padding: 10px;'>Modelo (p, d, q)</th>
+                    <th style='border: 1px solid black; padding: 10px;'>AIC</th>
+                    <th style='border: 1px solid black; padding: 10px;'>BIC</th>
+                </tr>
+            </thead>
+            <tbody>
+                {filas_comp_html}
+            </tbody>
+        </table>
+        <p style='font-size: 12px; color: #566573; margin-top: 10px;'>
+            <i>* El AIC (Akaike Information Criterion) estima la calidad relativa de los modelos; 
+            el valor más bajo indica la mejor combinación de ajuste y simplicidad.</i>
+        </p>
+    </div>
+    """
+
+    reporte_detallado = reporte_lb + reporte_comparativo
+
+    return df_final, reporte, fig_prediccion, tabla_pred, fig_residuos, reporte_detallado
+
+def comparar_modelos_ARIMA(serie, p_actual, d, q_actual):
+    """
+    Compara el modelo actual contra modelos candidatos comunes.
+    """
+    candidatos = [
+        (p_actual, d, q_actual), # Modelo actual
+        (0, 1, 0),               # Caminata aleatoria
+        (1, d, 0),               # AR(1)
+        (0, d, 1),               # MA(1)
+        (1, d, 1)                # Mixto simple
+    ]
+    
+    # Eliminar duplicados si el actual coincide con un candidato
+    candidatos = list(set(candidatos))
+    resultados_comp = []
+
+    for order in candidatos:
+        try:
+            # Ajuste rápido para comparación
+            mod = ARIMA(serie, order=order, enforce_stationarity=False, enforce_invertibility=False)
+            res = mod.fit()
+            resultados_comp.append({
+                'Orden (p,d,q)': str(order),
+                'AIC': res.aic,
+                'BIC': res.bic,
+                'Log-Likelihood': res.llf
+            })
+        except:
+            continue
+
+    df_comp = pd.DataFrame(resultados_comp).sort_values(by='AIC')
+    return df_comp
+
+def tab_ST_AUTO_ARIMA_all(df1, df2, df3, var1, var2, var3):
+
+    '''
+    IMPORTANTE: los datasetes df1, df2 y df3 deben ser los ORIGINALES ya filtrados por
+                provincia y departamento, pero SIN DIFERENCIACIÓN.
+    '''
+
+    df_final1, desc1, fig1, predic1, info1 = tab_ST_AUTO_ARIMA(df1, var1, n = 5)
+    df_final2, desc2, fig2, predic2, info2 = tab_ST_AUTO_ARIMA(df2, var2, n = 5)
+    df_final3, desc3, fig3, predic3, info3 = tab_ST_AUTO_ARIMA(df3, var3, n = 5)
+
+    return (# AUTO-ARIMA de la Serie 1
+            df_final1,
+            gr.update(value = desc1, visible = True),
+            gr.update(value = fig1, visible = fig1 is not None),
+            gr.update(value = predic1, visible = True),
+            gr.update(value = info1, visible = True),
+            # AUTO-ARIMA de la Serie 2
+            df_final2,
+            gr.update(value = desc2, visible = True),
+            gr.update(value = fig2, visible = fig2 is not None),
+            gr.update(value = predic2, visible = True),
+            gr.update(value = info2, visible = True),
+            # AUTO-ARIMA de la Serie 3
+            df_final3,
+            gr.update(value = desc3, visible = True),
+            gr.update(value = fig3, visible = fig3 is not None),
+            gr.update(value = predic3, visible = True),
+            gr.update(value = info3, visible = True),
+            )
+
+def tab_ST_AUTO_ARIMA(df, indicador, n):
+    """
+    Identifica automáticamente el mejor modelo ARIMA, genera pronósticos 
+    y reporta métricas de ajuste y pruebas de diagnóstico.
+    
+    df: Dataset original con columna 'periodo'.
+    indicador: Nombre de la variable objetivo.
+    n: Número de periodos a proyectar.
+    """
+    
+    if df.empty:
+        reporte = """
+            <div style="padding:15px; border:2px solid #ffa000; background-color:#fff9c4; border-radius:8px;">
+                <strong style="color:#f57c00;"> ERROR EN EL ANÁLISIS:</strong><br>
+                No se seleccionó una serie temporal.
+            </div>
+            """
+        return pd.DataFrame(), reporte, None, None, None
+
+    # --- PREPARACIÓN DE DATOS ---
+    ind_orig = next((k for k, v in dict_ncortos.items() if v == indicador), indicador)
+    df_prep = df.copy()
+    df_prep['periodo'] = pd.to_datetime(df_prep['periodo'].astype(str), format='%Y', errors='coerce')
+    df_prep = df_prep.sort_values('periodo').set_index('periodo')
+    df_prep.index = df_prep.index.to_period('Y') 
+    serie = df_prep[ind_orig].dropna()
+
+    # --- EJECUCIÓN AUTO-ARIMA ---
+    # m=1 para datos anuales (no estacional), m=12 para mensuales, etc.
+    # d=None permite que el test ADF/KPSS determine el orden de integración automáticamente.
+    modelo_auto = pm.auto_arima(
+        serie, 
+        start_p=1, start_q=1,
+        max_p=5, max_q=5,
+        d=None,           
+        seasonal=False,   
+        stepwise=True,
+        suppress_warnings=True, 
+        error_action='ignore'
+    )
+    
+    p, d, q = modelo_auto.order
+    residuos = modelo_auto.resid()
+    
+    # --- PRUEBA ESTADÍSTICA: SHAPIRO-WILK (Normalidad de Residuos) ---
+    # H0: Los residuos siguen una distribución normal.
+    sw_stat, sw_p = stats.shapiro(residuos)
+    sw_status = "Normal" if sw_p > 0.05 else "No Normal"
+    sw_color = "#28B463" if sw_p > 0.05 else "#CB4335"
+
+    # --- TABLA DE COEFICIENTES (HTML) ---
+    # Extraemos la tabla 1 del summary (coeficientes, errores, p-values)
+    html_coefs = modelo_auto.summary().tables[1].as_html()
+    
+    # --- REPORTE DE MÉTRICAS ---
+    reporte_html = f"""
+    <div style='font-family: Arial; font-size: 14px; border: 1px solid #2E86C1; border-radius: 8px; padding: 15px;'>
+        <h4 style='color: #2E86C1; margin-top: 0;'>Optimización Auto-ARIMA: ({p}, {d}, {q})</h4>
+        <table style='width: 100%; border-collapse: collapse; margin-bottom: 15px;'>
+            <tr style='background-color: #F2F4F4;'>
+                <th style='border: 1px solid black; padding: 8px;'>Métrica de Selección</th>
+                <th style='border: 1px solid black; padding: 8px;'>Valor</th>
+            </tr>
+            <tr><td style='border: 1px solid black; padding: 8px;'>AIC (Akaike)</td><td style='border: 1px solid black; padding: 8px; text-align: right;'>{modelo_auto.aic():.3f}</td></tr>
+            <tr><td style='border: 1px solid black; padding: 8px;'>BIC (Bayesiano)</td><td style='border: 1px solid black; padding: 8px; text-align: right;'>{modelo_auto.bic():.3f}</td></tr>
+            <tr><td style='border: 1px solid black; padding: 8px;'>Normalidad Residuos (Shapiro)</td><td style='border: 1px solid black; padding: 8px; text-align: right; color: {sw_color}; font-weight: bold;'>{sw_status} (p={sw_p:.4f})</td></tr>
+        </table>
+        <style>
+            .table_auto_coef {{ width: 100%; border-collapse: collapse; font-family: Arial; }}
+            .table_auto_coef td, .table_auto_coef th {{ border: 1px solid black; padding: 8px; text-align: center; }}
+            .table_auto_coef th {{ background-color: #F2F4F4; }}
+        </style>
+        {html_coefs}
+    </div>
+    """
+
+    # --- PRONÓSTICO ---
+    pronostico, intervalos = modelo_auto.predict(n_periods=n, return_conf_int=True)
+    
+    anios_hist = serie.index.astype(str).tolist()
+    ultimo_periodo = serie.index[-1]
+    anios_fut = [str(ultimo_periodo + i) for i in range(1, n + 1)]
+
+    df_plot_hist = pd.DataFrame({'Año': anios_hist, 'Valor': serie.values})
+    df_plot_pred = pd.DataFrame({
+        'Año': anios_fut,
+        'Valor': pronostico,
+        'Inf': intervalos[:, 0],
+        'Sup': intervalos[:, 1]
+    })
+
+    # --- GRÁFICO ---
+    fig_pred = go.Figure()
+    # Histórico
+    fig_pred.add_trace(go.Scatter(x=df_plot_hist['Año'], 
+                            y=df_plot_hist['Valor'], 
+                            mode='lines+markers', 
+                            name='Histórico', 
+                            line=dict(color='#1f77b4', width=2)))
+    # Predicción
+    fig_pred.add_trace(go.Scatter(x=df_plot_pred['Año'], 
+                            y=df_plot_pred['Valor'], 
+                            mode='lines+markers', 
+                            name='Auto-ARIMA', 
+                            line=dict(color='#D35400', width=3)))
+    # IC
+    fig_pred.add_trace(go.Scatter(
+        x=df_plot_pred['Año'].tolist() + df_plot_pred['Año'].tolist()[::-1],
+        y=df_plot_pred['Sup'].tolist() + df_plot_pred['Inf'].tolist()[::-1],
+        fill='toself', fillcolor='rgba(211, 84, 0, 0.2)', line=dict(color='rgba(255,255,255,0)'), hoverinfo="skip", name='IC 95%'
+    ))
+    fig_pred.update_layout(template="plotly_white", height=450, title=f"<b>PROYECCIÓN AUTO-ARIMA: {indicador.upper()}</b>", margin=dict(l=10, r=10, t=50, b=10))
+
+    # --- TABLA DE VALORES PREDICHOS ---
+    tabla_pred_html = f"""
+    <div style='margin-top: 20px;'>
+        <h4 style='color: #000;'>Valores Pronosticados</h4>
+        <style>
+            .table_res {{ width: 100%; border-collapse: collapse; border: 1px solid black; }}
+            .table_res th {{ background-color: #F2F4F4; border: 1px solid black; padding: 10px; }}
+            .table_res td {{ border: 1px solid black; padding: 8px; text-align: right; font-weight: bold; }}
+        </style>
+        {df_plot_pred.to_html(classes='table_res', index=False, formatters={{'Valor': lambda x: f"{x:.2f}", 'Inf': lambda x: f"{x:.2f}", 'Sup': lambda x: f"{x:.2f}"}})}
+    </div>
+    """
+
+    # --- VALIDACIÓN DE RESIDUOS (LJUNG-BOX) ---
+    lb_test = acorr_ljungbox(residuos, lags=[min(10, len(residuos)//5)], model_df=(p + q))
+    p_lb = lb_test['lb_pvalue'].iloc[0]
+    status_lb = "Independientes (Ruido Blanco)" if p_lb > 0.05 else "Autocorrelacionados"
+    color_lb = "#28B463" if p_lb > 0.05 else "#CB4335"
+
+    reporte_detallado = f"""
+    <div style='margin-top: 15px; padding: 10px; border: 1px solid #ddd; background-color: #FDFEFE;'>
+        <b>Prueba de Ljung-Box (Residuos):</b><br>
+        p-value: <span style='color: {color_lb}; font-weight: bold;'>{p_lb:.4f}</span><br>
+        Estado: <b style='color: {color_lb};'>{status_lb}</b>
+        <p style='font-size: 11px;'><i>* Un modelo válido no debe tener autocorrelación en los residuos.</i></p>
+    </div>
+    """
+
+    df_final = pd.concat([df_plot_hist, df_plot_pred[['Año', 'Valor']]]).reset_index(drop=True)
+
+    return df_final, reporte_html, fig_pred, tabla_pred_html, reporte_detallado
 
 def tab_ST_serie_complete(df, metodo):
     """
@@ -2534,7 +3137,14 @@ def tab_ST_imputar_df(df, imp_option, indicador, serie, mg, tend, mm, sd):
                 # Gráfico de predicciones y tabla de predicciones
                 gr.Plot(visible=False), gr.update(visible=False),
                 # Gráficos de residuos e info de residuos
-                gr.Plot(visible=False), gr.update(visible=False)
+                gr.Plot(visible=False), gr.update(visible=False),
+                ## Sección AUTO-ARIMA
+                # Información de filtros y parámetros de AUTO-ARIMA
+                gr.update(visible=False), gr.update(visible=False),
+                # Gráfico de predicciones y tabla de predicciones
+                gr.Plot(visible=False), gr.update(visible=False),
+                # Info de residuos
+                gr.update(visible=False)
             )
 
 def tab_ST_restaurar_df(df, cultivo, provincia, departamento,
@@ -2601,7 +3211,14 @@ def tab_ST_restaurar_df(df, cultivo, provincia, departamento,
                 # Gráfico de predicciones y tabla de predicciones
                 gr.Plot(visible=False), gr.update(visible=False),
                 # Gráficos de residuos e info de residuos
-                gr.Plot(visible=False), gr.update(visible=False)
+                gr.Plot(visible=False), gr.update(visible=False),
+                ## Sección AUTO-ARIMA
+                # Información de filtros y parámetros de AUTO-ARIMA
+                gr.update(visible=False), gr.update(visible=False),
+                # Gráfico de predicciones y tabla de predicciones
+                gr.Plot(visible=False), gr.update(visible=False),
+                # Info de residuos
+                gr.update(visible=False)
                 )
 
 def tab_ST_cortar_df(df, indicador, yinicial, yfinal, serie, mg, tend, mm, sd):
@@ -2653,7 +3270,14 @@ def tab_ST_cortar_df(df, indicador, yinicial, yfinal, serie, mg, tend, mm, sd):
                 # Gráfico de predicciones y tabla de predicciones
                 gr.Plot(visible=False), gr.update(visible=False),
                 # Gráficos de residuos e info de residuos
-                gr.Plot(visible=False), gr.update(visible=False)
+                gr.Plot(visible=False), gr.update(visible=False),
+                ## Sección AUTO-ARIMA
+                # Información de filtros y parámetros de AUTO-ARIMA
+                gr.update(visible=False), gr.update(visible=False),
+                # Gráfico de predicciones y tabla de predicciones
+                gr.Plot(visible=False), gr.update(visible=False),
+                # Info de residuos
+                gr.update(visible=False)
                 )
 
 
@@ -2828,6 +3452,18 @@ with gr.Blocks(title="Análisis de Cultivos") as app:
     ARIMA_q_1 = gr.State(value=NO_EXISTE)
     ARIMA_q_2 = gr.State(value=NO_EXISTE)
     ARIMA_q_3 = gr.State(value=NO_EXISTE)
+    # Almacenamiento de los tres datasets con valores históricos y predichos con ARIMA
+    # CUIDADO: no es un dataset completo, solo tiene PERIODO y la variable (VALOR) que se esté analizando
+    # No es un dataset filtrado que tenga CULTIVO, PROVINCIA y DEPARTAMENTO
+    dataset_ARIMA_state_1 = gr.State(pd.DataFrame())
+    dataset_ARIMA_state_2 = gr.State(pd.DataFrame())
+    dataset_ARIMA_state_3 = gr.State(pd.DataFrame())
+    # Almacenamiento de los tres datasets con valores históricos y predichos con AUTO-ARIMA
+    # CUIDADO: no es un dataset completo, solo tiene PERIODO y la variable (VALOR) que se esté analizando
+    # No es un dataset filtrado que tenga CULTIVO, PROVINCIA y DEPARTAMENTO
+    dataset_AUTO_ARIMA_state_1 = gr.State(pd.DataFrame())
+    dataset_AUTO_ARIMA_state_2 = gr.State(pd.DataFrame())
+    dataset_AUTO_ARIMA_state_3 = gr.State(pd.DataFrame())
 
 
     gr.Row(elem_classes="header-tab")
@@ -2843,15 +3479,16 @@ with gr.Blocks(title="Análisis de Cultivos") as app:
                 with gr.Column(scale=8, elem_classes="portrait-bg-video"): # elem_classes="portrait-bg-1"):
                     gr.HTML(portada_video)
                     gr.HTML("ANÁLISIS <br> DE SERIES<br>TEMPORALES<br>"
-                            "DE LOS<br>PRINCIPALES<br>CULTIVOS<br>"
+                            "ANUALES<br>DE LOS<br>PRINCIPALES<br>CULTIVOS<br>"
                             "DE LA<br>REPÚBLICA ARGENTINA", elem_classes="portrait-title")
                 with gr.Column(scale=2, elem_classes="portrait-bg-2"):
-                    gr.HTML("Aplicación de algoritmos de Machine Learning <br>"
-                            "a las Bases de Datos Abiertas <br>"
-                            "de la Dirección Nacional de Agricultura<br>"
-                            "del Ministerio de Agricultura, Ganadería y Pesca<br>"
-                            "de la República Argentina,<br>"
-                            "para el análisis de series temporales de los cultivos más importantes "
+                    gr.HTML("Aplicación de algoritmos de Machine Learning "
+                            "a las Bases de Datos Abiertas "
+                            "de la Dirección Nacional de Agricultura "
+                            "del Ministerio de Agricultura, Ganadería y Pesca "
+                            "de la República Argentina, "
+                            "para el análisis de series temporales anuales "
+                            "de los cultivos más importantes "
                             "en las principales regiones productoras del país.",
                             elem_classes="portrait-subtitle")
         
@@ -3529,11 +4166,63 @@ with gr.Blocks(title="Análisis de Cultivos") as app:
                                 ARIMA_resids3 = gr.HTML("Prueba Ljung-Box de Residuos", visible=False)
             # endregion SECCIÓN 5: APLICACIÓN DEL MODELO ARIMA
 
-            # region SECCIÓN 6: TRANSFORMADAS DE FOURIER
+            # region SECCÓN 6: APLICACIÓN DEL MODELO AUTO-ARIMA
+            with gr.Tab("Modelo AUTO-ARIMA") as subtab_AUTO_ARIMA:
+                with gr.Row():
+                    with gr.Column(elem_classes="custom-tab-2", scale=20): 
+                        gr.HTML("&nbsp;&nbsp;5. APLICACIÓN DEL MODELO PREDICTIVO AUTO-ARIMA",
+                                elem_classes="subtitle-text")
+                    with gr.Column(min_width=150):
+                        AUTO_ARIMA_button = gr.Button("Calcular", variant="primary", visible=True, 
+                                                elem_classes="custom-button3")
+                        
+                with gr.Row(elem_classes="custom-tab"):
+                    gr.HTML("El modelo <b>Auto-ARIMA</b> automatiza la selección óptima de los hiperparámetros (p, d, q) "
+                                "mediante algoritmos de búsqueda <i>stepwise</i> que minimizan el Criterio de Información de "
+                                "Akaike (AIC). Es ideal cuando la estructura de la serie es compleja o cuando se busca eliminar "
+                                "la subjetividad en la interpretación de las gráficas ACF y PACF. Este enfoque garantiza un "
+                                "equilibrio estadístico entre el ajuste del modelo y su parsimonia, evitando el sobreajuste "
+                                "y optimizando la capacidad predictiva de forma computacional.",
+                                elem_classes="info-display-2a")
+            
+                with gr.Row(elem_classes="custom-tab"):
+                    with gr.Column():
+                        with gr.Row():
+                            AUTO_ARIMA_desc1 = gr.HTML("AUTO-ARIMA de la Serie 1", elem_classes="info-display-3")
+                        with gr.Row():
+                            with gr.Column():                        
+                                AUTO_ARIMA_info1 = gr.HTML("Parámetros y Estadísticos de AUTO-ARIMA", visible=False)
+                                AUTO_ARIMA_graph1 = gr.Plot(show_label=False, visible=False)
+                                AUTO_ARIMA_preds1 = gr.HTML("Tabla de Valores Predichos", visible=False)
+                                AUTO_ARIMA_resids1 = gr.HTML("Prueba Ljung-Box de Residuos", visible=False)
+
+                    with gr.Column():
+                        with gr.Row():
+                            AUTO_ARIMA_desc2 = gr.HTML("AUTO-ARIMA de la Serie 2", elem_classes="info-display-3")
+                        with gr.Row():
+                            with gr.Column():
+                                AUTO_ARIMA_info2 = gr.HTML("Parámetros y Estadísticos de ARIMA", visible=False)
+                                AUTO_ARIMA_graph2 = gr.Plot(show_label=False, visible=False)
+                                AUTO_ARIMA_preds2 = gr.HTML("Tabla de Valores Predichos", visible=False)
+                                AUTO_ARIMA_resids2 = gr.HTML("Prueba Ljung-Box de Residuos", visible=False)
+
+                    with gr.Column():
+                        with gr.Row():
+                            AUTO_ARIMA_desc3 = gr.HTML("AUTO-ARIMA de la Serie 3", elem_classes="info-display-3")
+                        with gr.Row():
+                            with gr.Column():
+                                AUTO_ARIMA_info3 = gr.HTML("Parámetros y Estadísticos de AUTO-ARIMA", visible=False)
+                                AUTO_ARIMA_graph3 = gr.Plot(show_label=False, visible=False)
+                                AUTO_ARIMA_preds3 = gr.HTML("Tabla de Valores Predichos", visible=False)
+                                AUTO_ARIMA_resids3 = gr.HTML("Prueba Ljung-Box de Residuos", visible=False)
+            # endregion SECCIÓN 6: APLICACIÓN DEL MODELO AUTO-ARIMA
+
+
+            # region SECCIÓN 7: TRANSFORMADAS DE FOURIER
             with gr.Tab("Transformadas de Fourier") as subtab_fourier:
                 with gr.Row(elem_classes="custom-tab-2"):    
                     gr.HTML("&nbsp;&nbsp;7. TRANSFORMADA DE FOURIER PARA LAS SERIES TEMPORALES A COMPARAR", elem_classes="subtitle-text")              
-            # enderegion SECCIÓN 6: TRANSFORMADAS DE FOURIER
+            # enderegion SECCIÓN 7: TRANSFORMADAS DE FOURIER
 
 
             cult1.change(
@@ -3552,7 +4241,9 @@ with gr.Blocks(title="Análisis de Cultivos") as app:
                             PACF_graph1, PACF_info1,
                             ARIMA_p_1, ARIMA_q_1,
                             ARIMA_desc1, ARIMA_info1, ARIMA_graph1,
-                            ARIMA_preds1, ARIMA_graph1_resids, ARIMA_resids1]
+                            ARIMA_preds1, ARIMA_graph1_resids, ARIMA_resids1,
+                            AUTO_ARIMA_desc1, AUTO_ARIMA_info1, AUTO_ARIMA_graph1,
+                            AUTO_ARIMA_preds1, AUTO_ARIMA_resids1]
             )
 
             cult2.change(
@@ -3571,7 +4262,9 @@ with gr.Blocks(title="Análisis de Cultivos") as app:
                             PACF_graph2, PACF_info2,
                             ARIMA_p_2, ARIMA_q_2,
                             ARIMA_desc2, ARIMA_info2, ARIMA_graph2,
-                            ARIMA_preds2, ARIMA_graph2_resids, ARIMA_resids2]
+                            ARIMA_preds2, ARIMA_graph2_resids, ARIMA_resids2,
+                            AUTO_ARIMA_desc2, AUTO_ARIMA_info2, AUTO_ARIMA_graph2,
+                            AUTO_ARIMA_preds2, AUTO_ARIMA_resids2]
             )
 
             cult3.change(
@@ -3590,7 +4283,9 @@ with gr.Blocks(title="Análisis de Cultivos") as app:
                             PACF_graph3, PACF_info3,
                             ARIMA_p_3, ARIMA_q_3,
                             ARIMA_desc3, ARIMA_info3, ARIMA_graph3,
-                            ARIMA_preds3, ARIMA_graph3_resids, ARIMA_resids3]
+                            ARIMA_preds3, ARIMA_graph3_resids, ARIMA_resids3,
+                            AUTO_ARIMA_desc3, AUTO_ARIMA_info3, AUTO_ARIMA_graph3,
+                            AUTO_ARIMA_preds3, AUTO_ARIMA_resids3]
             )
 
             prov1.change(
@@ -3609,7 +4304,9 @@ with gr.Blocks(title="Análisis de Cultivos") as app:
                             PACF_graph1, PACF_info1,
                             ARIMA_p_1, ARIMA_q_1,
                             ARIMA_desc1, ARIMA_info1, ARIMA_graph1, ARIMA_preds1,
-                            ARIMA_graph1_resids, ARIMA_resids1]
+                            ARIMA_graph1_resids, ARIMA_resids1,
+                            AUTO_ARIMA_desc1, AUTO_ARIMA_info1, AUTO_ARIMA_graph1,
+                            AUTO_ARIMA_preds1, AUTO_ARIMA_resids1]
             )
 
             prov2.change(
@@ -3628,7 +4325,9 @@ with gr.Blocks(title="Análisis de Cultivos") as app:
                             PACF_graph2, PACF_info2,
                             ARIMA_p_2, ARIMA_q_2,
                             ARIMA_desc2, ARIMA_info2, ARIMA_graph2, ARIMA_preds2,
-                            ARIMA_graph2_resids, ARIMA_resids2]
+                            ARIMA_graph2_resids, ARIMA_resids2,
+                            AUTO_ARIMA_desc2, AUTO_ARIMA_info2, AUTO_ARIMA_graph2,
+                            AUTO_ARIMA_preds2, AUTO_ARIMA_resids2]
             )
             
             prov3.change(
@@ -3647,7 +4346,9 @@ with gr.Blocks(title="Análisis de Cultivos") as app:
                             PACF_graph3, PACF_info3,
                             ARIMA_p_3, ARIMA_q_3,
                             ARIMA_desc3, ARIMA_info3, ARIMA_graph3, ARIMA_preds3,
-                            ARIMA_graph3_resids, ARIMA_resids3]
+                            ARIMA_graph3_resids, ARIMA_resids3,
+                            AUTO_ARIMA_desc3, AUTO_ARIMA_info3, AUTO_ARIMA_graph3,
+                            AUTO_ARIMA_preds3, AUTO_ARIMA_resids3]
             )
             
             dep1.change(
@@ -3666,7 +4367,9 @@ with gr.Blocks(title="Análisis de Cultivos") as app:
                             PACF_graph1, PACF_info1,
                             ARIMA_p_1, ARIMA_q_1,
                             ARIMA_desc1, ARIMA_info1, ARIMA_graph1, ARIMA_preds1,
-                            ARIMA_graph1_resids, ARIMA_resids1]
+                            ARIMA_graph1_resids, ARIMA_resids1,
+                            AUTO_ARIMA_desc1, AUTO_ARIMA_info1, AUTO_ARIMA_graph1,
+                            AUTO_ARIMA_preds1, AUTO_ARIMA_resids1]
             )
 
             dep2.change(
@@ -3685,7 +4388,9 @@ with gr.Blocks(title="Análisis de Cultivos") as app:
                             PACF_graph2, PACF_info2,
                             ARIMA_p_2, ARIMA_q_2,
                             ARIMA_desc2, ARIMA_info2, ARIMA_graph2, ARIMA_preds2,
-                            ARIMA_graph2_resids, ARIMA_resids2]
+                            ARIMA_graph2_resids, ARIMA_resids2,
+                            AUTO_ARIMA_desc2, AUTO_ARIMA_info2, AUTO_ARIMA_graph2,
+                            AUTO_ARIMA_preds2, AUTO_ARIMA_resids2]
             )
 
             dep3.change(
@@ -3704,7 +4409,9 @@ with gr.Blocks(title="Análisis de Cultivos") as app:
                             PACF_graph3, PACF_info3,
                             ARIMA_p_3, ARIMA_q_3,
                             ARIMA_desc3, ARIMA_info3, ARIMA_graph3, ARIMA_preds3,
-                            ARIMA_graph3_resids, ARIMA_resids3]
+                            ARIMA_graph3_resids, ARIMA_resids3,
+                            AUTO_ARIMA_desc3, AUTO_ARIMA_info3, AUTO_ARIMA_graph3,
+                            AUTO_ARIMA_preds3, AUTO_ARIMA_resids3]
             )
 
             var1.change(
@@ -3723,7 +4430,9 @@ with gr.Blocks(title="Análisis de Cultivos") as app:
                             PACF_graph1, PACF_info1,
                             ARIMA_p_1, ARIMA_q_1,
                             ARIMA_desc1, ARIMA_info1, ARIMA_graph1, ARIMA_preds1,
-                            ARIMA_graph1_resids, ARIMA_resids1]
+                            ARIMA_graph1_resids, ARIMA_resids1,
+                            AUTO_ARIMA_desc1, AUTO_ARIMA_info1, AUTO_ARIMA_graph1,
+                            AUTO_ARIMA_preds1, AUTO_ARIMA_resids1]
             )
             
             var2.change(
@@ -3742,7 +4451,9 @@ with gr.Blocks(title="Análisis de Cultivos") as app:
                             PACF_graph2, PACF_info2,
                             ARIMA_p_2, ARIMA_q_2,
                             ARIMA_desc2, ARIMA_info2, ARIMA_graph2, ARIMA_preds2,
-                            ARIMA_graph2_resids, ARIMA_resids2]
+                            ARIMA_graph2_resids, ARIMA_resids2,
+                            AUTO_ARIMA_desc2, AUTO_ARIMA_info2, AUTO_ARIMA_graph2,
+                            AUTO_ARIMA_preds2, AUTO_ARIMA_resids2]
             )
 
             var3.change(
@@ -3761,7 +4472,9 @@ with gr.Blocks(title="Análisis de Cultivos") as app:
                             PACF_graph3, PACF_info3,
                             ARIMA_p_3, ARIMA_q_3,
                             ARIMA_desc3, ARIMA_info3, ARIMA_graph3, ARIMA_preds3,
-                            ARIMA_graph3_resids, ARIMA_resids3]
+                            ARIMA_graph3_resids, ARIMA_resids3,
+                            AUTO_ARIMA_desc3, AUTO_ARIMA_info3, AUTO_ARIMA_graph3,
+                            AUTO_ARIMA_preds3, AUTO_ARIMA_resids3]
             )
 
             graph_serie.change(
@@ -3841,7 +4554,9 @@ with gr.Blocks(title="Análisis de Cultivos") as app:
                             PACF_graph1, PACF_info1,
                             ARIMA_p_1, ARIMA_q_1,
                             ARIMA_desc1, ARIMA_info1, ARIMA_graph1, ARIMA_preds1,
-                            ARIMA_graph1_resids, ARIMA_resids1]
+                            ARIMA_graph1_resids, ARIMA_resids1,
+                            AUTO_ARIMA_desc1, AUTO_ARIMA_info1, AUTO_ARIMA_graph1,
+                            AUTO_ARIMA_preds1, AUTO_ARIMA_resids1]
             )
 
             imp2_button.click(
@@ -3859,7 +4574,9 @@ with gr.Blocks(title="Análisis de Cultivos") as app:
                             PACF_graph2, PACF_info2,
                             ARIMA_p_2, ARIMA_q_2,
                             ARIMA_desc2, ARIMA_info2, ARIMA_graph2, ARIMA_preds2,
-                            ARIMA_graph2_resids, ARIMA_resids2]
+                            ARIMA_graph2_resids, ARIMA_resids2,
+                            AUTO_ARIMA_desc2, AUTO_ARIMA_info2, AUTO_ARIMA_graph2,
+                            AUTO_ARIMA_preds2, AUTO_ARIMA_resids2]
             )
 
             imp3_button.click(
@@ -3877,7 +4594,9 @@ with gr.Blocks(title="Análisis de Cultivos") as app:
                             PACF_graph3, PACF_info3,
                             ARIMA_p_3, ARIMA_q_3,
                             ARIMA_desc3, ARIMA_info3, ARIMA_graph3, ARIMA_preds3,
-                            ARIMA_graph3_resids, ARIMA_resids3]
+                            ARIMA_graph3_resids, ARIMA_resids3,
+                            AUTO_ARIMA_desc3, AUTO_ARIMA_info3, AUTO_ARIMA_graph3,
+                            AUTO_ARIMA_preds3, AUTO_ARIMA_resids3]
             )
 
             rest1_button.click(
@@ -3895,7 +4614,9 @@ with gr.Blocks(title="Análisis de Cultivos") as app:
                             PACF_graph1, PACF_info1,
                             ARIMA_p_1, ARIMA_q_1,
                             ARIMA_desc1, ARIMA_info1, ARIMA_graph1, ARIMA_preds1,
-                            ARIMA_graph1_resids, ARIMA_resids1]
+                            ARIMA_graph1_resids, ARIMA_resids1,
+                            AUTO_ARIMA_desc1, AUTO_ARIMA_info1, AUTO_ARIMA_graph1,
+                            AUTO_ARIMA_preds1, AUTO_ARIMA_resids1]
             )
 
             rest2_button.click(
@@ -3913,7 +4634,9 @@ with gr.Blocks(title="Análisis de Cultivos") as app:
                             PACF_graph2, PACF_info2,
                             ARIMA_p_2, ARIMA_q_2,
                             ARIMA_desc2, ARIMA_info2, ARIMA_graph2, ARIMA_preds2,
-                            ARIMA_graph2_resids, ARIMA_resids2]
+                            ARIMA_graph2_resids, ARIMA_resids2,
+                            AUTO_ARIMA_desc2, AUTO_ARIMA_info2, AUTO_ARIMA_graph2,
+                            AUTO_ARIMA_preds2, AUTO_ARIMA_resids2]
             )
 
             rest3_button.click(
@@ -3931,7 +4654,9 @@ with gr.Blocks(title="Análisis de Cultivos") as app:
                             PACF_graph3, PACF_info3,
                             ARIMA_p_3, ARIMA_q_3,
                             ARIMA_desc3, ARIMA_info3, ARIMA_graph3, ARIMA_preds3,
-                            ARIMA_graph3_resids, ARIMA_resids3]
+                            ARIMA_graph3_resids, ARIMA_resids3,
+                            AUTO_ARIMA_desc3, AUTO_ARIMA_info3, AUTO_ARIMA_graph3,
+                            AUTO_ARIMA_preds3, AUTO_ARIMA_resids3]
             )
 
             cut1_button.click(
@@ -3949,7 +4674,9 @@ with gr.Blocks(title="Análisis de Cultivos") as app:
                             PACF_graph1, PACF_info1,
                             ARIMA_p_1, ARIMA_q_1,
                             ARIMA_desc1, ARIMA_info1, ARIMA_graph1, ARIMA_preds1,
-                            ARIMA_graph1_resids, ARIMA_resids1]
+                            ARIMA_graph1_resids, ARIMA_resids1,
+                            AUTO_ARIMA_desc1, AUTO_ARIMA_info1, AUTO_ARIMA_graph1,
+                            AUTO_ARIMA_preds1, AUTO_ARIMA_resids1]
             )
             
             cut2_button.click(
@@ -3967,7 +4694,9 @@ with gr.Blocks(title="Análisis de Cultivos") as app:
                             PACF_graph2, PACF_info2,
                             ARIMA_p_2, ARIMA_q_2,
                             ARIMA_desc2, ARIMA_info2, ARIMA_graph2, ARIMA_preds2,
-                            ARIMA_graph2_resids, ARIMA_resids2]
+                            ARIMA_graph2_resids, ARIMA_resids2,
+                            AUTO_ARIMA_desc2, AUTO_ARIMA_info2, AUTO_ARIMA_graph2,
+                            AUTO_ARIMA_preds2, AUTO_ARIMA_resids2]
             )
 
             cut3_button.click(
@@ -3985,7 +4714,9 @@ with gr.Blocks(title="Análisis de Cultivos") as app:
                             PACF_graph3, PACF_info3,
                             ARIMA_p_3, ARIMA_q_3,
                             ARIMA_desc3, ARIMA_info3, ARIMA_graph3, ARIMA_preds3,
-                            ARIMA_graph3_resids, ARIMA_resids3]
+                            ARIMA_graph3_resids, ARIMA_resids3,
+                            AUTO_ARIMA_desc3, AUTO_ARIMA_info3, AUTO_ARIMA_graph3,
+                            AUTO_ARIMA_preds3, AUTO_ARIMA_resids3]
             )
 
             STL_button.click(
@@ -4024,14 +4755,31 @@ with gr.Blocks(title="Análisis de Cultivos") as app:
                             ARIMA_p_1, ARIMA_p_2, ARIMA_p_3,
                             level_diff_state_1, level_diff_state_2, level_diff_state_3,
                             ARIMA_q_1, ARIMA_q_2, ARIMA_q_3],
-                outputs = [ARIMA_info1, ARIMA_graph1, ARIMA_preds1,
+                outputs = [dataset_ARIMA_state_1,
+                            ARIMA_info1, ARIMA_graph1, ARIMA_preds1,
                             ARIMA_graph1_resids, ARIMA_resids1,
+                            dataset_ARIMA_state_2,
                             ARIMA_info2, ARIMA_graph2, ARIMA_preds2,
                             ARIMA_graph2_resids, ARIMA_resids2,
+                            dataset_ARIMA_state_3,
                             ARIMA_info3, ARIMA_graph3, ARIMA_preds3,
                             ARIMA_graph3_resids, ARIMA_resids3]
             )
 
+            AUTO_ARIMA_button.click(
+                fn = tab_ST_AUTO_ARIMA_all,
+                inputs = [dataset_filter_state_1, dataset_filter_state_2, dataset_filter_state_3,
+                            var1, var2, var3],
+                outputs = [dataset_AUTO_ARIMA_state_1,
+                            AUTO_ARIMA_info1, AUTO_ARIMA_graph1, AUTO_ARIMA_preds1,
+                            AUTO_ARIMA_resids1,
+                            dataset_AUTO_ARIMA_state_2,
+                            AUTO_ARIMA_info2, AUTO_ARIMA_graph2, AUTO_ARIMA_preds2,
+                            AUTO_ARIMA_resids2,
+                            dataset_AUTO_ARIMA_state_3,
+                            AUTO_ARIMA_info3, AUTO_ARIMA_graph3, AUTO_ARIMA_preds3,
+                            AUTO_ARIMA_resids3]
+            )
 
 
         ###### PESTAÑA BOSQUES ALEATORIOS
