@@ -25,6 +25,11 @@ import plotly.express as px
 import unicodedata
 # fin prg MAF
 
+# comienzo prg YAE
+from sklearn.ensemble import RandomForestRegressor
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import mean_squared_error, r2_score
+# fin  prg YAE
 
 # region CONSTANTES Y DICCIONARIOS
 # --- Constantes ---
@@ -4124,6 +4129,7 @@ with gr.Blocks(title="Análisis de Cultivos") as app:
 
 
         ###### PESTAÑA BOSQUES ALEATORIOS
+        ###### comienzo prg YAE
         with gr.Tab("Bosques Aleatorios"):
             with gr.Row(elem_classes="title-tab"):
                 gr.HTML("&nbsp;&nbsp;ANÁLISIS DE INDICADORES EDUCATIVOS MEDIANTE BOSQUES ALEATORIOS", elem_classes="title-text")
