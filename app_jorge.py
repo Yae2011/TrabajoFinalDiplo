@@ -3463,8 +3463,9 @@ def tab_ST_serie_cut(df, yinicial, yfinal):
 
     return df_cut, inicio, final, regs, regsno, None
 
-def tab_ST_FOURIER(df1, df2, df3, diff1, diff2, diff3, cult1, cult2, cult3,
-                            prov1, prov2, prov3, dep1, dep2, dep3, ind1, ind2, ind3):
+def tab_ST_FOURIER(df1, df2, df3, diff1, diff2, diff3, d1, d2, d3,
+                                    cult1, cult2, cult3, prov1, prov2, prov3, 
+                                    dep1, dep2, dep3, ind1, ind2, ind3):
     
     if df1.empty:
         text1, ind1 = None, None
@@ -3487,28 +3488,21 @@ def tab_ST_FOURIER(df1, df2, df3, diff1, diff2, diff3, cult1, cult2, cult3,
     # Gráfico de las series originales
     titulo = "SERIES ORIGINALES"
     graph_orig = tab_ST_create_evolution_graph_triple(df1, df2, df3, 
-                                        ind1, ind2, ind3, text1, text2, text3, titulo,
-                                        serie=True, med_glob=False, tend=False, 
-                                        med_mov=False, sd_mov=False, tipo_mov=4, 
-                                        interactivo=True, h_estatico=6, 
-                                        h_interactivo=H_INTERACTIVO1)
+                            ind1, ind2, ind3, text1, text2, text3, titulo, serie=True,
+                            med_glob=False, tend=False, med_mov=False, sd_mov=False, tipo_mov=4, 
+                            interactivo=True, h_estatico=6, h_interactivo=H_INTERACTIVO1)
         
     # Gráfico de las series diferenciadas
     titulo = "SERIES DIFERENCIADAS"
     graph_diff = tab_ST_create_evolution_graph_triple(diff1, diff2, diff3, 
-                                        ind1, ind2, ind3, text1, text2, text3, titulo,
-                                        serie=True, med_glob=False, tend=False, 
-                                        med_mov=False, sd_mov=False, tipo_mov=4, 
-                                        interactivo=True, h_estatico=6, 
-                                        h_interactivo=H_INTERACTIVO1)
+                            ind1, ind2, ind3, text1, text2, text3, titulo, serie=True,
+                            med_glob=False, tend=False, med_mov=False, sd_mov=False, tipo_mov=4, 
+                            interactivo=True, h_estatico=6, h_interactivo=H_INTERACTIVO1)
 
     # Cálculo completo de FFT, SFTF y wavelets para series originales y diferenciadas
-    # graph_full_1, reporte1 = tab_ST_Fourier_Wavelets_Full(df1, diff1, ind1, fs=1.0)
-    # graph_full_2, reporte2 = tab_ST_Fourier_Wavelets_Full(df2, diff2, ind2, fs=1.0)
-    # graph_full_3, reporte3 = tab_ST_Fourier_Wavelets_Full(df3, diff3, ind3, fs=1.0)
-    graph_full_1, reporte1 = None, None
-    graph_full_2, reporte2 = None, None
-    graph_full_3, reporte3 = None, None
+    graph_full_1, reporte1 = tab_ST_Fourier_Wavelets_Full(df1, diff1, ind1, d1, fs=1.0)
+    graph_full_2, reporte2 = tab_ST_Fourier_Wavelets_Full(df2, diff2, ind2, d2, fs=1.0)
+    graph_full_3, reporte3 = tab_ST_Fourier_Wavelets_Full(df3, diff3, ind3, d3, fs=1.0)
 
     return (# Gráfico series originales
             gr.update(visible=graph_orig is not None, value=graph_orig),
@@ -3706,10 +3700,14 @@ def tab_ST_create_evolution_graph_triple(df1, df2, df3, ind1, ind2, ind3,
         finally:
             plt.close(fig)
 
-def tab_ST_Fourier_Wavelets_Full(df_orig, df_diff, var, fs=1.0):
+def tab_ST_Fourier_Wavelets_Full(df_orig, df_diff, var, d, fs=1.0):
     """
     Análisis Espectral con visualización unificada.
-    Busca automáticamente la columna 'periodo' para el eje temporal.
+    La columna 'periodo' es para el eje temporal.
+    - df_orig: df original
+    - df_diff: df diferenciado
+    - var: indicador con nombre original
+    - fs: frecuencia de muestreo
     """
     
     if df_orig.empty:
@@ -3719,13 +3717,33 @@ def tab_ST_Fourier_Wavelets_Full(df_orig, df_diff, var, fs=1.0):
                 No se seleccionó una serie temporal.
             </div>
             """
-        return gr.update(visible=False), reporte
+        return None, reporte
+    
+    if df_diff.empty:
+        reporte = """
+            <div style="padding:15px; border:2px solid #ffa000; background-color:#fff9c4; border-radius:8px;">
+                <strong style="color:#f57c00;"> ERROR EN EL ANÁLISIS:</strong><br>
+                No se verificó la estacionariedad de la serie temporal.
+            </div>
+            """
+        return None, reporte
+    
+    # Se verifica que la serie sea estacionaria (NO_EXISTE = sin prueba ADF, no se verificó estacionariedad)
+    if d == NO_EXISTE:
+        reporte = """
+            <div style="padding:15px; border:2px solid #ffa000; background-color:#fff9c4; border-radius:8px;">
+                <strong style="color:#f57c00;"> ERROR EN EL ANÁLISIS:</strong><br>
+                La serie debe ser estacionaria para aplicar la Transformada Rápida de Fourier.
+                Debe aplicarse la diferenciación (si corresponde) y 
+                la prueba ADF para verificar ESTACIONARIEDAD.</div>
+            """
+        return None, reporte
     
     # 1. Extracción de datos asumiendo columna 'periodo'
     # Usamos .copy() para evitar SettingWithCopyWarning
     y_orig = df_orig[var].values
     anios_orig = df_orig['periodo'].values
-    
+
     # Limpieza de la serie diferenciada (eliminando NaNs iniciales)
     df_diff_clean = df_diff[['periodo', var]].dropna()
     y_diff = df_diff_clean[var].values
@@ -3751,10 +3769,10 @@ def tab_ST_Fourier_Wavelets_Full(df_orig, df_diff, var, fs=1.0):
     
     fig_espectral = make_subplots(
         rows=4, cols=1, 
-        subplot_titles=(f'Serie Temporal Estacionaria (Dominio del Tiempo - {var} Dif.)',
-                        f'Densidad Espectral Global (Dominio de la Frecuencia - FFT Welch)', 
-                        'Evolución Temporal de Frecuencias (Espectrograma STFT)', 
-                        'Análisis de Resolución Tiempo-Frecuencia (Wavelets CWT)'),
+        subplot_titles=(f'Serie Temporal Estacionaria<br>Dominio del Tiempo',
+                        f'Densidad Espectral Global<br>Dominio de la Frecuencia - FFT Welch', 
+                        f'Evolución Temporal de Frecuencias<br>Espectrograma STFT', 
+                        f'Análisis de Resolución Tiempo-Frecuencia<br>Wavelets CWT'),
         vertical_spacing=0.07
     )
 
@@ -3784,12 +3802,20 @@ def tab_ST_Fourier_Wavelets_Full(df_orig, df_diff, var, fs=1.0):
         colorscale='Magma', showscale=False, name='CWT'
     ), row=4, col=1)
 
-    # Diseño y Estética Unificada (Coherente con tab_ST_ARIMA)
-    fig_espectral.update_layout(height=1200, template="plotly_white", margin=dict(l=20, r=20, t=60, b=20))
-    fig_espectral.update_annotations(font=dict(family="Arial Black", size=14, color="black"))
+    fig_espectral.update_layout(height=1200, template="plotly_white",
+                                autosize=True, # El gráfico se adapta al contenedor
+                                margin=dict(l=5, r=5, t=50, b=20)) # Márgenes del gráfico
+    fig_espectral.update_annotations(font=dict(family="Arial Black", 
+                                size=14, color="black"))
     
-    fig_espectral.update_xaxes(showgrid=True, gridcolor='lightgray', tickfont=dict(family="Arial Black", size=10))
-    fig_espectral.update_yaxes(showgrid=True, gridcolor='lightgray', tickfont=dict(family="Arial Black", size=10))
+    fig_espectral.update_xaxes(showgrid=True, 
+                               gridcolor='lightgray', 
+                               tickfont=dict(family="Arial Black", size=10),
+                               tickmode='auto',
+                               nticks=5)
+    fig_espectral.update_yaxes(showgrid=True, 
+                               gridcolor='lightgray', 
+                               tickfont=dict(family="Arial Black", size=10))
 
     # --- 4. REPORTE ANALÍTICO (HTML) ---
     
@@ -3801,20 +3827,20 @@ def tab_ST_Fourier_Wavelets_Full(df_orig, df_diff, var, fs=1.0):
         periodo = round(1/f_val, 2) if f_val != 0 else "∞"
         filas_info_html += f"""
             <tr>
-                <td style='padding: 8px; border: 1px solid black; background-color: #F2F4F4; font-weight: bold;'>Periodo: {periodo} años</td>
-                <td style='padding: 8px; border: 1px solid black; background-color: #FFFFFF; text-align: right;'>Frec: {f_val:.4f}</td>
-                <td style='padding: 8px; border: 1px solid black; background-color: #FFFFFF; font-weight: bold; text-align: right;'>Potencia: {mag_fft[idx]:.2f}</td>
+                <td style='padding: 8px; border: 1px solid black; background-color: #F2F4F4; font-weight: bold;'>{periodo} años</td>
+                <td style='padding: 8px; border: 1px solid black; background-color: #FFFFFF; text-align: right;'>{f_val:.4f}</td>
+                <td style='padding: 8px; border: 1px solid black; background-color: #FFFFFF; font-weight: bold; text-align: right;'>{mag_fft[idx]:.2f}</td>
             </tr>
         """
 
     reporte_html = f"""
     <div style='font-family: Arial; font-size: 14px; overflow-x: auto;'>
-        <h4 style='color: #000000;'>Análisis Espectral Consolidado: {var.upper()}</h4>
+        <h4 style='color: #000000;'>Análisis Espectral Consolidado<br>{dict_nlargos[var]}</h4>
         <table style='width: 100%; border-collapse: collapse; margin-bottom: 20px; border: 1px solid black;'>
             <tr style='background-color: #F2F4F4;'>
-                <th style='padding: 10px; border: 1px solid black; text-align: center; color: black;'>Periodicidad Detectada</th>
+                <th style='padding: 10px; border: 1px solid black; text-align: center; color: black;'>Período Detectado</th>
                 <th style='padding: 10px; border: 1px solid black; text-align: center; color: black;'>Frecuencia (1/T)</th>
-                <th style='padding: 10px; border: 1px solid black; text-align: center; color: black;'>Intensidad de Señal</th>
+                <th style='padding: 10px; border: 1px solid black; text-align: center; color: black;'>Potencia de la Señal</th>
             </tr>
             {filas_info_html}
         </table>
@@ -4577,7 +4603,7 @@ with gr.Blocks(title="Análisis de Cultivos") as app:
                 with gr.Row(elem_classes="custom-tab"):
                     with gr.Column():
                         with gr.Row():
-                            STL_desc1 = gr.HTML("Descomposición de la Serie 1", elem_classes="info-display-3")
+                            STL_desc1 = gr.HTML("Debe seleccionarse la Serie 1", elem_classes="info-display-3")
                         with gr.Row():
                             with gr.Column():                        
                                 STL_graph1 = gr.Plot(show_label=False, visible=False)
@@ -4585,7 +4611,7 @@ with gr.Blocks(title="Análisis de Cultivos") as app:
 
                     with gr.Column():
                         with gr.Row():
-                            STL_desc2 = gr.HTML("Descomposición de la Serie 2", elem_classes="info-display-3")
+                            STL_desc2 = gr.HTML("Debe seleccionarse la Serie 2", elem_classes="info-display-3")
                         with gr.Row():
                             with gr.Column():
                                 STL_graph2 = gr.Plot(show_label=False, visible=False)
@@ -4593,7 +4619,7 @@ with gr.Blocks(title="Análisis de Cultivos") as app:
 
                     with gr.Column():
                         with gr.Row():
-                            STL_desc3 = gr.HTML("Descomposición de la Serie 3", elem_classes="info-display-3")
+                            STL_desc3 = gr.HTML("Debe seleccionarse la Serie 3", elem_classes="info-display-3")
                         with gr.Row():
                             with gr.Column():
                                 STL_graph3 = gr.Plot(show_label=False, visible=False)
@@ -4613,7 +4639,7 @@ with gr.Blocks(title="Análisis de Cultivos") as app:
                 with gr.Row(elem_classes="custom-tab"):
                     with gr.Column():
                         with gr.Row():
-                            ADF_desc1 = gr.HTML("Prueba ADF para la Serie 1", elem_classes="info-display-3")
+                            ADF_desc1 = gr.HTML("Debe seleccionarse la Serie 1", elem_classes="info-display-3")
                         with gr.Row():
                             leveldiff1 = gr.Radio(label="Grado de Diferenciación", choices=[0, 1, 2, 3, 4], value=0, visible=False)
                         with gr.Row():
@@ -4624,7 +4650,7 @@ with gr.Blocks(title="Análisis de Cultivos") as app:
 
                     with gr.Column():
                         with gr.Row():
-                            ADF_desc2 = gr.HTML("Prueba ADF para la Serie 2", elem_classes="info-display-3")
+                            ADF_desc2 = gr.HTML("Debe seleccionarse la Serie 2", elem_classes="info-display-3")
                         with gr.Row():
                             leveldiff2 = gr.Radio(label="Grado de Diferenciación", choices=[0, 1, 2, 3, 4], value=0, visible=False)
                         with gr.Row():
@@ -4635,7 +4661,7 @@ with gr.Blocks(title="Análisis de Cultivos") as app:
 
                     with gr.Column():
                         with gr.Row():
-                            ADF_desc3 = gr.HTML("Prueba ADF para la Serie 3", elem_classes="info-display-3")
+                            ADF_desc3 = gr.HTML("Debe seleccionarse la Serie 3", elem_classes="info-display-3")
                         with gr.Row():
                             leveldiff3 = gr.Radio(label="Grado de Diferenciación", choices=[0, 1, 2, 3, 4], value=0, visible=False)
                         with gr.Row():
@@ -4658,7 +4684,7 @@ with gr.Blocks(title="Análisis de Cultivos") as app:
                 with gr.Row(elem_classes="custom-tab"):
                     with gr.Column():
                         with gr.Row():
-                            ACF_desc1 = gr.HTML("Autocorrelación de la Serie 1", elem_classes="info-display-3")
+                            ACF_desc1 = gr.HTML("Debe seleccionarse la Serie 1", elem_classes="info-display-3")
                         with gr.Row():
                             with gr.Column():                        
                                 ACF_graph1 = gr.Plot(show_label=False, visible=False)
@@ -4668,7 +4694,7 @@ with gr.Blocks(title="Análisis de Cultivos") as app:
 
                     with gr.Column():
                         with gr.Row():
-                            ACF_desc2 = gr.HTML("Autocorrelación de la Serie 2", elem_classes="info-display-3")
+                            ACF_desc2 = gr.HTML("Debe seleccionarse la Serie 2", elem_classes="info-display-3")
                         with gr.Row():
                             with gr.Column():
                                 ACF_graph2 = gr.Plot(show_label=False, visible=False)
@@ -4678,7 +4704,7 @@ with gr.Blocks(title="Análisis de Cultivos") as app:
 
                     with gr.Column():
                         with gr.Row():
-                            ACF_desc3 = gr.HTML("AutocorrelacióN de la Serie 3", elem_classes="info-display-3")
+                            ACF_desc3 = gr.HTML("Debe seleccionarse la Serie 3", elem_classes="info-display-3")
                         with gr.Row():
                             with gr.Column():
                                 ACF_graph3 = gr.Plot(show_label=False, visible=False)
@@ -4708,7 +4734,7 @@ with gr.Blocks(title="Análisis de Cultivos") as app:
                 with gr.Row(elem_classes="custom-tab"):
                     with gr.Column():
                         with gr.Row():
-                            ARIMA_desc1 = gr.HTML("ARIMA de la Serie 1", elem_classes="info-display-3")
+                            ARIMA_desc1 = gr.HTML("Debe seleccionarse la Serie 1", elem_classes="info-display-3")
                         with gr.Row():
                             with gr.Column():                        
                                 ARIMA_info1 = gr.HTML("Parámetros y Estadísticos de ARIMA", visible=False)
@@ -4719,7 +4745,7 @@ with gr.Blocks(title="Análisis de Cultivos") as app:
 
                     with gr.Column():
                         with gr.Row():
-                            ARIMA_desc2 = gr.HTML("ARIMA de la Serie 2", elem_classes="info-display-3")
+                            ARIMA_desc2 = gr.HTML("Debe seleccionarse la Serie 2", elem_classes="info-display-3")
                         with gr.Row():
                             with gr.Column():
                                 ARIMA_info2 = gr.HTML("Parámetros y Estadísticos de ARIMA", visible=False)
@@ -4730,7 +4756,7 @@ with gr.Blocks(title="Análisis de Cultivos") as app:
 
                     with gr.Column():
                         with gr.Row():
-                            ARIMA_desc3 = gr.HTML("ARIMA de la Serie 3", elem_classes="info-display-3")
+                            ARIMA_desc3 = gr.HTML("Debe seleccionarse la Serie 3", elem_classes="info-display-3")
                         with gr.Row():
                             with gr.Column():
                                 ARIMA_info3 = gr.HTML("Parámetros y Estadísticos de ARIMA", visible=False)
@@ -4811,9 +4837,9 @@ with gr.Blocks(title="Análisis de Cultivos") as app:
 
                 with gr.Column(elem_classes="custom-tab"):
                     with gr.Row():
-                        Fourier_desc1 = gr.HTML("Fourier de la Serie 1", elem_classes="info-display-3")
-                        Fourier_desc2 = gr.HTML("Fourier de la Serie 2", elem_classes="info-display-3")
-                        Fourier_desc3 = gr.HTML("Fourier de la Serie 3", elem_classes="info-display-3")
+                        Fourier_desc1 = gr.HTML("Debe seleccionarse la Serie 1", elem_classes="info-display-3")
+                        Fourier_desc2 = gr.HTML("Debe seleccionarse la Serie 2", elem_classes="info-display-3")
+                        Fourier_desc3 = gr.HTML("Debe seleccionarse la Serie 3", elem_classes="info-display-3")
                     
                     with gr.Row(visible=True):
                         Fourier_series_orig = gr.Plot(show_label=False, visible=False, elem_classes="custom-graf-panel")
@@ -4823,7 +4849,7 @@ with gr.Blocks(title="Análisis de Cultivos") as app:
 
                     with gr.Row():
                         with gr.Column():                        
-                            Fourier_graph1 = gr.Plot(show_label=True, visible=False)
+                            Fourier_graph1 = gr.Plot(show_label=False, visible=False)
                             Fourier_info1 = gr.HTML("Estadísticos Serie 1", visible=False)
                         with gr.Column():                        
                             Fourier_graph2 = gr.Plot(show_label=False, visible=False)
@@ -5387,6 +5413,7 @@ with gr.Blocks(title="Análisis de Cultivos") as app:
                 fn = tab_ST_FOURIER,
                 inputs = [dataset_filter_state_1, dataset_filter_state_2, dataset_filter_state_3,
                             dataset_diff_state_1, dataset_diff_state_2, dataset_diff_state_3,
+                            level_diff_state_1, level_diff_state_2, level_diff_state_3,
                             cult1, cult2, cult3, prov1, prov2, prov3,
                             dep1, dep2, dep3, var1, var2, var3],
                 outputs = [Fourier_series_orig, Fourier_series_dif,
