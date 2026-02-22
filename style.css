@@ -144,7 +144,19 @@
     margin-top: 28px !important;
     margin-bottom: 0px !important;
 }
-
+.custom-graf-panel {
+    background-color: #ffffff !important;
+    border-radius: 10px !important;
+    border: none !important;
+    /*box-shadow: var(--shadow-soft) !important;*/
+    width: 100% !important;
+}
+.custom-tab-special {
+    padding-top: 15px !important;
+    padding-bottom: 15px !important;
+    padding-right: 15px !important;
+    padding-left: 25px !important;
+}
 
 
 /* ### CONTENEDOR ENCABEZADO 
@@ -519,6 +531,8 @@
     transform: translateY(2px);
     box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.1) !important;
 }
+
+
 
 /* ### TEXTO PARA CAMPO INFORMATIVO 
 ------------------------------------------------ */
