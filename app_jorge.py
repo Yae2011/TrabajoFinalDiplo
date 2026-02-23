@@ -1462,7 +1462,7 @@ def tab_ST_on_option_select(df, cultivo, provincia, departamento, indicador,
                 # gr.update(visible=False),
                 ## Sección FOURIER
                 # Información de filtros
-                gr.update(visible=False),
+                msg,
                 # Gráfico de series originales y diferenciadas
                 gr.Plot(visible=False), gr.Plot(visible=False),
                 # Gráficos de Transformada de Fourier y otras
@@ -3703,13 +3703,10 @@ def tab_ST_create_evolution_graph_triple(df1, df2, df3, ind1, ind2, ind3,
 def tab_ST_Fourier_Wavelets_Full(df_orig, df_diff, var, d, fs=1.0):
     """
     Análisis Espectral con visualización unificada.
-    La columna 'periodo' es para el eje temporal.
-    - df_orig: df original
-    - df_diff: df diferenciado
-    - var: indicador con nombre original
-    - fs: frecuencia de muestreo
+    Optimizado para visualizar ciclos en el dominio del tiempo.
     """
     
+    # Validaciones de entrada
     if df_orig.empty:
         reporte = """
             <div style="padding:15px; border:2px solid #ffa000; background-color:#fff9c4; border-radius:8px;">
@@ -3727,125 +3724,203 @@ def tab_ST_Fourier_Wavelets_Full(df_orig, df_diff, var, d, fs=1.0):
             </div>
             """
         return None, reporte
-    
-    # Se verifica que la serie sea estacionaria (NO_EXISTE = sin prueba ADF, no se verificó estacionariedad)
+
+    # Se verifica que la serie sea estacionaria
+    # (NO_EXISTE = sin prueba ADF, no se verificó estacionariedad)
     if d == NO_EXISTE:
         reporte = """
             <div style="padding:15px; border:2px solid #ffa000; background-color:#fff9c4; border-radius:8px;">
                 <strong style="color:#f57c00;"> ERROR EN EL ANÁLISIS:</strong><br>
                 La serie debe ser estacionaria para aplicar la Transformada Rápida de Fourier.
-                Debe aplicarse la diferenciación (si corresponde) y 
+                Debe aplicarse la diferenciación (si corresponde) y
                 la prueba ADF para verificar ESTACIONARIEDAD.</div>
             """
         return None, reporte
-    
-    # 1. Extracción de datos asumiendo columna 'periodo'
-    # Usamos .copy() para evitar SettingWithCopyWarning
+
+   
+    # 1. Preparación de datos
     y_orig = df_orig[var].values
     anios_orig = df_orig['periodo'].values
-
-    # Limpieza de la serie diferenciada (eliminando NaNs iniciales)
-    df_diff_clean = df_diff[['periodo', var]].dropna()
-    y_diff = df_diff_clean[var].values
-    anios_diff = df_diff_clean['periodo'].values
+    
+    # 1. Preparación de la señal
+    y_diff = df_diff[var].dropna().values
+    anios_diff = df_diff['periodo'].dropna().values
+    n = len(y_diff)
 
     # --- 2. CÁLCULOS TÉCNICOS ---
     
-    # FFT (Welch) sobre Serie Diferenciada
-    f_fft, mag_fft = welch(y_diff, fs=fs, nperseg=len(y_diff))
-    
-    # STFT sobre Serie Original
+    """
+    # Cálculo de la FFT Real
+    fft_coeffs = np.fft.rfft(y_diff)
+    frecuencias = np.fft.rfftfreq(n, d=1/fs)
+    # Magnitud normalizada (como en su ejemplo: * 2 / n)
+    magnitud = np.abs(fft_coeffs) * 2 / n
+
+    # Conversión de Frecuencias a Períodos (Eje X para el segundo gráfico)
+    # Evitamos división por cero en la frecuencia fundamental (0)
+    con_periodo = np.zeros_like(frecuencias)
+    con_periodo[1:] = 1 / frecuencias[1:] 
+
+    # FILTRADO E IFFT PARA EL PRIMER GRÁFICO (Dominio del Tiempo)
+    # Mantener los 5 picos principales para reconstruir la intensidad en el tiempo
+    umbral = np.sort(magnitud)[-5]
+    fft_filtrada = np.where(magnitud >= umbral, fft_coeffs, 0)
+    y_ciclica_reconstruida = np.fft.irfft(fft_filtrada, n=n)
+    """
+
+    # FFT para señales reales
+    fft_coeffs = np.fft.rfft(y_diff)
+    frecuencias = np.fft.rfftfreq(n, d=1/fs)
+    # Magnitud normalizada
+    magnitud = np.abs(fft_coeffs) * 2 / n
+
+    # Cálculo del umbral de significancia (95% confianza: media + 2 sigma)
+    media_mag = np.mean(magnitud)
+    desv_mag = np.std(magnitud)
+    umbral_95 = media_mag + (2 * desv_mag)
+
+    # Conversión de Frecuencia a Período (Eje X del gráfico 2)
+    con_periodo = np.zeros_like(frecuencias)
+    con_periodo[1:] = 1 / frecuencias[1:] 
+
+    # TRANSFORMADA INVERSA (IFFT): Solo componentes que superan el ruido (Significativos)
+    fft_filtrada = np.where(magnitud >= umbral_95, fft_coeffs, 0)
+    y_ciclica_reconstruida = np.fft.irfft(fft_filtrada, n=n)
+
+
+    # STFT: Evolución temporal de las frecuencias
     nperseg = min(20, len(y_orig) // 3)
     f_stft, t_stft, Zxx = stft(y_orig, fs=fs, nperseg=nperseg, noverlap=nperseg-1)
-    # Ajuste del eje de tiempo relativo a los años reales
     t_stft_años = anios_orig[0] + t_stft
 
-    # Wavelets (CWT) - Serie Original
+    # Wavelets (CWT)
     scales = np.arange(1, 31)
     coef, freqs_wav = pywt.cwt(y_orig, scales, 'cmor1.5-1.0', sampling_period=1/fs)
     power_wav = (np.abs(coef)) ** 2
 
-    # --- 3. GENERACIÓN DE GRÁFICOS (4 SUBPLOTS) ---
-    
+    # --- 3. GENERACIÓN DE GRÁFICOS ---
     fig_espectral = make_subplots(
         rows=4, cols=1, 
-        subplot_titles=(f'Serie Temporal Estacionaria<br>Dominio del Tiempo',
-                        f'Densidad Espectral Global<br>Dominio de la Frecuencia - FFT Welch', 
-                        f'Evolución Temporal de Frecuencias<br>Espectrograma STFT', 
-                        f'Análisis de Resolución Tiempo-Frecuencia<br>Wavelets CWT'),
+        subplot_titles=(
+            'Intensidad de Ciclos Dominantes<br>en el Tiempo (Inversa de la FFT)',
+            'Espectro de Magnitud vs. Período<br>(Ciclos Detectados)', 
+            'Evolución Temporal de Frecuencias<br>(STFT)', 
+            'Análisis Tiempo-Frecuencia<br>(Wavelets)'
+        ),
         vertical_spacing=0.07
     )
 
-    # A. Serie Diferenciada (Dominio del Tiempo)
+    """
+    # A. GRÁFICO 1: IFFT (Dominio del Tiempo)
     fig_espectral.add_trace(go.Scatter(
-        x=anios_diff, y=y_diff, 
-        mode='lines+markers', name='Serie Dif.',
-        line=dict(color='#FF7F0E', width=2),
-        marker=dict(size=4)
+        x=anios_diff, y=y_ciclica_reconstruida,
+        mode='lines', line=dict(color='#2ECC71', width=2.5),
+        fill='tozeroy', name='Intensidad Temporal'
     ), row=1, col=1)
 
-    # B. FFT - Dominio de la Frecuencia
-    fig_espectral.add_trace(go.Bar(
-        x=f_fft, y=mag_fft, name='FFT Welch', 
-        marker_color='#1f77b4'
+    # B. GRÁFICO 2: Magnitud vs Período (Como su código de ventas)
+    # Filtramos periodos muy largos para que el gráfico sea legible (ej. < 20 años)
+    mask_visible = (con_periodo > 0) & (con_periodo < 20)
+    fig_espectral.add_trace(go.Scatter(
+        x=con_periodo[mask_visible], 
+        y=magnitud[mask_visible],
+        mode='lines+markers',
+        line=dict(color='#1F77B4', width=2),
+        marker=dict(size=4),
+        name='Espectro de Período'
     ), row=2, col=1)
+    """
+
+    # A. Reconstrucción Temporal (IFFT)
+    fig_espectral.add_trace(go.Scatter(
+        x=anios_diff, y=y_ciclica_reconstruida,
+        mode='lines', line=dict(color='#2ECC71', width=2.5),
+        fill='tozeroy', name='Ciclos Significativos'
+    ), row=1, col=1)
+
+    # B. Magnitud vs Período con Validación Visual
+    mask_vis = (con_periodo > 0) & (con_periodo < 25) # Filtro de visualización
+    fig_espectral.add_trace(go.Scatter(
+        x=con_periodo[mask_vis], y=magnitud[mask_vis],
+        mode='lines+markers', line=dict(color='#1F77B4', width=2),
+        marker=dict(size=5)
+    ), row=2, col=1)
+
+    # LÍNEA DE VALIDACIÓN VISUAL (Umbral Estadístico)
+    fig_espectral.add_shape(
+        type="line", x0=0, x1=25, y0=umbral_95, y1=umbral_95,
+        line=dict(color="Red", width=2, dash="dash"), row=2, col=1
+    )
+
+    fig_espectral.add_annotation(
+        x=22, y=umbral_95, text="Confianza 95%", showarrow=False,
+        font=dict(color="red", size=11), bgcolor="white", row=2, col=1
+    )
 
     # C. Espectrograma (STFT)
     fig_espectral.add_trace(go.Heatmap(
         z=np.abs(Zxx), x=t_stft_años, y=f_stft, 
-        colorscale='Viridis', showscale=False, name='STFT'
+        colorscale='Viridis', showscale=False
     ), row=3, col=1)
 
     # D. Wavelets (CWT)
     fig_espectral.add_trace(go.Contour(
         z=power_wav, x=anios_orig, y=freqs_wav, 
-        colorscale='Magma', showscale=False, name='CWT'
+        colorscale='Magma', showscale=False
     ), row=4, col=1)
 
-    fig_espectral.update_layout(height=1200, template="plotly_white",
-                                autosize=True, # El gráfico se adapta al contenedor
-                                margin=dict(l=5, r=5, t=50, b=20)) # Márgenes del gráfico
-    fig_espectral.update_annotations(font=dict(family="Arial Black", 
-                                size=14, color="black"))
+    # --- Configuración Estética ---
+    fig_espectral.update_layout(
+        height=1200, 
+        template="plotly_white",
+        autosize=True,
+        margin=dict(l=20, r=20, t=50, b=20),
+        showlegend=False # Desactivación global de leyendas
+    )
     
-    fig_espectral.update_xaxes(showgrid=True, 
-                               gridcolor='lightgray', 
-                               tickfont=dict(family="Arial Black", size=10),
-                               tickmode='auto',
-                               nticks=5)
-    fig_espectral.update_yaxes(showgrid=True, 
-                               gridcolor='lightgray', 
-                               tickfont=dict(family="Arial Black", size=10))
+    fig_espectral.update_annotations(font=dict(family="Arial Black", size=14, color="black"))
+    fig_espectral.update_xaxes(showgrid=True, gridcolor='lightgray', nticks=10)
+    fig_espectral.update_yaxes(showgrid=True, gridcolor='lightgray')
 
-    # --- 4. REPORTE ANALÍTICO (HTML) ---
-    
-    picos_idx = np.argsort(mag_fft)[-4:][::-1]
-    
-    filas_info_html = ""
+    # --- 4. REPORTE ANALÍTICO ---
+
+    # Cálculo del umbral de significancia (95% de confianza aproximado)
+    media_mag = np.mean(magnitud)
+    desv_mag = np.std(magnitud)
+    umbral_95 = media_mag + (2 * desv_mag)
+
+    # Obtenemos los índices de los 4 picos con mayor magnitud
+    picos_idx = np.argsort(magnitud)[-4:][::-1]
+    filas_html = ""
     for idx in picos_idx:
-        f_val = f_fft[idx]
-        periodo = round(1/f_val, 2) if f_val != 0 else "∞"
-        filas_info_html += f"""
-            <tr>
-                <td style='padding: 8px; border: 1px solid black; background-color: #F2F4F4; font-weight: bold;'>{periodo} años</td>
-                <td style='padding: 8px; border: 1px solid black; background-color: #FFFFFF; text-align: right;'>{f_val:.4f}</td>
-                <td style='padding: 8px; border: 1px solid black; background-color: #FFFFFF; font-weight: bold; text-align: right;'>{mag_fft[idx]:.2f}</td>
-            </tr>
-        """
+        p_val, f_val, mag_val = con_periodo[idx], frecuencias[idx], magnitud[idx]
+        es_sig = mag_val > umbral_95
+        color = "#D4EFDF" if es_sig else "#FFFFFF" # Verde si es significativo
+        
+        filas_html += f"""
+            <tr style='background-color: {color};'>
+                <td style='padding:8px; border:1px solid black;'>{p_val:.2f} años{' (Sig.)' if es_sig else ''}</td>
+                <td style='padding:8px; border:1px solid black; text-align:right;'>{f_val:.4f}</td>
+                <td style='padding:8px; border:1px solid black; text-align:right; font-weight:bold;'>{mag_val:.2f}</td>
+            </tr>"""
 
     reporte_html = f"""
-    <div style='font-family: Arial; font-size: 14px; overflow-x: auto;'>
-        <h4 style='color: #000000;'>Análisis Espectral Consolidado<br>{dict_nlargos[var]}</h4>
-        <table style='width: 100%; border-collapse: collapse; margin-bottom: 20px; border: 1px solid black;'>
+    <div style='font-family: Arial; font-size: 14px;'>
+        <h4 style='color: #000000;'>Análisis de Ciclicidad con Umbral Estadístico</h4>
+        <table style='width: 100%; border-collapse: collapse; border: 1px solid black;'>
             <tr style='background-color: #F2F4F4;'>
-                <th style='padding: 10px; border: 1px solid black; text-align: center; color: black;'>Período Detectado</th>
-                <th style='padding: 10px; border: 1px solid black; text-align: center; color: black;'>Frecuencia (1/T)</th>
-                <th style='padding: 10px; border: 1px solid black; text-align: center; color: black;'>Potencia de la Señal</th>
+                <th style='padding:10px; border:1px solid black;'>Período (Años)</th>
+                <th style='padding:10px; border:1px solid black;'>Frecuencia (1/T)</th>
+                <th style='padding:10px; border:1px solid black;'>Potencia</th>
             </tr>
-            {filas_info_html}
+            {filas_html}
         </table>
-    </div>
-    """
+        <div style='margin-top:10px; padding:10px; border: 1px solid #27AE60; background-color: #EBF5FB;'>
+            Las filas con fondo verde y la línea roja en el gráfico
+            indican componentes que superan el umbral de confianza del 95% (media + 2 SD). 
+            Solo estos componentes han sido utilizados para la reconstrucción temporal (IFFT).
+        </div>
+    </div>"""
 
     return fig_espectral, reporte_html
 
