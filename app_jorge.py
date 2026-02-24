@@ -999,9 +999,9 @@ def tab_ST_on_cult_select(dataset_type, serie, mg, tend, mm, sd):
                 gr.update(visible=False),
                 # Gráfico de series originales y diferenciadas
                 gr.Plot(visible=False), gr.Plot(visible=False),
-                # Gráficos de Transformada de Fourier y otras
-                gr.Plot(visible=False),
-                # Informe de Transformada de Fourier y otras
+                # Area de cinco gráficos espectrales
+                gr.update(visible=False),
+                # Informe Fourier
                 gr.update(visible=False)
                 )
 
@@ -1125,9 +1125,9 @@ def tab_ST_on_cult_select(dataset_type, serie, mg, tend, mm, sd):
                 msg,
                 # Gráfico de series originales y diferenciadas
                 gr.Plot(visible=False), gr.Plot(visible=False),
-                # Gráficos de Transformada de Fourier y otras
-                gr.Plot(visible=False),
-                # Informe de Transformada de Fourier y otras
+                # Area de cinco gráficos espectrales
+                gr.update(visible=False),
+                # Informe Fourier
                 gr.update(visible=False)
                 )
 
@@ -1211,9 +1211,9 @@ def tab_ST_on_prov_select(df, cultivo, provincia, indicador,
                 gr.update(visible=False),
                 # Gráfico de series originales y diferenciadas
                 gr.Plot(visible=False), gr.Plot(visible=False),
-                # Gráficos de Transformada de Fourier y otras
-                gr.Plot(visible=False),
-                # Informe de Transformada de Fourier y otras
+                # Area de cinco gráficos espectrales
+                gr.update(visible=False),
+                # Informe Fourier
                 gr.update(visible=False)
                 )
     
@@ -1300,9 +1300,9 @@ def tab_ST_on_prov_select(df, cultivo, provincia, indicador,
                 msg,
                 # Gráfico de series originales y diferenciadas
                 gr.Plot(visible=False), gr.Plot(visible=False),
-                # Gráficos de Transformada de Fourier y otras
-                gr.Plot(visible=False),
-                # Informe de Transformada de Fourier y otras
+                # Area de cinco gráficos espectrales
+                gr.update(visible=False),
+                # Informe Fourier
                 gr.update(visible=False)
                 )
 
@@ -1378,9 +1378,9 @@ def tab_ST_on_option_select(df, cultivo, provincia, departamento, indicador,
                 gr.update(visible=False),
                 # Gráfico de series originales y diferenciadas
                 gr.Plot(visible=False), gr.Plot(visible=False),
-                # Gráficos de Transformada de Fourier y otras
-                gr.Plot(visible=False),
-                # Informe de Transformada de Fourier y otras
+                # Area de cinco gráficos espectrales
+                gr.update(visible=False),
+                # Informe Fourier
                 gr.update(visible=False)
                 )
     
@@ -1465,9 +1465,9 @@ def tab_ST_on_option_select(df, cultivo, provincia, departamento, indicador,
                 msg,
                 # Gráfico de series originales y diferenciadas
                 gr.Plot(visible=False), gr.Plot(visible=False),
-                # Gráficos de Transformada de Fourier y otras
-                gr.Plot(visible=False),
-                # Informe de Transformada de Fourier y otras
+                # Area de cinco gráficos espectrales
+                gr.update(visible=False),
+                # Informe Fourier
                 gr.update(visible=False)
                 )
 
@@ -2306,8 +2306,8 @@ def tab_ST_on_level_change():
             ## Sección FOURIER
             gr.Plot(visible=False), # Gráfico de series originales
             gr.Plot(visible=False), # Gráfico de series diferenciadas
-            gr.Plot(visible=False), # Gráficos de Transformada de Fourier y otras
-            gr.update(visible=False) # Informe de Transformada de Fourier y otras
+            gr.update(visible=False), # Area de cinco gráficos espectrales
+            gr.update(visible=False) # Informe Fourier
     )
 
 def tab_ST_ARIMA_all(df1, df2, df3, var1, var2, var3, p1, p2, p3, d1, d2, d3, q1, q2, q3):
@@ -3218,9 +3218,9 @@ def tab_ST_imputar_df(df, imp_option, indicador, serie, mg, tend, mm, sd):
                 gr.update(),
                 # Gráfico de series originales y diferenciadas
                 gr.Plot(visible=False), gr.Plot(visible=False),
-                # Gráficos de Transformada de Fourier y otras
-                gr.Plot(visible=False),
-                # Informe de Transformada de Fourier y otras
+                # Area de cinco gráficos espectrales
+                gr.update(visible=False),
+                # Informe Fourier
                 gr.update(visible=False)
             )
 
@@ -3301,9 +3301,9 @@ def tab_ST_restaurar_df(df, cultivo, provincia, departamento,
                 gr.update(),
                 # Gráfico de series originales y diferenciadas
                 gr.Plot(visible=False), gr.Plot(visible=False),
-                # Gráficos de Transformada de Fourier y otras
-                gr.Plot(visible=False),
-                # Informe de Transformada de Fourier y otras
+                # Area de cinco gráficos espectrales
+                gr.update(visible=False),
+                # Informe Fourier
                 gr.update(visible=False)
                 )
 
@@ -3369,9 +3369,9 @@ def tab_ST_cortar_df(df, indicador, yinicial, yfinal, serie, mg, tend, mm, sd):
                 gr.update(),
                 # Gráfico de series originales y diferenciadas
                 gr.Plot(visible=False), gr.Plot(visible=False),
-                # Gráficos de Transformada de Fourier y otras
-                gr.Plot(visible=False),
-                # Informe de Transformada de Fourier y otras
+                # Area de cinco gráficos espectrales
+                gr.update(visible=False),
+                # Informe Fourier
                 gr.update(visible=False)
                 )
 
@@ -3434,9 +3434,9 @@ def tab_ST_cortar_df(df, indicador, yinicial, yfinal, serie, mg, tend, mm, sd):
                 gr.update(),
                 # Gráfico de series originales y diferenciadas
                 gr.Plot(visible=False), gr.Plot(visible=False),
-                # Gráficos de Transformada de Fourier y otras
-                gr.Plot(visible=False),
-                # Informe de Transformada de Fourier y otras
+                # Area de cinco gráficos espectrales
+                gr.update(visible=False),
+                # Informe Fourier
                 gr.update(visible=False)
                 )
 
@@ -3500,23 +3500,44 @@ def tab_ST_FOURIER(df1, df2, df3, diff1, diff2, diff3, d1, d2, d3,
                             interactivo=True, h_estatico=6, h_interactivo=H_INTERACTIVO1)
 
     # Cálculo completo de FFT, SFTF y wavelets para series originales y diferenciadas
-    graph_full_1, reporte1 = tab_ST_Fourier_Wavelets_Full(df1, diff1, ind1, d1, fs=1.0)
-    graph_full_2, reporte2 = tab_ST_Fourier_Wavelets_Full(df2, diff2, ind2, d2, fs=1.0)
-    graph_full_3, reporte3 = tab_ST_Fourier_Wavelets_Full(df3, diff3, ind3, d3, fs=1.0)
+    g1_1, g1_2, g1_3, g1_4, g1_5, reporte1 = tab_ST_Fourier_Wavelets_Full(df1, diff1, ind1, d1, fs=1.0)
+    g2_1, g2_2, g2_3, g2_4, g2_5, reporte2 = tab_ST_Fourier_Wavelets_Full(df2, diff2, ind2, d2, fs=1.0)
+    g3_1, g3_2, g3_3, g3_4, g3_5, reporte3 = tab_ST_Fourier_Wavelets_Full(df3, diff3, ind3, d3, fs=1.0)
 
     return (# Gráfico series originales
             gr.update(visible=graph_orig is not None, value=graph_orig),
             # Gráfico de series diferenciadas
             gr.update(visible=graph_diff is not None, value=graph_diff),
-            # gráficos e informe de serie 1
-            gr.update(visible=graph_full_1 is not None, value=graph_full_1),
+            # Area de la serie 1 (se hace visible si se generó el primer gráfico)
+            gr.update(visible=g1_1 is not None, value=g1_1),
+            # Gráficos de serie 1
+            gr.update(visible=g1_1 is not None, value=g1_1),
+            gr.update(visible=g1_2 is not None, value=g1_2),
+            gr.update(visible=g1_3 is not None, value=g1_3),
+            gr.update(visible=g1_4 is not None, value=g1_4),
+            gr.update(visible=g1_5 is not None, value=g1_5),
+            # Informe de la serie 1
             gr.update(visible=True, value=reporte1),
-            # Gráficos e informe de serie 2
-            gr.update(visible=graph_full_2 is not None, value=graph_full_2), 
+            # Area de la serie 2 (se hace visible si se generó el primer gráfico)
+            gr.update(visible=g2_1 is not None, value=g2_1),
+            # Gráficos de serie 2
+            gr.update(visible=g2_1 is not None, value=g2_1),
+            gr.update(visible=g2_2 is not None, value=g2_2),
+            gr.update(visible=g2_3 is not None, value=g2_3),
+            gr.update(visible=g2_4 is not None, value=g2_4),
+            gr.update(visible=g2_5 is not None, value=g2_5),
+            # Informe de la serie 2
             gr.update(visible=True, value=reporte2),
-            # Gráficos e informe de serie 3
-            gr.update(visible=graph_full_3 is not None, value=graph_full_3), 
-            gr.update(visible=True, value=reporte3)
+            # Area de la serie 3 (se hace visible si se generó el primer gráfico)
+            gr.update(visible=g3_1 is not None, value=g3_1),
+            # Gráficos de serie 3
+            gr.update(visible=g3_1 is not None, value=g3_1),
+            gr.update(visible=g3_2 is not None, value=g3_2),
+            gr.update(visible=g3_3 is not None, value=g3_3),
+            gr.update(visible=g3_4 is not None, value=g3_4),
+            gr.update(visible=g3_5 is not None, value=g3_5),
+            # Informe de la serie 3
+            gr.update(visible=True, value=reporte3),
             )
 
 def tab_ST_create_evolution_graph_triple(df1, df2, df3, ind1, ind2, ind3, 
@@ -3706,7 +3727,7 @@ def tab_ST_Fourier_Wavelets_Full(df_orig, df_diff, var, d, fs=1.0):
     Optimizado para visualizar ciclos en el dominio del tiempo.
     """
     
-    # Validaciones de entrada
+    # Validaciones de entrada (Se mantienen igual)
     if df_orig.empty:
         reporte = """
             <div style="padding:15px; border:2px solid #ffa000; background-color:#fff9c4; border-radius:8px;">
@@ -3714,7 +3735,7 @@ def tab_ST_Fourier_Wavelets_Full(df_orig, df_diff, var, d, fs=1.0):
                 No se seleccionó una serie temporal.
             </div>
             """
-        return None, reporte
+        return None, None, None, None, None, reporte
     
     if df_diff.empty:
         reporte = """
@@ -3723,10 +3744,8 @@ def tab_ST_Fourier_Wavelets_Full(df_orig, df_diff, var, d, fs=1.0):
                 No se verificó la estacionariedad de la serie temporal.
             </div>
             """
-        return None, reporte
+        return None, None, None, None, None, reporte
 
-    # Se verifica que la serie sea estacionaria
-    # (NO_EXISTE = sin prueba ADF, no se verificó estacionariedad)
     if d == NO_EXISTE:
         reporte = """
             <div style="padding:15px; border:2px solid #ffa000; background-color:#fff9c4; border-radius:8px;">
@@ -3735,168 +3754,172 @@ def tab_ST_Fourier_Wavelets_Full(df_orig, df_diff, var, d, fs=1.0):
                 Debe aplicarse la diferenciación (si corresponde) y
                 la prueba ADF para verificar ESTACIONARIEDAD.</div>
             """
-        return None, reporte
+        return None, None, None, None, None, reporte
 
-   
     # 1. Preparación de datos
     y_orig = df_orig[var].values
     anios_orig = df_orig['periodo'].values
-    
-    # 1. Preparación de la señal
     y_diff = df_diff[var].dropna().values
     anios_diff = df_diff['periodo'].dropna().values
     n = len(y_diff)
 
     # --- 2. CÁLCULOS TÉCNICOS ---
-    
-    """
-    # Cálculo de la FFT Real
     fft_coeffs = np.fft.rfft(y_diff)
     frecuencias = np.fft.rfftfreq(n, d=1/fs)
-    # Magnitud normalizada (como en su ejemplo: * 2 / n)
     magnitud = np.abs(fft_coeffs) * 2 / n
 
-    # Conversión de Frecuencias a Períodos (Eje X para el segundo gráfico)
-    # Evitamos división por cero en la frecuencia fundamental (0)
-    con_periodo = np.zeros_like(frecuencias)
-    con_periodo[1:] = 1 / frecuencias[1:] 
-
-    # FILTRADO E IFFT PARA EL PRIMER GRÁFICO (Dominio del Tiempo)
-    # Mantener los 5 picos principales para reconstruir la intensidad en el tiempo
-    umbral = np.sort(magnitud)[-5]
-    fft_filtrada = np.where(magnitud >= umbral, fft_coeffs, 0)
-    y_ciclica_reconstruida = np.fft.irfft(fft_filtrada, n=n)
-    """
-
-    # FFT para señales reales
-    fft_coeffs = np.fft.rfft(y_diff)
-    frecuencias = np.fft.rfftfreq(n, d=1/fs)
-    # Magnitud normalizada
-    magnitud = np.abs(fft_coeffs) * 2 / n
-
-    # Cálculo del umbral de significancia (95% confianza: media + 2 sigma)
     media_mag = np.mean(magnitud)
     desv_mag = np.std(magnitud)
     umbral_95 = media_mag + (2 * desv_mag)
 
-    # Conversión de Frecuencia a Período (Eje X del gráfico 2)
     con_periodo = np.zeros_like(frecuencias)
     con_periodo[1:] = 1 / frecuencias[1:] 
 
-    # TRANSFORMADA INVERSA (IFFT): Solo componentes que superan el ruido (Significativos)
     fft_filtrada = np.where(magnitud >= umbral_95, fft_coeffs, 0)
     y_ciclica_reconstruida = np.fft.irfft(fft_filtrada, n=n)
 
-
-    # STFT: Evolución temporal de las frecuencias
     nperseg = min(20, len(y_orig) // 3)
     f_stft, t_stft, Zxx = stft(y_orig, fs=fs, nperseg=nperseg, noverlap=nperseg-1)
-    t_stft_años = anios_orig[0] + t_stft
+    # t_stft_años = anios_orig[0] + t_stft
 
-    # Wavelets (CWT)
     scales = np.arange(1, 31)
     coef, freqs_wav = pywt.cwt(y_orig, scales, 'cmor1.5-1.0', sampling_period=1/fs)
-    power_wav = (np.abs(coef)) ** 2
+    # power_wav = (np.abs(coef)) ** 2
 
-    # --- 3. GENERACIÓN DE GRÁFICOS ---
-    fig_espectral = make_subplots(
-        rows=4, cols=1, 
-        subplot_titles=(
-            'Intensidad de Ciclos Dominantes<br>en el Tiempo (Inversa de la FFT)',
-            'Espectro de Magnitud vs. Período<br>(Ciclos Detectados)', 
-            'Evolución Temporal de Frecuencias<br>(STFT)', 
-            'Análisis Tiempo-Frecuencia<br>(Wavelets)'
-        ),
-        vertical_spacing=0.07
-    )
-
-    """
-    # A. GRÁFICO 1: IFFT (Dominio del Tiempo)
-    fig_espectral.add_trace(go.Scatter(
-        x=anios_diff, y=y_ciclica_reconstruida,
-        mode='lines', line=dict(color='#2ECC71', width=2.5),
-        fill='tozeroy', name='Intensidad Temporal'
-    ), row=1, col=1)
-
-    # B. GRÁFICO 2: Magnitud vs Período (Como su código de ventas)
-    # Filtramos periodos muy largos para que el gráfico sea legible (ej. < 20 años)
-    mask_visible = (con_periodo > 0) & (con_periodo < 20)
-    fig_espectral.add_trace(go.Scatter(
-        x=con_periodo[mask_visible], 
-        y=magnitud[mask_visible],
-        mode='lines+markers',
-        line=dict(color='#1F77B4', width=2),
-        marker=dict(size=4),
-        name='Espectro de Período'
-    ), row=2, col=1)
-    """
-
-    # A. Reconstrucción Temporal (IFFT)
-    fig_espectral.add_trace(go.Scatter(
-        x=anios_diff, y=y_ciclica_reconstruida,
-        mode='lines', line=dict(color='#2ECC71', width=2.5),
-        fill='tozeroy', name='Ciclos Significativos'
-    ), row=1, col=1)
-
-    # B. Magnitud vs Período con Validación Visual
-    mask_vis = (con_periodo > 0) & (con_periodo < 25) # Filtro de visualización
-    fig_espectral.add_trace(go.Scatter(
-        x=con_periodo[mask_vis], y=magnitud[mask_vis],
-        mode='lines+markers', line=dict(color='#1F77B4', width=2),
-        marker=dict(size=5)
-    ), row=2, col=1)
-
-    # LÍNEA DE VALIDACIÓN VISUAL (Umbral Estadístico)
-    fig_espectral.add_shape(
-        type="line", x0=0, x1=25, y0=umbral_95, y1=umbral_95,
-        line=dict(color="Red", width=2, dash="dash"), row=2, col=1
-    )
-
-    fig_espectral.add_annotation(
-        x=22, y=umbral_95, text="Confianza 95%", showarrow=False,
-        font=dict(color="red", size=11), bgcolor="white", row=2, col=1
-    )
-
-    # C. Espectrograma (STFT)
-    fig_espectral.add_trace(go.Heatmap(
-        z=np.abs(Zxx), x=t_stft_años, y=f_stft, 
-        colorscale='Viridis', showscale=False
-    ), row=3, col=1)
-
-    # D. Wavelets (CWT)
-    fig_espectral.add_trace(go.Contour(
-        z=power_wav, x=anios_orig, y=freqs_wav, 
-        colorscale='Magma', showscale=False
-    ), row=4, col=1)
-
-    # --- Configuración Estética ---
-    fig_espectral.update_layout(
-        height=1200, 
-        template="plotly_white",
-        autosize=True,
-        margin=dict(l=20, r=20, t=50, b=20),
-        showlegend=False # Desactivación global de leyendas
-    )
     
-    fig_espectral.update_annotations(font=dict(family="Arial Black", size=14, color="black"))
-    fig_espectral.update_xaxes(showgrid=True, gridcolor='lightgray', nticks=10)
-    fig_espectral.update_yaxes(showgrid=True, gridcolor='lightgray')
+    # --- 3. Generación de Gráficos Individuales ---
+
+    # G1: Ciclos Dominantes (Tiempo)
+    fig1 = go.Figure()
+    fig1.add_trace(go.Scatter(x=anios_diff, y=y_ciclica_reconstruida, fill='tozeroy',
+                              line=dict(color='#2ECC71', width=2.5), name='Ciclos'))
+    fig1.update_layout(title="<b>Ciclos Dominantes en el Tiempo</b>", template="plotly_white",
+         margin=dict(l=20, r=20, t=50, b=30), height=350)
+    # fig1.update_annotations(font=dict(family="Arial Black", size=14, color="black"))
+    fig1.update_xaxes(
+        title_text="<b>Tiempo (Años)</b>",
+        showgrid=True, gridcolor='lightgray', 
+        tickmode='auto',
+        tickfont=dict(family="Arial Black", size=12),
+        title_font=dict(family="Arial Black", size=13)
+    )
+    fig1.update_yaxes(
+        title_text="<b>Amplitud</b>",
+        showgrid=True, gridcolor='lightgray',
+        tickmode='auto',
+        tickfont=dict(family="Arial Black", size=12),
+        title_font=dict(family="Arial Black", size=13)
+    )
+
+
+    # G2: Espectro de Frecuencia
+    fig2 = go.Figure()
+    fig2.add_trace(go.Scatter(x=frecuencias, y=magnitud, line=dict(color='#8E44AD')))
+    fig2.add_hline(y=umbral_95, line_dash="dash", line_color="red", annotation_text="Conf. 95%")
+    fig2.update_layout(title="<b>Amplitud vs Frecuencia</b>", template="plotly_white",
+                       margin=dict(l=20, r=20, t=50, b=30), height=350)
+    fig2.add_shape(
+        type="line", x0=frecuencias.min(), x1=frecuencias.max(), y0=umbral_95, y1=umbral_95,
+        line=dict(color="Red", width=2, dash="dash")
+    )
+    fig2.update_xaxes(
+        title_text="<b>Frecuencia (Ciclos por año)</b>",
+        showgrid=True, gridcolor='lightgray', 
+        tickmode='auto',
+        tickfont=dict(family="Arial Black", size=12),
+        title_font=dict(family="Arial Black", size=13)
+    )
+    fig2.update_yaxes(
+        title_text="<b>Amplitud</b>",
+        showgrid=True, gridcolor='lightgray',
+        tickmode='auto',
+        tickfont=dict(family="Arial Black", size=12),
+        title_font=dict(family="Arial Black", size=13)
+    )
+
+
+    # G3: Magnitud vs Período
+    con_periodo = np.zeros_like(frecuencias)
+    con_periodo[1:] = 1 / frecuencias[1:]
+    mask_vis = (con_periodo > 0) & (con_periodo < 25)
+    
+    fig3 = go.Figure()
+    fig3.add_trace(go.Scatter(x=con_periodo[mask_vis], y=magnitud[mask_vis], mode='lines+markers'))
+    fig3.add_hline(y=umbral_95, line_dash="dash", line_color="red", annotation_text="Conf. 95%")
+    fig3.update_layout(title="<b>Amplitud vs Período (Años)</b>", template="plotly_white",
+                       margin=dict(l=20, r=20, t=50, b=30), height=350)
+    fig3.add_shape(
+        type="line", x0=0, x1=25, y0=umbral_95, y1=umbral_95,
+        line=dict(color="Red", width=2, dash="dash")
+    )
+    fig3.update_xaxes(
+        title_text="<b>Período(Años)</b>",
+        showgrid=True, gridcolor='lightgray', 
+        tickmode='auto',
+        tickfont=dict(family="Arial Black", size=12),
+        title_font=dict(family="Arial Black", size=13)
+    )
+    fig3.update_yaxes(
+        title_text="<b>Amplitud</b>",
+        showgrid=True, gridcolor='lightgray',
+        tickmode='auto',
+        tickfont=dict(family="Arial Black", size=12),
+        title_font=dict(family="Arial Black", size=13)
+    )
+
+
+    # G4: Espectrograma (STFT)
+    nperseg = min(20, len(y_orig) // 3)
+    f_stft, t_stft, Zxx = stft(y_orig, fs=fs, nperseg=nperseg, noverlap=nperseg-1)
+    fig4 = go.Figure(data=go.Heatmap(z=np.abs(Zxx), x=anios_orig[0] + t_stft, y=f_stft, colorscale='Viridis'))
+    fig4.update_layout(title="<b>Evolución Temporal de Frecuencias</b>", template="plotly_white",
+                       margin=dict(l=20, r=20, t=50, b=30), height=350)
+    fig4.update_xaxes(
+        title_text="<b>Tiempo (Años)</b>",
+        showgrid=True, gridcolor='lightgray', 
+        tickmode='auto',
+        tickfont=dict(family="Arial Black", size=12),
+        title_font=dict(family="Arial Black", size=13)
+    )
+    fig4.update_yaxes(
+        title_text="<b>Frecuencia</b>",
+        showgrid=True, gridcolor='lightgray',
+        tickmode='auto',
+        tickfont=dict(family="Arial Black", size=12),
+        title_font=dict(family="Arial Black", size=13)
+    )
+
+
+    # G5: Wavelets (CWT)
+    scales = np.arange(1, 31)
+    coef, freqs_wav = pywt.cwt(y_orig, scales, 'cmor1.5-1.0', sampling_period=1/fs)
+    fig5 = go.Figure(data=go.Contour(z=np.log1p(np.abs(coef)**2), x=anios_orig, y=freqs_wav, 
+                                     colorscale='Electric', line_width=0))
+    fig5.update_layout(title="<b>Análisis Tiempo-Frecuencia</b>", template="plotly_white",
+                       margin=dict(l=20, r=20, t=50, b=30), height=350)
+    fig5.update_xaxes(
+        title_text="<b>Tiempo (Años)</b>",
+        showgrid=True, gridcolor='lightgray', 
+        tickmode='auto',
+        tickfont=dict(family="Arial Black", size=12),
+        title_font=dict(family="Arial Black", size=13)
+    )
+    fig5.update_yaxes(
+        title_text="<b>Frecuencia</b>",
+        showgrid=True, gridcolor='lightgray',
+        tickmode='auto',
+        tickfont=dict(family="Arial Black", size=12),
+        title_font=dict(family="Arial Black", size=13)
+    )
+
 
     # --- 4. REPORTE ANALÍTICO ---
-
-    # Cálculo del umbral de significancia (95% de confianza aproximado)
-    media_mag = np.mean(magnitud)
-    desv_mag = np.std(magnitud)
-    umbral_95 = media_mag + (2 * desv_mag)
-
-    # Obtenemos los índices de los 4 picos con mayor magnitud
     picos_idx = np.argsort(magnitud)[-4:][::-1]
     filas_html = ""
     for idx in picos_idx:
         p_val, f_val, mag_val = con_periodo[idx], frecuencias[idx], magnitud[idx]
         es_sig = mag_val > umbral_95
-        color = "#D4EFDF" if es_sig else "#FFFFFF" # Verde si es significativo
-        
+        color = "#D4EFDF" if es_sig else "#FFFFFF"
         filas_html += f"""
             <tr style='background-color: {color};'>
                 <td style='padding:8px; border:1px solid black;'>{p_val:.2f} años{' (Sig.)' if es_sig else ''}</td>
@@ -3911,18 +3934,19 @@ def tab_ST_Fourier_Wavelets_Full(df_orig, df_diff, var, d, fs=1.0):
             <tr style='background-color: #F2F4F4;'>
                 <th style='padding:10px; border:1px solid black;'>Período (Años)</th>
                 <th style='padding:10px; border:1px solid black;'>Frecuencia (1/T)</th>
-                <th style='padding:10px; border:1px solid black;'>Potencia</th>
+                <th style='padding:10px; border:1px solid black;'>Amplitud</th>
             </tr>
             {filas_html}
         </table>
         <div style='margin-top:10px; padding:10px; border: 1px solid #27AE60; background-color: #EBF5FB;'>
-            Las filas con fondo verde y la línea roja en el gráfico
-            indican componentes que superan el umbral de confianza del 95% (media + 2 SD). 
-            Solo estos componentes han sido utilizados para la reconstrucción temporal (IFFT).
+            Las filas destacadas indican componentes (ciclos) que superan el umbral 
+            de confianza del 95% (media + 2 SD). Solo estos componentes han sido utilizados 
+            para la reconstrucción de la serie temporal (mediante FFT Inversa) 
+            presentada en el primer gráfico.
         </div>
     </div>"""
 
-    return fig_espectral, reporte_html
+    return fig1, fig2, fig3, fig4, fig5, reporte_html
 
 def tab_ST_Fourier_Wavelets_Triple(df_o1, df_o2, df_o3, df_d1, df_d2, df_d3, var1, var2, var3, fs=1.0):
     """
@@ -4066,6 +4090,7 @@ extra_css = f"""
 .header-tab {{ background-image: url('data:image/png;base64,{fondo_encabezado}') !important; }}
 .portrait-bg-1 {{ background-image: url('data:image/png;base64,{fondo_portada}') !important; }}
 .portrait-bg-2 {{ background-image: url('data:image/png;base64,{fondo_titulo}') !important; }}
+.modal-ayuda {{ background-image: url('data:image/png;base64,{fondo_contenedor}') !important; }}
 """
 custom_css = base_css + extra_css
 
@@ -4416,6 +4441,7 @@ with gr.Blocks(title="Análisis de Cultivos") as app:
 
         ###### PESTAÑA COMPARACIÓN DE SERIES TEMPORALES
         with gr.Tab("Series Temporales") as tab_ST:
+
             with gr.Row(elem_classes="title-tab"):
                 gr.HTML("&nbsp;&nbsp;COMPARACIÓN DE SERIES TEMPORALES", elem_classes="title-text")
             
@@ -4896,6 +4922,7 @@ with gr.Blocks(title="Análisis de Cultivos") as app:
 
             # region SECCIÓN 6: TRANSFORMADAS DE FOURIER
             with gr.Tab("Transformada de Fourier") as subtab_Fourier:
+                
                 with gr.Row():
                     with gr.Column(elem_classes="custom-tab-2", scale=20): 
                         gr.HTML("&nbsp;&nbsp;6. APLICACIÓN DE LA TRANSFORMADA RÁPIDA DE FOURIER",
@@ -4923,16 +4950,254 @@ with gr.Blocks(title="Análisis de Cultivos") as app:
                         Fourier_series_dif = gr.Plot(show_label=False, visible=False, elem_classes="custom-graf-panel")
 
                     with gr.Row():
-                        with gr.Column():                        
-                            Fourier_graph1 = gr.Plot(show_label=False, visible=False)
+                        with gr.Column():
+                            with gr.Column(visible=False) as Fourier_serie_1:                        
+                                Fourier_graph11 = gr.Plot(show_label=False)
+                                Fourier_btn_help11 = gr.Button("Explicación", variant="primary", 
+                                                    elem_classes="custom-button6")
+                                Fourier_graph12 = gr.Plot(show_label=False)
+                                Fourier_btn_help12 = gr.Button("Explicación", variant="primary", 
+                                                    elem_classes="custom-button6")
+                                Fourier_graph13 = gr.Plot(show_label=False)
+                                Fourier_btn_help13 = gr.Button("Explicación", variant="primary", 
+                                                    elem_classes="custom-button6")
+                                Fourier_graph14 = gr.Plot(show_label=False)
+                                Fourier_btn_help14 = gr.Button("Explicación", variant="primary", 
+                                                    elem_classes="custom-button6")
+                                Fourier_graph15 = gr.Plot(show_label=False)
+                                Fourier_btn_help15 = gr.Button("Explicación", variant="primary", 
+                                                    elem_classes="custom-button6")
                             Fourier_info1 = gr.HTML("Estadísticos Serie 1", visible=False)
-                        with gr.Column():                        
-                            Fourier_graph2 = gr.Plot(show_label=False, visible=False)
+                            
+                        with gr.Column():
+                            with gr.Column(visible=False) as Fourier_serie_2:                        
+                                Fourier_graph21 = gr.Plot(show_label=False)
+                                Fourier_btn_help21 = gr.Button("Explicación", variant="primary", 
+                                                    elem_classes="custom-button6")
+                                Fourier_graph22 = gr.Plot(show_label=False,)
+                                Fourier_btn_help22 = gr.Button("Explicación", variant="primary", 
+                                                    elem_classes="custom-button6")
+                                Fourier_graph23 = gr.Plot(show_label=False,)
+                                Fourier_btn_help23 = gr.Button("Explicación", variant="primary", 
+                                                    elem_classes="custom-button6")
+                                Fourier_graph24 = gr.Plot(show_label=False)
+                                Fourier_btn_help24 = gr.Button("Explicación", variant="primary", 
+                                                    elem_classes="custom-button6")
+                                Fourier_graph25 = gr.Plot(show_label=False)
+                                Fourier_btn_help25 = gr.Button("Explicación", variant="primary", 
+                                                    elem_classes="custom-button6")
                             Fourier_info2 = gr.HTML("Estadísticos Serie 2", visible=False)
-                        with gr.Column():                        
-                            Fourier_graph3 = gr.Plot(show_label=False, visible=False)
+                            
+                        with gr.Column():
+                            with gr.Column(visible=False) as Fourier_serie_3:                        
+                                Fourier_graph31 = gr.Plot(show_label=False)
+                                Fourier_btn_help31 = gr.Button("Explicación", variant="primary", 
+                                                    elem_classes="custom-button6")
+                                Fourier_graph32 = gr.Plot(show_label=False)
+                                Fourier_btn_help32 = gr.Button("Explicación", variant="primary", 
+                                                    elem_classes="custom-button6")
+                                Fourier_graph33 = gr.Plot(show_label=False)
+                                Fourier_btn_help33 = gr.Button("Explicación", variant="primary", 
+                                                    elem_classes="custom-button6")
+                                Fourier_graph34 = gr.Plot(show_label=False)
+                                Fourier_btn_help34 = gr.Button("Explicación", variant="primary", 
+                                                    elem_classes="custom-button6")
+                                Fourier_graph35 = gr.Plot(show_label=False)
+                                Fourier_btn_help35 = gr.Button("Explicación", variant="primary", 
+                                                    elem_classes="custom-button6")
                             Fourier_info3 = gr.HTML("Estadísticos Serie 3", visible=False)
+                            
 
+                # --- VENTANAS FLOTANTES (MODALES) ---
+                with gr.Column(visible=False) as Fourier_modal_1:
+                    with gr.Column(elem_classes="overlay"):
+                        pass # Solo para el fondo oscuro
+                    with gr.Column(elem_classes="modal-ayuda"):
+                        gr.HTML("""
+                            <div style='text-align: left; line-height: 1.6;
+                                font-size: 14pt;'>
+                                <p><b>CICLOS DOMINANTES O SIGNIFICATIVOS EN EL TIEMPO<br>APLICANDO 
+                                LA INVERSA DE LA TRANSFORMADA RÁPIDA DE FOURIER (FFT)</b></p>
+                            </div>
+                            """)
+                        gr.HTML("""
+                            <div style='text-align: left; line-height: 1.6; font-size: 12pt;''>
+                                <p>La serie temporal, previamente diferenciada, 
+                                se descompuso en sus frecuencias constituyentes mediante la 
+                                <b> Transformada Rápida de Fourier (FFT)</b>, 
+                                obteniéndose las diferentes ondas o ciclos que la conforman.</p>
+                                <p>Luego se aplicó un <b>filtro de umbral estadístico</b> que eliminó
+                                los componentes u ondas cuya amplitud no era significativa 
+                                (inferior a la media + 2 SD), por considerarse ruido aleatorio.</p>
+                                <p>Aplicando la <b> inversa de la FFT</b>, se reconstruyó la señal 
+                                (serie temporal) utilizando únicamente los ciclos significativos, 
+                                obteniendo así la tendencia cíclica estructural libre de 
+                                fluctuaciones aleatorias o ruido blanco. El gráfico presenta
+                                la señal filtrada.</p>
+                            </div>
+                            """)
+                        Fourier_btn_cerrar1 = gr.Button("Cerrar", variant="primary",
+                                                        elem_classes="custom-button6")
+                        
+                with gr.Column(visible=False) as Fourier_modal_2:    
+                    with gr.Column(elem_classes="overlay"):
+                        pass # Solo para el fondo oscuro
+                    with gr.Column(elem_classes="modal-ayuda"):
+                        gr.HTML("""
+                            <div style='text-align: left; line-height: 1.6; font-size: 14pt;'>
+                                <p><b>ESPECTRO DE POTENCIA:<br>MAGNITUD EN EL DOMINIO 
+                                DE LA FRECUENCIA</b></p>
+                            </div>
+                            """)
+                        gr.HTML("""
+                            <div style='text-align: left; line-height: 1.6; font-size: 12pt;'>
+                                <p>Este gráfico representa el <b>Periodograma</b> de la serie, 
+                                donde se traslada la información del dominio del tiempo al dominio 
+                                de la frecuencia. El eje horizontal muestra la frecuencia 
+                                (ciclos por unidad de tiempo), mientras que el eje vertical 
+                                indica la <b>amplitud (magnitud)</b> de cada componente oscilatorio.</p>
+                                <p>La línea punteada roja establece el <b>umbral de significancia 
+                                estadística</b> (Media + 2 Desviaciones Estándar). Los picos 
+                                que sobresalen de este límite identifican las frecuencias 
+                                que contienen la mayor parte de la energía de la señal, 
+                                permitiendo distinguir entre variaciones sistemáticas y 
+                                el ruido estocástico de alta frecuencia.</p>
+                            </div>
+                            """)
+                        Fourier_btn_cerrar2 = gr.Button("Cerrar", variant="primary",
+                                                        elem_classes="custom-button6")
+                        
+                with gr.Column(visible=False) as Fourier_modal_3:    
+                    with gr.Column(elem_classes="overlay"):
+                        pass # Solo para el fondo oscuro
+                    with gr.Column(elem_classes="modal-ayuda"):        
+                        gr.HTML("""
+                            <div style='text-align: left; line-height: 1.6; font-size: 14pt;'>
+                                <p><b>ANÁLISIS DE PERIODICIDAD:<br>IDENTIFICACIÓN DE 
+                                CICLOS TEMPORALES</b></p>
+                            </div>
+                            """)
+                        gr.HTML("""
+                            <div style='text-align: left; line-height: 1.6; font-size: 12pt;'>
+                                <p>A diferencia del gráfico anterior, aquí se presenta la magnitud 
+                                en función del <b>Período (T = 1/f)</b>. Esta visualización es 
+                                fundamental en la ciencia de datos aplicada a series temporales, 
+                                ya que permite interpretar los resultados en unidades de tiempo 
+                                naturales (años, meses o días).</p>
+                                <p>El gráfico permite identificar con precisión la 
+                                <b>longitud de los ciclos dominantes</b>. Por ejemplo, 
+                                un pico significativo en el valor 5 indica la presencia de 
+                                un componente estructural que se repite aproximadamente 
+                                cada 5 unidades de tiempo. La validación mediante el umbral estadístico 
+                                garantiza que la periodicidad detectada no sea producto del azar.</p>
+                            </div>
+                            """)
+                        Fourier_btn_cerrar3 = gr.Button("Cerrar", variant="primary",
+                                                        elem_classes="custom-button6")
+                        
+                with gr.Column(visible=False) as Fourier_modal_4:    
+                    with gr.Column(elem_classes="overlay"):
+                        pass # Solo para el fondo oscuro
+                    with gr.Column(elem_classes="modal-ayuda"):
+                        gr.HTML("""
+                            <div style='text-align: left; line-height: 1.6; font-size: 14pt;'>
+                                <p><b>ESPECTROGRAMA:<br>TRANSFORMADA DE FOURIER DE 
+                                TIEMPO REDUCIDO (STFT)</b></p>
+                            </div>
+                            """)
+                        gr.HTML("""
+                            <div style='text-align: left; line-height: 1.6; font-size: 12pt;'>
+                                <p>La FFT estándar asume que las frecuencias son estacionarias 
+                                (no cambian con el tiempo). El <b>Espectrograma</b> supera esta 
+                                limitación mediante una ventana deslizante que calcula la distribución 
+                                de frecuencias en diferentes segmentos cronológicos.</p>
+                                <p>El mapa de calor (Heatmap) permite observar la <b>evolución temporal 
+                                de las frecuencias</b>: el eje X representa el tiempo, el eje Y 
+                                la frecuencia, y la intensidad del color la magnitud. 
+                                Es una herramienta crítica para detectar cambios en la estructura 
+                                de la serie, como la aparición o desaparición de ciclos en períodos 
+                                específicos. Se aplica a series temporales sin diferenciar. El método
+                                STFT permite revelar la dinámica temporal de las frecuencias 
+                                que la diferenciación suele ocultar.</p>
+                                <p>La STFT aborda la no estacionariedad de una manera distinta a la 
+                                diferenciación: en lugar de estabilizar la media de toda la serie, 
+                                divide la señal original en pequeños segmentos o "ventanas" de tiempo. 
+                                Al ser las ventanas lo suficientemente cortas, se asume que dentro de 
+                                ese breve intervalo la señal es cuasi-estacionaria. Este método permite 
+                                observar cómo cambian las frecuencias de la serie original (incluyendo tendencias 
+                                de baja frecuencia) a lo largo del tiempo, algo que la diferenciación eliminaría.</p>
+                                <p><b>Nota: </b>la barra de color representa la magnitud de la Transformada de Fourier
+                                de Tiempo Reducido; colores claros indican una alta concentración de energía o amplitud 
+                                en esa combinación específica de tiempo y frecuencia (el ciclo está muy presente 
+                                en ese momento histórico); colores xscuros indican que esa frecuencia tiene una 
+                                presencia nula o insignificante en ese punto del tiempo.</p>
+                                <p>La escala de color es el indicador de relevancia:</p>
+                                <p>* Densidad: indica qué tan "fuerte" es un ciclo.</p>
+                                <p>* Persistencia: si una franja de color intenso se extiende horizontalmente,
+                                el ciclo es persistente en el tiempo.</p>
+                                <p>* Localización: si el color intenso es solo una mancha aislada, indica 
+                                un evento cíclico transitorio o un choque externo que afectó la serie 
+                                solo en un momento dado.</p>
+                            </div>
+                            """)
+                        Fourier_btn_cerrar4 = gr.Button("Cerrar", variant="primary",
+                                                        elem_classes="custom-button6")
+                        
+                with gr.Column(visible=False) as Fourier_modal_5:    
+                    with gr.Column(elem_classes="overlay"):
+                        pass # Solo para el fondo oscuro
+                    with gr.Column(elem_classes="modal-ayuda"):
+                        gr.HTML("""
+                            <div style='text-align: left; line-height: 1.6; font-size: 14pt;'>
+                                <p><b>ESCALOGRAMA:<br>ANÁLISIS TIEMPO-FRECUENCIA<br>MEDIANTE TRANSFORMADA WAVELET CONTINUA (CWT)</b></p>
+                            </div>
+                            """)
+                        gr.HTML("""
+                            <div style='text-align: left; line-height: 1.6; font-size: 12pt;'>
+                                <p>La <b>Transformada Wavelet (Ondícula)</b> ofrece una resolución 
+                                multiescala superior a la STFT. Utilizando la familia de wavelets de 
+                                <i>Morlet Compleja</i>, este gráfico descompone la serie en componentes 
+                                que están localizados tanto en tiempo como en frecuencia de forma óptima.</p>
+                                <p>Este análisis es especialmente eficaz para señales no estacionarias 
+                                y con transitorios abruptos. Las regiones de mayor intensidad 
+                                revelan dónde se concentra la energía de la señal. Permite identificar 
+                                <b>fenómenos cíclicos transitorios</b> que podrían diluirse en un análisis 
+                                de Fourier global, proporcionando una visión detallada de la intermitencia 
+                                de los ciclos. Este método se aplica a la serie original, sin diferenciar,
+                                La CWT es una herramienta diseñada para analizar señales no estacionarias.
+                                La Wavelet se expande y se contrae (escalamiento) para detectar tanto cambios 
+                                abruptos como tendencias de largo plazo. No necesita que la serie sea 
+                                estacionaria porque su base (la wavelet madre) es local en el tiempo. 
+                                Captura la estructura multiescala de la serie original. Si se aplica 
+                                Wavelets a la serie diferenciada, se estarían analizando las oscilaciones 
+                                de los cambios marginales, perdiendo la información de la evolución 
+                                de los ciclos en sus niveles de magnitud originales.</p>
+                                <p><b>Nota sobre la visualización:</b> para mejorar la interpretabilidad, 
+                                los valores de intensidad (color) representan el <b>logaritmo de la 
+                                potencia de la wavelet</b>. Esta transformación logarítmica es fundamental 
+                                para normalizar la escala visual, permitiendo identificar simultáneamente 
+                                ciclos de gran magnitud y fluctuaciones sutiles que, de otro modo, 
+                                quedarían ocultas por la dominancia de las bajas frecuencias.</p>
+                                <p>A diferencia de los métodos globales, la CWT revela la intermitencia 
+                                de los fenómenos, mostrando con precisión en qué momentos históricos se 
+                                activan o disipan ciertas periodicidades.</p>
+                                <p><b>Nota: </b>la barra de color representa el Logaritmo de la Potencia 
+                                de la Wavelet. Colores hacia el Blanco/Amarillo representan los "picos de potencia". 
+                                Al aplicar el logaritmo, estos puntos resaltan las periodicidades que dominan 
+                                la estructura de la serie original. Colores Oscuros/Azules representan zonas de 
+                                silencio espectral donde no existe una oscilación coherente con la escala 
+                                (frecuencia) analizada.</p>
+                                <p>La escala de color es el indicador de relevancia:</p>
+                                <p>* Densidad: indica qué tan "fuerte" es un ciclo.</p>
+                                <p>* Persistencia: si una franja de color intenso se extiende horizontalmente,
+                                el ciclo es persistente en el tiempo.</p>
+                                <p>* Localización: si el color intenso es solo una mancha aislada, indica 
+                                un evento cíclico transitorio o un choque externo que afectó la serie 
+                                solo en un momento dado.</p>
+                            </div>
+                            """)
+                        Fourier_btn_cerrar5 = gr.Button("Cerrar", variant="primary",
+                                                        elem_classes="custom-button6")
 
                 # enderegion SECCIÓN 6: TRANSFORMADAS DE FOURIER
 
@@ -4955,7 +5220,7 @@ with gr.Blocks(title="Análisis de Cultivos") as app:
                             ARIMA_desc1, ARIMA_info1, ARIMA_graph1,
                             ARIMA_preds1, ARIMA_graph1_resids, ARIMA_resids1,
                             Fourier_desc1, Fourier_series_orig, Fourier_series_dif,
-                            Fourier_graph1, Fourier_info1]
+                            Fourier_serie_1, Fourier_info1]
             )
 
             cult2.select(
@@ -4976,7 +5241,7 @@ with gr.Blocks(title="Análisis de Cultivos") as app:
                             ARIMA_desc2, ARIMA_info2, ARIMA_graph2,
                             ARIMA_preds2, ARIMA_graph2_resids, ARIMA_resids2,
                             Fourier_desc2, Fourier_series_orig, Fourier_series_dif,
-                            Fourier_graph2, Fourier_info2]
+                            Fourier_serie_2, Fourier_info2]
             )
 
             cult3.select(
@@ -4997,7 +5262,7 @@ with gr.Blocks(title="Análisis de Cultivos") as app:
                             ARIMA_desc3, ARIMA_info3, ARIMA_graph3,
                             ARIMA_preds3, ARIMA_graph3_resids, ARIMA_resids3,
                             Fourier_desc3, Fourier_series_orig, Fourier_series_dif,
-                            Fourier_graph3, Fourier_info3]
+                            Fourier_serie_3, Fourier_info3]
             )
 
             prov1.select(
@@ -5018,7 +5283,7 @@ with gr.Blocks(title="Análisis de Cultivos") as app:
                             ARIMA_desc1, ARIMA_info1, ARIMA_graph1, ARIMA_preds1,
                             ARIMA_graph1_resids, ARIMA_resids1,
                             Fourier_desc1, Fourier_series_orig, Fourier_series_dif,
-                            Fourier_graph1, Fourier_info1]
+                            Fourier_serie_1, Fourier_info1]
             )
 
             prov2.select(
@@ -5039,7 +5304,7 @@ with gr.Blocks(title="Análisis de Cultivos") as app:
                             ARIMA_desc2, ARIMA_info2, ARIMA_graph2, ARIMA_preds2,
                             ARIMA_graph2_resids, ARIMA_resids2,
                             Fourier_desc2, Fourier_series_orig, Fourier_series_dif,
-                            Fourier_graph2, Fourier_info2]
+                            Fourier_serie_2, Fourier_info2]
             )
             
             prov3.select(
@@ -5060,7 +5325,7 @@ with gr.Blocks(title="Análisis de Cultivos") as app:
                             ARIMA_desc3, ARIMA_info3, ARIMA_graph3, ARIMA_preds3,
                             ARIMA_graph3_resids, ARIMA_resids3,
                             Fourier_desc3, Fourier_series_orig, Fourier_series_dif,
-                            Fourier_graph3, Fourier_info3]
+                            Fourier_serie_3, Fourier_info3]
             )
             
             dep1.select(
@@ -5081,7 +5346,7 @@ with gr.Blocks(title="Análisis de Cultivos") as app:
                             ARIMA_desc1, ARIMA_info1, ARIMA_graph1, ARIMA_preds1,
                             ARIMA_graph1_resids, ARIMA_resids1,
                             Fourier_desc1, Fourier_series_orig, Fourier_series_dif,
-                            Fourier_graph1, Fourier_info1]
+                            Fourier_serie_1, Fourier_info1]
             )
 
             dep2.select(
@@ -5102,7 +5367,7 @@ with gr.Blocks(title="Análisis de Cultivos") as app:
                             ARIMA_desc2, ARIMA_info2, ARIMA_graph2, ARIMA_preds2,
                             ARIMA_graph2_resids, ARIMA_resids2,
                             Fourier_desc2, Fourier_series_orig, Fourier_series_dif,
-                            Fourier_graph2, Fourier_info2]
+                            Fourier_serie_2, Fourier_info2]
             )
 
             dep3.select(
@@ -5123,7 +5388,7 @@ with gr.Blocks(title="Análisis de Cultivos") as app:
                             ARIMA_desc3, ARIMA_info3, ARIMA_graph3, ARIMA_preds3,
                             ARIMA_graph3_resids, ARIMA_resids3,
                             Fourier_desc3, Fourier_series_orig, Fourier_series_dif,
-                            Fourier_graph3, Fourier_info3]
+                            Fourier_serie_3, Fourier_info3]
             )
 
             var1.select(
@@ -5144,7 +5409,7 @@ with gr.Blocks(title="Análisis de Cultivos") as app:
                             ARIMA_desc1, ARIMA_info1, ARIMA_graph1, ARIMA_preds1,
                             ARIMA_graph1_resids, ARIMA_resids1,
                             Fourier_desc1, Fourier_series_orig, Fourier_series_dif,
-                            Fourier_graph1, Fourier_info1]
+                            Fourier_serie_1, Fourier_info1]
             )
             
             var2.select(
@@ -5165,7 +5430,7 @@ with gr.Blocks(title="Análisis de Cultivos") as app:
                             ARIMA_desc2, ARIMA_info2, ARIMA_graph2, ARIMA_preds2,
                             ARIMA_graph2_resids, ARIMA_resids2,
                             Fourier_desc2, Fourier_series_orig, Fourier_series_dif,
-                            Fourier_graph2, Fourier_info2]
+                            Fourier_serie_2, Fourier_info2]
             )
 
             var3.select(
@@ -5186,7 +5451,7 @@ with gr.Blocks(title="Análisis de Cultivos") as app:
                             ARIMA_desc3, ARIMA_info3, ARIMA_graph3, ARIMA_preds3,
                             ARIMA_graph3_resids, ARIMA_resids3,
                             Fourier_desc3, Fourier_series_orig, Fourier_series_dif,
-                            Fourier_graph3, Fourier_info3]
+                            Fourier_serie_3, Fourier_info3]
             )
 
             graph_serie.change(
@@ -5232,7 +5497,7 @@ with gr.Blocks(title="Análisis de Cultivos") as app:
                             ARIMA_info1, ARIMA_graph1, ARIMA_preds1,
                             ARIMA_graph1_resids, ARIMA_resids1,
                             Fourier_series_orig, Fourier_series_dif,
-                            Fourier_graph1, Fourier_info1]
+                            Fourier_serie_1, Fourier_info1]
             )
 
             leveldiff2.change(
@@ -5243,7 +5508,7 @@ with gr.Blocks(title="Análisis de Cultivos") as app:
                             ARIMA_info2, ARIMA_graph2, ARIMA_preds2,
                             ARIMA_graph2_resids, ARIMA_resids2,
                             Fourier_series_orig, Fourier_series_dif,
-                            Fourier_graph2, Fourier_info2]
+                            Fourier_serie_2, Fourier_info2]
             )
 
             leveldiff3.change(
@@ -5254,7 +5519,7 @@ with gr.Blocks(title="Análisis de Cultivos") as app:
                             ARIMA_info3, ARIMA_graph3, ARIMA_preds3,
                             ARIMA_graph3_resids, ARIMA_resids3,
                             Fourier_series_orig, Fourier_series_dif,
-                            Fourier_graph3, Fourier_info3]
+                            Fourier_serie_3, Fourier_info3]
             )
 
             imp1_button.click(
@@ -5274,7 +5539,7 @@ with gr.Blocks(title="Análisis de Cultivos") as app:
                             ARIMA_desc1, ARIMA_info1, ARIMA_graph1, ARIMA_preds1,
                             ARIMA_graph1_resids, ARIMA_resids1,
                             Fourier_desc1, Fourier_series_orig, Fourier_series_dif,
-                            Fourier_graph1, Fourier_info1]
+                            Fourier_serie_1, Fourier_info1]
             )
 
             imp2_button.click(
@@ -5294,7 +5559,7 @@ with gr.Blocks(title="Análisis de Cultivos") as app:
                             ARIMA_desc2, ARIMA_info2, ARIMA_graph2, ARIMA_preds2,
                             ARIMA_graph2_resids, ARIMA_resids2,
                             Fourier_desc2, Fourier_series_orig, Fourier_series_dif,
-                            Fourier_graph2, Fourier_info2]
+                            Fourier_serie_2, Fourier_info2]
             )
 
             imp3_button.click(
@@ -5314,7 +5579,7 @@ with gr.Blocks(title="Análisis de Cultivos") as app:
                             ARIMA_desc3, ARIMA_info3, ARIMA_graph3, ARIMA_preds3,
                             ARIMA_graph3_resids, ARIMA_resids3,
                             Fourier_desc3, Fourier_series_orig, Fourier_series_dif,
-                            Fourier_graph3, Fourier_info3]
+                            Fourier_serie_3, Fourier_info3]
             )
 
             rest1_button.click(
@@ -5334,7 +5599,7 @@ with gr.Blocks(title="Análisis de Cultivos") as app:
                             ARIMA_desc1, ARIMA_info1, ARIMA_graph1, ARIMA_preds1,
                             ARIMA_graph1_resids, ARIMA_resids1,
                             Fourier_desc1, Fourier_series_orig, Fourier_series_dif,
-                            Fourier_graph1, Fourier_info1]
+                            Fourier_serie_1, Fourier_info1]
             )
 
             rest2_button.click(
@@ -5354,7 +5619,7 @@ with gr.Blocks(title="Análisis de Cultivos") as app:
                             ARIMA_desc2, ARIMA_info2, ARIMA_graph2, ARIMA_preds2,
                             ARIMA_graph2_resids, ARIMA_resids2,
                             Fourier_desc2, Fourier_series_orig, Fourier_series_dif,
-                            Fourier_graph2, Fourier_info2]
+                            Fourier_serie_2, Fourier_info2]
             )
 
             rest3_button.click(
@@ -5374,7 +5639,7 @@ with gr.Blocks(title="Análisis de Cultivos") as app:
                             ARIMA_desc3, ARIMA_info3, ARIMA_graph3, ARIMA_preds3,
                             ARIMA_graph3_resids, ARIMA_resids3,
                             Fourier_desc3, Fourier_series_orig, Fourier_series_dif,
-                            Fourier_graph3, Fourier_info3]
+                            Fourier_serie_3, Fourier_info3]
             )
 
             cut1_button.click(
@@ -5394,7 +5659,7 @@ with gr.Blocks(title="Análisis de Cultivos") as app:
                             ARIMA_desc1, ARIMA_info1, ARIMA_graph1, ARIMA_preds1,
                             ARIMA_graph1_resids, ARIMA_resids1,
                             Fourier_desc1, Fourier_series_orig, Fourier_series_dif,
-                            Fourier_graph1, Fourier_info1]
+                            Fourier_serie_1, Fourier_info1]
             )
             
             cut2_button.click(
@@ -5414,7 +5679,7 @@ with gr.Blocks(title="Análisis de Cultivos") as app:
                             ARIMA_desc2, ARIMA_info2, ARIMA_graph2, ARIMA_preds2,
                             ARIMA_graph2_resids, ARIMA_resids2,
                             Fourier_desc2, Fourier_series_orig, Fourier_series_dif,
-                            Fourier_graph2, Fourier_info2]
+                            Fourier_serie_2, Fourier_info2]
             )
 
             cut3_button.click(
@@ -5434,7 +5699,7 @@ with gr.Blocks(title="Análisis de Cultivos") as app:
                             ARIMA_desc3, ARIMA_info3, ARIMA_graph3, ARIMA_preds3,
                             ARIMA_graph3_resids, ARIMA_resids3,
                             Fourier_desc3, Fourier_series_orig, Fourier_series_dif,
-                            Fourier_graph3, Fourier_info3]
+                            Fourier_serie_3, Fourier_info3]
             )
 
             STL_button.click(
@@ -5492,10 +5757,64 @@ with gr.Blocks(title="Análisis de Cultivos") as app:
                             cult1, cult2, cult3, prov1, prov2, prov3,
                             dep1, dep2, dep3, var1, var2, var3],
                 outputs = [Fourier_series_orig, Fourier_series_dif,
-                            Fourier_graph1, Fourier_info1,
-                            Fourier_graph2, Fourier_info2,
-                            Fourier_graph3, Fourier_info3]
+                            Fourier_serie_1, Fourier_graph11, 
+                            Fourier_graph12, Fourier_graph13,
+                            Fourier_graph14, Fourier_graph15,
+                            Fourier_info1,
+                            Fourier_serie_2, Fourier_graph21, 
+                            Fourier_graph22, Fourier_graph23,
+                            Fourier_graph24, Fourier_graph25,
+                            Fourier_info2,
+                            Fourier_serie_3, Fourier_graph31, 
+                            Fourier_graph32, Fourier_graph33,
+                            Fourier_graph34, Fourier_graph35,
+                            Fourier_info3
+                            ]
             )
+
+            Fourier_btn_help11.click(fn = lambda: gr.update(visible=True),
+                                        inputs = None, outputs = Fourier_modal_1)
+            Fourier_btn_help12.click(fn = lambda: gr.update(visible=True),
+                                        inputs = None, outputs = Fourier_modal_2)
+            Fourier_btn_help13.click(fn = lambda: gr.update(visible=True), 
+                                        inputs = None, outputs = Fourier_modal_3)
+            Fourier_btn_help14.click(fn = lambda: gr.update(visible=True),
+                                        inputs = None, outputs = Fourier_modal_4)
+            Fourier_btn_help15.click(fn = lambda: gr.update(visible=True), 
+                                        inputs = None, outputs = Fourier_modal_5)
+            
+            Fourier_btn_help21.click(fn = lambda: gr.update(visible=True),
+                                        inputs = None, outputs = Fourier_modal_1)
+            Fourier_btn_help22.click(fn = lambda: gr.update(visible=True),
+                                        inputs = None, outputs = Fourier_modal_2)
+            Fourier_btn_help23.click(fn = lambda: gr.update(visible=True), 
+                                        inputs = None, outputs = Fourier_modal_3)
+            Fourier_btn_help24.click(fn = lambda: gr.update(visible=True),
+                                        inputs = None, outputs = Fourier_modal_4)
+            Fourier_btn_help25.click(fn = lambda: gr.update(visible=True), 
+                                        inputs = None, outputs = Fourier_modal_5)
+            
+            Fourier_btn_help31.click(fn = lambda: gr.update(visible=True),
+                                        inputs = None, outputs = Fourier_modal_1)
+            Fourier_btn_help32.click(fn = lambda: gr.update(visible=True),
+                                        inputs = None, outputs = Fourier_modal_2)
+            Fourier_btn_help33.click(fn = lambda: gr.update(visible=True), 
+                                        inputs = None, outputs = Fourier_modal_3)
+            Fourier_btn_help34.click(fn = lambda: gr.update(visible=True),
+                                        inputs = None, outputs = Fourier_modal_4)
+            Fourier_btn_help35.click(fn = lambda: gr.update(visible=True), 
+                                        inputs = None, outputs = Fourier_modal_5)
+            
+            Fourier_btn_cerrar1.click(fn = lambda: gr.update(visible=False), 
+                                        inputs = None, outputs = Fourier_modal_1)
+            Fourier_btn_cerrar2.click(fn = lambda: gr.update(visible=False),
+                                        inputs = None, outputs = Fourier_modal_2)
+            Fourier_btn_cerrar3.click(fn = lambda: gr.update(visible=False), 
+                                        inputs = None, outputs = Fourier_modal_3)
+            Fourier_btn_cerrar4.click(fn = lambda: gr.update(visible=False), 
+                                        inputs = None, outputs = Fourier_modal_4)
+            Fourier_btn_cerrar5.click(fn = lambda: gr.update(visible=False), 
+                                        inputs = None, outputs = Fourier_modal_5)
 
             """
             AUTO_ARIMA_button.click(
