@@ -35,6 +35,7 @@ FILE_MAP = {
     "SORGO": "sorgo_depurado.csv",
     "TRIGO": "trigo_depurado.csv",
     "YERBA MATE": "yerbamate_depurado.csv",
+    "VARIABLES": "variables_nacionales.csv"
 }
 KEY_COLUMNS = ['cultivo', 'periodo', 'provincia', 'departamento']
 MIN_REG = 20 # Cantidad mínima de registros para cada serie temporal
@@ -44,10 +45,10 @@ YEAR_MAX = 2024 # ültimo año de la serie de datos
 
 # Se cargan las descripciones de las variables de los datasets en un diccionario
 # para títulos de gráficos de evolución de cultivos
-variables = os.path.join(DATA_PATH, "Nombres_Largos.csv")
+variables = os.path.join(DATA_PATH, "nombres_largos.csv")
 df_vars = pd.read_csv(variables, header=None, encoding='latin-1', sep=',')
 dict_nlargos = df_vars.set_index(df_vars.columns[0])[df_vars.columns[1]].to_dict()
-variables = os.path.join(DATA_PATH, "Nombres_Cortos.csv")
+variables = os.path.join(DATA_PATH, "nombres_cortos.csv")
 df_vars = pd.read_csv(variables, header=None, encoding='latin-1', sep=',')
 dict_ncortos = df_vars.set_index(df_vars.columns[0])[df_vars.columns[1]].to_dict()
 # endregion
@@ -67,11 +68,22 @@ def load_data(dataset_type):
     
     try:
         df = pd.read_csv(path, encoding='utf-8', skipinitialspace=True, sep=',')
-        # df.columns = ['cultivo', 'periodo', 'provincia', 'departamento', 'sup_sem_ha', 'sup_cos_ha', 'rend_kgxha', 'prod_ton']
         df.columns = df.columns.str.strip()
         return df, list(df['provincia'].unique())
     except Exception as e:
         return pd.DataFrame(), [f"Error cargando: {e}"]
+    
+def load_vars(file_vars):
+    path = get_file_path(file_vars)
+    if not path or not os.path.exists(path):
+        return ["Archivo no encontrado"]
+    
+    try:
+        df = pd.read_csv(path, encoding='utf-8', skipinitialspace=True, sep=',')
+        df.columns = df.columns.str.strip()
+        return df
+    except Exception as e:
+        return [f"Error cargando: {e}"]
 
 # endregion
 
@@ -79,11 +91,13 @@ def load_data(dataset_type):
 # region FUNCIONES PARA LA PESTAÑA "EDA"
 def tab_EDA_on_cultivo(cultivo, automatico, interactivo):
     df, provincias = load_data(cultivo)
-    
+
     if df.empty:
         m_inic = "EL CULTIVO SELECCIONADO NO ESTÁ DISPONIBLE"
         return (# Dataframes original y filtrado
-                df, pd.DataFrame(), 
+                df, pd.DataFrame(),
+                # Dataframe combinado con el de variables externas
+                pd.DataFrame(),
                 # Campos provincia, departamento
                 gr.update(choices=[], value=None), gr.update(choices=[], value=None),
                 # Mensaje de filtros
@@ -102,8 +116,24 @@ def tab_EDA_on_cultivo(cultivo, automatico, interactivo):
                 gr.Button(interactive=False), gr.Button(interactive=False),
                 # Opciones del gráfico de la serie
                 gr.Checkbox(value=True), gr.Checkbox(value=True), gr.Checkbox(value=True),
-                gr.Checkbox(value=False), gr.Checkbox(value=False)
-        )
+                gr.Checkbox(value=False), gr.Checkbox(value=False),
+                # Mensaje de filtros 2
+                m_inic,
+                # Estructura y contenido de variables externas
+                pd.DataFrame(), pd.DataFrame(),
+                # Lista de indicadores
+                gr.Dropdown(choices=[], value=None, interactive=False),
+                # Botones cambiar indicador
+                gr.Button(interactive=False), gr.Button(interactive=False),
+                # Lista de variables
+                gr.Dropdown(choices=[], value=None, interactive=False),
+                # Botones cambiar variable
+                gr.Button(interactive=False), gr.Button(interactive=False),
+                # Lista de desplazamientos
+                gr.Dropdown(value=0, interactive=False),
+                # Gráfico de series de indicador y variable
+                None
+            )
     
     # Se arma el listado ordenado de provincias y se guarda la primera provincia
     provincias_sorted = sorted([str(p) for p in provincias])
@@ -127,7 +157,9 @@ def tab_EDA_on_cultivo(cultivo, automatico, interactivo):
     indicador_first = indicadores[0]
 
     # Se filtra el dataset de cultivo
-    filtered = get_filtered_subset(df, prov_first, dpto_first, KEY_COLUMNS)
+    df_filtered = get_filtered_subset(df, prov_first, dpto_first, KEY_COLUMNS)
+    df_vars = load_vars("VARIABLES") # Se carga el df de variables externas
+    df_combinado = pd.merge(df_filtered, df_vars, on='periodo', how='left')
 
     if automatico:
         return tab_EDA_show_data(df, cultivo, prov_first, dpto_first, True, interactivo)
@@ -137,13 +169,15 @@ def tab_EDA_on_cultivo(cultivo, automatico, interactivo):
         # y la lista "departamento" muestra el primer departamento. La lista "indicador"
         # se actualiza recién luego de presionar el botón "Mostrar Datos"
         return (# Dataframes original y filtrado
-                df, filtered,
+                df, df_filtered,
+                # Dataframe combinado con el de variables externas
+                df_combinado,
                 # Campo provincia
                 gr.update(choices=provincias_sorted, value=prov_first),
                 # Campo departamento
                 gr.update(choices=dptos_sorted, value=dpto_first),
                 # Mensaje de filtros
-                gr.HTML(value=m_inic),
+                m_inic,
                 # Botón mostrar datos
                 gr.update(visible=True),
                 # Área de datos
@@ -158,7 +192,23 @@ def tab_EDA_on_cultivo(cultivo, automatico, interactivo):
                 gr.Button(interactive=False), gr.Button(interactive=False),
                 # Opciones del gráfico de la serie
                 gr.Checkbox(value=True), gr.Checkbox(value=True), gr.Checkbox(value=True), \
-                gr.Checkbox(value=False), gr.Checkbox(value=False)
+                gr.Checkbox(value=False), gr.Checkbox(value=False),
+                # Mensaje de filtros 2
+                m_inic,
+                # Dataframes de variables externas
+                pd.DataFrame(), pd.DataFrame(),
+                # Lista de indicadores
+                gr.Dropdown(choices=[], value=None, interactive=False),
+                # Botones cambiar indicador
+                gr.Button(interactive=False), gr.Button(interactive=False),
+                # Lista de variables
+                gr.Dropdown(choices=[], value=None, interactive=False),
+                # Botones cambiar variable
+                gr.Button(interactive=False), gr.Button(interactive=False),
+                # Lista de desplazamientos
+                gr.Dropdown(value=0, interactive=False),
+                # Gráfico de series de indicador y variable
+                None
         )
 
 def tab_EDA_on_provincia(df, cultivo, provincia, automatico, interactivo):
@@ -181,20 +231,24 @@ def tab_EDA_on_provincia(df, cultivo, provincia, automatico, interactivo):
     indicador_first = indicadores[0]
 
     # Se filtra el dataset de cultivo
-    filtered = get_filtered_subset(df, provincia, dpto_first, KEY_COLUMNS)
+    df_filtered = get_filtered_subset(df, provincia, dpto_first, KEY_COLUMNS)
+    df_vars = load_vars("VARIABLES") # Se carga el df de variables externas
+    df_combinado = pd.merge(df_filtered, df_vars, on='periodo', how='left')
 
     if automatico:
         return tab_EDA_show_data(df, cultivo, provincia, dpto_first, True, interactivo)
     else:
         m_inic = "DEBE SELECCIONARSE EL BOTÓN \"MOSTRAR DATOS\" PARA VISUALIZAR LOS RESULTADOS"
         return (# Dataframes original y filtrado
-                df, filtered,
+                df, df_filtered,
+                # Dataframe combinado con el de variables externas
+                df_combinado,
                 # Campo provincia
                 gr.update(),
                 # Campo departamento
                 gr.update(choices=dptos_sorted, value=dpto_first),
                 # Mensaje de filtros
-                gr.HTML(value=m_inic),
+                m_inic,
                 # Botón mostrar datos
                 gr.update(visible=True),
                 # Área de datos
@@ -209,7 +263,23 @@ def tab_EDA_on_provincia(df, cultivo, provincia, automatico, interactivo):
                 gr.Button(interactive=False), gr.Button(interactive=False),
                 # Opciones del gráfico de la serie
                 gr.Checkbox(value=True), gr.Checkbox(value=True), gr.Checkbox(value=True), \
-                gr.Checkbox(value=False), gr.Checkbox(value=False)
+                gr.Checkbox(value=False), gr.Checkbox(value=False),
+                # Mensaje de filtros 2
+                m_inic,
+                # Dataframes de variables externas
+                pd.DataFrame(), pd.DataFrame(),
+                # Lista de indicadores
+                gr.Dropdown(choices=[], value=None, interactive=False),
+                # Botones cambiar indicador
+                gr.Button(interactive=False), gr.Button(interactive=False),
+                # Lista de variables
+                gr.Dropdown(choices=[], value=None, interactive=False),
+                # Botones cambiar variable
+                gr.Button(interactive=False), gr.Button(interactive=False),
+                # Lista de desplazamientos
+                gr.Dropdown(value=0, interactive=False),
+                # Gráfico de series de indicador y variable
+                None
             )
 
 def tab_EDA_on_departamento(df, cultivo, provincia, departamento, automatico, interactivo):
@@ -226,14 +296,18 @@ def tab_EDA_on_departamento(df, cultivo, provincia, departamento, automatico, in
     indicador_first = indicadores[0]
 
     # Se filtra el dataset de cultivo
-    filtered = get_filtered_subset(df, provincia, departamento, KEY_COLUMNS)
+    df_filtered = get_filtered_subset(df, provincia, departamento, KEY_COLUMNS)
+    df_vars = load_vars("VARIABLES") # Se carga el df de variables externas
+    df_combinado = pd.merge(df_filtered, df_vars, on='periodo', how='left')
 
     if automatico:
         return tab_EDA_show_data(df, cultivo, provincia, departamento, True, interactivo)
     else:
         m_inic = "DEBE SELECCIONARSE EL BOTÓN \"MOSTRAR DATOS\" PARA VISUALIZAR LOS RESULTADOS"
         return (# Dataframes original y filtrado
-                df, filtered,
+                df, df_filtered,
+                # Dataframe combinado con el de variables externas
+                df_combinado,
                 # Campo provincia
                 gr.update(),
                 # Campo departamento
@@ -254,7 +328,23 @@ def tab_EDA_on_departamento(df, cultivo, provincia, departamento, automatico, in
                 gr.Button(interactive=False), gr.Button(interactive=False),
                 # Opciones del gráfico de la serie
                 gr.Checkbox(value=True), gr.Checkbox(value=True), gr.Checkbox(value=True), \
-                gr.Checkbox(value=False), gr.Checkbox(value=False)
+                gr.Checkbox(value=False), gr.Checkbox(value=False),
+                # Mensaje de filtros 2
+                m_inic,
+                # Dataframes de variables externas
+                pd.DataFrame(), pd.DataFrame(),
+                # Lista de indicadores
+                gr.Dropdown(choices=[], value=None, interactive=False),
+                # Botones cambiar indicador
+                gr.Button(interactive=False), gr.Button(interactive=False),
+                # Lista de variables
+                gr.Dropdown(choices=[], value=None, interactive=False),
+                # Botones cambiar variable
+                gr.Button(interactive=False), gr.Button(interactive=False),
+                # Lista de desplazamientos
+                gr.Dropdown(value=0, interactive=False),
+                # Gráfico de series de indicador y variable
+                None
             )
 
 def tab_EDA_create_boxplot_graph(df, interactivo):
@@ -690,9 +780,12 @@ def tab_EDA_options_graph(df, indicador, serie, mg, tend, mm, sd, interactivo=Fa
    
     return fig
 
-def tab_EDA_interactive(df, indicador, serie, mg, tend, mm, sd, interactivo=False):
+def tab_EDA_interactive(df, df_combinado, indicador, serie, mg, tend, mm, sd, 
+                                indicador2, variable, lag, interactivo=False,):
+    
     # df: dataset filtrado con columnas con nombres originales
-    # indicador: nombre descriptivo corto de columna
+    # df_combinado: dataset filtrado y combinado con nombres originales
+    # indicador, indicador2, variable: nombres descriptivos cortos
 
     if df is None or df.empty or indicador is None:
         return None, None
@@ -703,17 +796,22 @@ def tab_EDA_interactive(df, indicador, serie, mg, tend, mm, sd, interactivo=Fals
 
     # Columnas numéricas para graficar, se excluye la columna "período"
     numeric_cols = df.select_dtypes(include=['number']).columns.tolist()
-    # Se busca la clave original (columna) en el diccionario a partir del valor descriptivo
+    # Se busca la clave original (columna) en el diccionario a partir del nombre corto
     indicador = next((k for k, v in dict_ncortos.items() if v == indicador), indicador)
+    indicador2 = next((k for k, v in dict_ncortos.items() if v == indicador2), indicador2)
+    variable = next((k for k, v in dict_ncortos.items() if v == variable), variable)
+
     # Si el indicador no está en las columnas numéricas del df
     if indicador not in numeric_cols:
-        return None, None
+        return None, None, None
     
     fig1 = tab_EDA_create_boxplot_graph(df, interactivo)
     fig2 = tab_EDA_create_evolution_graph(df, indicador, serie, mg, tend, mm, sd, 
                                           tipo_mov=4, interactivo=interactivo)
+    fig3 = tab_EDA_create_evolution_graph_2Y(df_combinado, indicador2, variable, 
+                                             desfase=lag, interactivo=interactivo,)
    
-    return fig1, fig2
+    return fig1, fig2, fig3
     
 def tab_EDA_create_next_all_graphs(df, indicador, serie, mg, tend, mm, sd, interactivo=False):
     # df: dataset filtrado con columnas con nombres originales
@@ -856,9 +954,15 @@ def tab_EDA_show_data(df, cultivo, provincia, departamento, automatico, interact
         habilitar_boton=True
 
     if df.empty:
-        info_text = f" CULTIVO {cultivo.upper()} PARA {provincia} - {departamento}: SIN REGISTROS"
+        if cultivo and provincia and departamento:
+            info_text = f" CULTIVO {cultivo.upper()} PARA {provincia} - {departamento}: SIN REGISTROS"
+        else:
+            info_text = f" DEBE INDICARSE EL CULTIVO, LA PROVINCIA Y LA ZONA PARA MOSTRAR LOS DATOS"
+
         return (# Dataframes original y filtrado
-                df, pd.DataFrame(), 
+                df, pd.DataFrame(),
+                # Dataframe combinado con el de variables externas
+                pd.DataFrame(),
                 # Campos provincia, departamento
                 gr.update(choices=[], value=None), gr.update(choices=[], value=None),
                 # Mensaje de filtros
@@ -877,19 +981,35 @@ def tab_EDA_show_data(df, cultivo, provincia, departamento, automatico, interact
                 gr.Button(interactive=False), gr.Button(interactive=False),
                 # Opciones del gráfico de la serie
                 gr.Checkbox(value=True), gr.Checkbox(value=True), gr.Checkbox(value=True),
-                gr.Checkbox(value=False), gr.Checkbox(value=False)
-        )
+                gr.Checkbox(value=False), gr.Checkbox(value=False),
+                # Mensaje de filtros 2
+                info_text,
+                # Estructura y contenido de variables externas
+                pd.DataFrame(), pd.DataFrame(),
+                # Lista de indicadores
+                gr.Dropdown(choices=[], value=None, interactive=False),
+                # Botones cambiar indicador
+                gr.Button(interactive=False), gr.Button(interactive=False),
+                # Lista de variables
+                gr.Dropdown(choices=[], value=None, interactive=False),
+                # Botones cambiar variable
+                gr.Button(interactive=False), gr.Button(interactive=False),
+                # Lista de desplazamientos
+                gr.Dropdown(value=0, interactive=False),
+                # Gráfico de series de indicador y variable
+                None
+            )
 
     # Se filtra el dataset de cultivo
-    filtered = get_filtered_subset(df, provincia, departamento, KEY_COLUMNS)
+    df_filtered = get_filtered_subset(df, provincia, departamento, KEY_COLUMNS)
 
     # Columnas para mostrar del dataset
-    all_cols = list(filtered.columns)
+    all_cols = list(df_filtered.columns)
     cols_to_show = [c for c in all_cols if c not in ['provincia', 'departamento']]
 
     # Se arma el listado de las variables numéricas del dataset, excluyendo "periodo"
     # y se guarda la primera variable de la lista
-    numeric_cols = filtered.select_dtypes(include=['number']).columns.tolist()
+    numeric_cols = df_filtered.select_dtypes(include=['number']).columns.tolist()
     cols_to_plot = [c for c in numeric_cols if c != 'periodo']
     indicadores_originales = cols_to_plot
     # Se renombran los indicadores (nombres de columnas numéricas) con los nombres cortos del diccionario
@@ -897,11 +1017,11 @@ def tab_EDA_show_data(df, cultivo, provincia, departamento, automatico, interact
     indicador_first = indicadores[0]
 
     # Data 1: Mensaje informativo sobre registros y campos
-    info_text = f" CULTIVO DE {cultivo.upper()} EN {provincia} - {departamento}: {len(filtered)} REGISTROS  -  {len(cols_to_show)} CAMPOS"
+    info_text = f" CULTIVO DE {cultivo.upper()} EN {provincia} - {departamento}: {len(df_filtered)} REGISTROS  -  {len(cols_to_show)} CAMPOS"
    
     # Data 2: Calcular estadísticas del dataset filtrado
     stats = (
-            filtered.drop(columns=['periodo'], errors='ignore')
+            df_filtered.drop(columns=['periodo'], errors='ignore')
             .describe()
             .round(2)
             .reset_index()
@@ -910,28 +1030,67 @@ def tab_EDA_show_data(df, cultivo, provincia, departamento, automatico, interact
 
     # Se renombran las columnas con los nombres cortos
     # El parámetro 'errors="ignore"' evita conflictos si una clave del diccionario no está en el DF
-    stats = stats.rename(columns=dict_ncortos)
+    stats = stats.rename(columns=dict_ncortos).rename(columns=str.upper)
 
     # Data 3: Obtener el dataset final con las columnas para mostrar, 
     # renombrando las columnas con los nombres cortos
-    final_df = filtered[cols_to_show].rename(columns=dict_ncortos)
+    final_df = df_filtered[cols_to_show].rename(columns=dict_ncortos).rename(columns=str.upper)
   
     # Data 4: Generar gráfico de cajas
-    fig_boxplot = tab_EDA_create_boxplot_graph(filtered, interactivo)
+    fig_boxplot = tab_EDA_create_boxplot_graph(df_filtered, interactivo)
     
     # Data 5: Generar gráfico de serie temporal con la variable numérica indicada
-    fig_evolution = tab_EDA_create_evolution_graph(filtered, indicadores_originales[0], serie=True, 
+    fig_evolution = tab_EDA_create_evolution_graph(df_filtered, indicadores_originales[0], serie=True, 
                                     med_glob=True, tend=True, med_mov=False, sd_mov=False, 
                                     tipo_mov=4, interactivo=interactivo)
     
     # Data 6: Generar gráfico de histograma con la variable numérica indicada
-    fig_histogram = tab_EDA_create_histogram_graph(filtered, indicadores_originales[0])
+    fig_histogram = tab_EDA_create_histogram_graph(df_filtered, indicadores_originales[0])
 
     # Data 7: Generar gráfico de distribución normal con la variable numérica indicada
-    fig_normal_dist = tab_EDA_create_normal_dist_graph(filtered, indicadores_originales[0])
+    fig_normal_dist = tab_EDA_create_normal_dist_graph(df_filtered, indicadores_originales[0])
+
+    # Se concatena el df filtrado con el archivo de variables externas mediante
+    # la columna 'periodo'
+    df_vars = load_vars("VARIABLES") # Se carga el df de variables externas
+    df_combinado = pd.merge(df_filtered, df_vars, on='periodo', how='left')
+
+    # Calcular estadísticas del dataset de variables
+    stats_vars = (
+            df_vars.drop(columns=['periodo'], errors='ignore')
+            .describe(include='all')
+            .round(2)
+            .reset_index()
+            .rename(columns={'index': 'Medida'})
+            )
+
+    # Se renombran las columnas con los nombres cortos
+    stats_vars = stats_vars.rename(columns=dict_ncortos).rename(columns=str.upper)
+
+    # Se arma el listado de las variables coyunturales numéricas, excluyendo "periodo"
+    numeric_cols = df_vars.select_dtypes(include=['number']).columns.tolist()
+    cols_to_plot = [c for c in numeric_cols if c != 'periodo']
+    vars_originales = cols_to_plot
+    # Se renombran las columnas numéricas con los nombres cortos del diccionario
+    vars_list = [dict_ncortos.get(col, col) for col in vars_originales]
+    var_first = vars_list[0]
+
+    # Dataset de variables con nombres cortos, en mayúsculas
+    df_vars = df_vars.rename(columns=dict_ncortos).rename(columns=str.upper)
+
+    # Se extrae el nombre original del diccionario a partir del nombre corto descriptivo
+    indicador = next((k for k, v in dict_ncortos.items() if v == indicador_first), indicador_first)
+    variable = next((k for k, v in dict_ncortos.items() if v == var_first), var_first)
+    
+    # Gráfico de tendencia de indicador y de variable coyuntural
+    fig_evolution_2Y = tab_EDA_create_evolution_graph_2Y(df_combinado, indicador, 
+                                                                    variable, desfase=0,
+                                                                    interactivo=interactivo)
 
     return (# Dataframes original y filtrado
-            df, filtered, 
+            df, df_filtered, 
+            # Dataframe combinado con el de variables externas
+            df_combinado,
             # Campos provincia, departamento
             gr.update(), gr.update(),
             # Mensaje de filtros
@@ -954,7 +1113,23 @@ def tab_EDA_show_data(df, cultivo, provincia, departamento, automatico, interact
             gr.Button(interactive=True), gr.Button(interactive=True),
             # Opciones del gráfico de la serie
             gr.Checkbox(value=True), gr.Checkbox(value=True), gr.Checkbox(value=True),
-            gr.Checkbox(value=False), gr.Checkbox(value=False)
+            gr.Checkbox(value=False), gr.Checkbox(value=False),
+            # Mensaje de filtros 2
+            info_text,
+            # Estructura y contenido de variables externas
+            stats_vars, df_vars,
+            # Lista de indicadores
+            gr.Dropdown(choices=indicadores, value=indicador_first, interactive=True),
+            # Botones cambiar indicador
+            gr.Button(interactive=True), gr.Button(interactive=True),
+            # Lista de variables
+            gr.Dropdown(choices=vars_list, value=var_first, interactive=True),
+            # Botones cambiar variable
+            gr.Button(interactive=True), gr.Button(interactive=True),
+            # Lista de desplazamientos
+            gr.Dropdown(value=0, interactive=True),
+            # Gráfico de series de indicador y variable
+            fig_evolution_2Y
         )
 
 def tab_EDA_automatic(cultivo, provincia, departamento, automatico, interactivo):
@@ -968,11 +1143,13 @@ def tab_EDA_automatic(cultivo, provincia, departamento, automatico, interactivo)
     if df.empty:
         m_inic = "EL DATASET DE CULTIVO SELECCIONADO NO ESTÁ DISPONIBLE"
         return (# Dataframes original y filtrado
-                df, pd.DataFrame(), 
+                df, pd.DataFrame(),
+                # Dataframe combinado con el de variables externas
+                pd.DataFrame(),
                 # Campos provincia, departamento
                 gr.update(choices=[], value=None), gr.update(choices=[], value=None),
                 # Mensaje de filtros
-                gr.HTML(value=m_inic),
+                m_inic,
                 # Boton mostrar datos
                 gr.Button(interactive=habilitar_boton),
                 # Área de datos
@@ -987,20 +1164,43 @@ def tab_EDA_automatic(cultivo, provincia, departamento, automatico, interactivo)
                 gr.Button(interactive=False), gr.Button(interactive=False),
                 # Opciones del gráfico de la serie
                 gr.Checkbox(value=True), gr.Checkbox(value=True), gr.Checkbox(value=True),
-                gr.Checkbox(value=False), gr.Checkbox(value=False)
+                gr.Checkbox(value=False), gr.Checkbox(value=False),
+                # Mensaje de filtros 2
+                m_inic,
+                # Estructura y contenido de variables externas
+                pd.DataFrame(), pd.DataFrame(),
+                # Lista de indicadores
+                gr.Dropdown(choices=[], value=None, interactive=False),
+                # Botones cambiar indicador
+                gr.Button(interactive=False), gr.Button(interactive=False),
+                # Lista de variables
+                gr.Dropdown(choices=[], value=None, interactive=False),
+                # Botones cambiar variable
+                gr.Button(interactive=False), gr.Button(interactive=False),
+                # Lista de desplazamientos
+                gr.Dropdown(value=0, interactive=False),
+                # Gráfico de series de indicador y variable
+                None
             )
-        
+    
+    df_filtered = get_filtered_subset(df, provincia, departamento, KEY_COLUMNS)
+    # Se concatena el df filtrado con el archivo de variables externas mediante
+    # la columna 'periodo'
+    df_vars = load_vars("VARIABLES") # Se carga el df de variables externas
+    df_combinado = pd.merge(df_filtered, df_vars, on='periodo', how='left')
 
     if automatico: # Se marcó "Automático", se muestra la data y se deshabilita el botón "Mostrar datos"
         return tab_EDA_show_data(df, cultivo, provincia, departamento, True, interactivo)
     else: # Se desmarcó "Automático"; se limpia la data y se habilita el botón "Mostrar datos"
         m_inic = "DEBE SELECCIONARSE EL BOTÓN \"MOSTRAR DATOS\" PARA VISUALIZAR LOS RESULTADOS"
         return (# Dataframes original y filtrado
-                df, pd.DataFrame(), 
+                df, df_filtered, 
+                # Dataframe combinado con el de variables externas
+                df_combinado,
                 # Campos provincia, departamento
                 gr.update(), gr.update(),
                 # Mensaje de filtros
-                gr.HTML(value=m_inic),
+                m_inic,
                 # Boton mostrar datos
                 gr.Button(interactive=habilitar_boton),
                 # Área de datos
@@ -1015,9 +1215,291 @@ def tab_EDA_automatic(cultivo, provincia, departamento, automatico, interactivo)
                 gr.Button(interactive=False), gr.Button(interactive=False),
                 # Opciones del gráfico de la serie
                 gr.Checkbox(value=True), gr.Checkbox(value=True), gr.Checkbox(value=True),
-                gr.Checkbox(value=False), gr.Checkbox(value=False)
+                gr.Checkbox(value=False), gr.Checkbox(value=False),
+                # Mensaje de filtros 2
+                m_inic,
+                # Estructura y contenido de variables externas
+                pd.DataFrame(), pd.DataFrame(),
+                # Lista de indicadores
+                gr.Dropdown(choices=[], value=None, interactive=False),
+                # Botones cambiar indicador
+                gr.Button(interactive=False), gr.Button(interactive=False),
+                # Lista de variables
+                gr.Dropdown(choices=[], value=None, interactive=False),
+                # Botones cambiar variable
+                gr.Button(interactive=False), gr.Button(interactive=False),
+                # Lista de desplazamientos
+                gr.Dropdown(value=0, interactive=False),
+                # Gráfico de series de indicador y variable
+                None
+            )
+
+def tab_EDA_create_prev_evolution_graph_ind(df, indicador, variable, lag, interactivo=False):
+    # df: dataset filtrado y combinado con columnas con nombres originales
+    # indicador: nombre descriptivo corto de columna (variabe propia del cultivo)
+    # variable: nombre descriptivo corto de la columna (variable coyuntural)
+
+    # Se extrae el nombre original del diccionario a partir del nombre corto descriptivo
+    indicador = next((k for k, v in dict_ncortos.items() if v == indicador), indicador)
+    variable = next((k for k, v in dict_ncortos.items() if v == variable), variable)
+
+    # Lista de columnas numéricas propias del cultivo (columnas 5 a 8) del df combinado
+    indicadores_cols = df.columns[4:8].tolist()
+    # Se obtiene el índice del indicador actual (nombre corto)
+    indice_ind_actual = indicadores_cols.index(indicador)
+    # Se obtiene el nombre del indicador siguiente (nombre corto)
+    indice_ind_sig = (indice_ind_actual - 1) % len(indicadores_cols)
+    nuevo_indicador = indicadores_cols[indice_ind_sig]
+    
+    # Se genera el gráfico de evolución con dos ejes Y
+    # para el indicador anterior y la variable coyuntural actual
+    figura = tab_EDA_create_evolution_graph_2Y(df, nuevo_indicador, variable, desfase=lag,
+                                                                interactivo=interactivo)
+
+    # Se renombra el nuevo indicador con el nombre corto del diccionario para
+    # colocarlo en la lista desplegable
+    indicador_ncorto = dict_ncortos.get(nuevo_indicador)
+
+    return indicador_ncorto, figura
+
+def tab_EDA_create_next_evolution_graph_ind(df, indicador, variable, lag, interactivo=False):
+    # df: dataset filtrado y combinado con columnas con nombres originales
+    # indicador: nombre descriptivo corto de columna (variabe propia del cultivo)
+    # variable: nombre descriptivo corto de la columna (variable coyuntural)
+
+    # Se extrae el nombre original del diccionario a partir del nombre corto descriptivo
+    indicador = next((k for k, v in dict_ncortos.items() if v == indicador), indicador)
+    variable = next((k for k, v in dict_ncortos.items() if v == variable), variable)
+
+    # Lista de columnas numéricas propias del cultivo (columnas 5 a 8) del df combinado
+    indicadores_cols = df.columns[4:8].tolist()
+    # Se obtiene el índice del indicador actual (nombre corto)
+    indice_ind_actual = indicadores_cols.index(indicador)
+    # Se obtiene el nombre del indicador siguiente (nombre corto)
+    indice_ind_sig = (indice_ind_actual + 1) % len(indicadores_cols)
+    nuevo_indicador = indicadores_cols[indice_ind_sig]
+    
+    # Se genera el gráfico de evolución con dos ejes Y
+    # para el indicador siguiente y la variable coyuntural actual
+    figura = tab_EDA_create_evolution_graph_2Y(df, nuevo_indicador, variable, desfase=lag,
+                                                                interactivo=interactivo)
+
+    # Se renombra el nuevo indicador con el nombre corto del diccionario para
+    # colocarlo en la lista desplegable
+    indicador_ncorto = dict_ncortos.get(nuevo_indicador)
+
+    return indicador_ncorto, figura      
+
+def tab_EDA_create_prev_evolution_graph_var(df, indicador, variable, lag, interactivo=False):
+    # df: dataset filtrado y combinado con columnas con nombres originales
+    # indicador: nombre descriptivo corto de columna (variabe propia del cultivo)
+    # variable: nombre descriptivo corto de la columna (variable coyuntural)
+
+    # Se extrae el nombre original del diccionario a partir del nombre corto descriptivo
+    indicador = next((k for k, v in dict_ncortos.items() if v == indicador), indicador)
+    variable = next((k for k, v in dict_ncortos.items() if v == variable), variable)
+
+    # Lista de columnas numéricas de variables coyunturales (columnas 12 a última) del df combinado
+    variables_cols = df.columns[11:].tolist()
+    # Se obtiene el índice de la variable coyuntural actual (nombre corto)
+    indice_var_actual = variables_cols.index(variable)
+    # Se obtiene el nombre de la variable siguiente (nombre corto)
+    indice_var_sig = (indice_var_actual - 1) % len(variables_cols)
+    nueva_variable = variables_cols[indice_var_sig]
+
+    # Se genera el gráfico de evolución con dos ejes Y
+    # para la variable anterior y el indicador actual
+    figura = tab_EDA_create_evolution_graph_2Y(df, indicador, nueva_variable, desfase=lag,
+                                                                interactivo=interactivo)
+
+    # Se renombra la nueva variable coyuntural con el nombre corto del diccionario para
+    # colocarla en la lista desplegable
+    variable_ncorto = dict_ncortos.get(nueva_variable)
+
+    return variable_ncorto, figura  
+
+def tab_EDA_create_next_evolution_graph_var(df, indicador, variable, lag, interactivo=False):
+    # df: dataset filtrado y combinado con columnas con nombres originales
+    # indicador: nombre descriptivo corto de columna (variabe propia del cultivo)
+    # variable: nombre descriptivo corto de la columna (variable coyuntural)
+
+    # Se extrae el nombre original del diccionario a partir del nombre corto descriptivo
+    indicador = next((k for k, v in dict_ncortos.items() if v == indicador), indicador)
+    variable = next((k for k, v in dict_ncortos.items() if v == variable), variable)
+    
+    # Lista de columnas numéricas de variables coyunturales (columnas 12 a 8) del df combinado
+    variables_cols = df.columns[11:].tolist()
+    # Se obtiene el índice de la variable coyuntural actual (nombre corto)
+    indice_var_actual = variables_cols.index(variable)
+    # Se obtiene el nombre de la variable siguiente (nombre corto)
+    indice_var_sig = (indice_var_actual + 1) % len(variables_cols)
+    nueva_variable = variables_cols[indice_var_sig]
+
+    # Se genera el gráfico de evolución con dos ejes Y
+    # para la variable siguiente y el indicador actual
+    figura = tab_EDA_create_evolution_graph_2Y(df, indicador, nueva_variable, desfase=lag,
+                                                                interactivo=interactivo)
+
+    # Se renombra la nueva variable coyuntural con el nombre corto del diccionario para
+    # colocarla en la lista desplegable
+    variable_ncorto = dict_ncortos.get(nueva_variable)
+
+    return variable_ncorto, figura      
+
+def tab_EDA_create_evolution_graph_2Y(df, variable1, variable2, desfase=0, interactivo=False,
+                                                            h_estatico=5, h_interactivo=385):
+    """
+    Genera un gráfico de evolución para dos variables con ejes Y independientes.
+    - df: DataFrame con columna 'periodo' y las variables indicadas.
+    - variable1: Nombre original de la columna para el eje Y principal (izquierdo).
+    - variable2: Nombre original de la columna para el eje Y secundario (derecho).
+    - desfase: Entero. Desplaza variable2 en el tiempo (años). 
+               Negativo: adelanta la serie (shift -k). Positivo: retrasa la serie (shift +k).
+    """
+
+    # 1. Validación y Preparación de Datos
+    if df is None or df.empty:
+        return None
+        
+    df_sorted = df.sort_values('periodo').reset_index(drop=True)
+    
+    # Aplicación del desfase a la variable 2
+    # shift(n) desplaza los datos, manteniendo el índice de 'periodo' original
+    df_sorted[f'{variable2}_offset'] = df_sorted[variable2].shift(desfase)
+    
+    x_data = df_sorted['periodo']
+    y1 = df_sorted[variable1]
+    y2 = df_sorted[f'{variable2}_offset']
+
+    # Títulos dinámicos
+    titulo = f"Comparativa: {dict_nlargos[variable1]} vs {dict_nlargos[variable2]} (Desfase: {desfase} años)"
+
+    # --- OPCIÓN 1: GRÁFICO INTERACTIVO (PLOTLY) ---
+    if interactivo:
+        fig = make_subplots(specs=[[{"secondary_y": True}]])
+
+        # Serie Variable 1 (Eje Y1)
+        fig.add_trace(go.Scatter(
+            x=x_data, y=y1, 
+            mode='lines', 
+            # mode='lines+markers',
+            name=dict_nlargos[variable1],
+            line=dict(color='green', width=4),
+            marker=dict(color='green', size=6)
+        ), secondary_y=False) # Se especifica explícitamente el eje primario
+
+        # Serie Variable 2 (Eje Y2)
+        fig.add_trace(go.Scatter(
+            x=x_data, y=y2, 
+            mode='lines', 
+            # mode='lines+markers', 
+            name=f"{dict_nlargos[variable2]}", # (Desfase: {desfase} años)",
+            line=dict(color='red', width=4),
+            marker=dict(color='red', size=6),
+        ), secondary_y=True) # Se especifica explícitamente el eje secundario
+
+        """
+        # Tendencia V1
+        z1 = np.polyfit(x_data[y1.notna()], y1[y1.notna()], 1)
+        p1 = np.poly1d(z1)
+        fig.add_trace(go.Scatter(x=x_data, y=p1(x_data), mode='lines', 
+                                    name='Tendencia V1', 
+                                    line=dict(color='green', dash='dot', width=2)),
+                                    secondary_y=False)
+        
+        # Tendencia V2
+        mask2 = y2.notna()
+        z2 = np.polyfit(x_data[mask2], y2[mask2], 1)
+        p2 = np.poly1d(z2)
+        fig.add_trace(go.Scatter(x=x_data, y=p2(x_data), mode='lines', 
+                                    name='Tendencia V2', 
+                                    line=dict(color='red', dash='dot', width=2)),
+                                    secondary_y=True)
+        """
+
+        # Ajustes de Layout para Doble Eje
+        fig.update_layout(
+            title={'text': f"<b>{titulo}</b>", 'x': 0.5, 'xanchor': 'center'},
+            height=h_interactivo,
+            template="plotly_white",
+            xaxis=dict(showline=True, linewidth=1, linecolor='black', mirror=True),
+            yaxis=dict(title=dict_nlargos[variable1], 
+                    # titlefont=dict(color="green"), 
+                    tickfont=dict(color="green")),
+            yaxis2=dict(title=dict_nlargos[variable2],
+                        # titlefont=dict(color="red"), 
+                        tickfont=dict(color="red"), 
+                        anchor="x", 
+                        overlaying="y", 
+                        side="right"),
+            legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
+            margin=dict(l=10, r=10, t=80, b=30),
+            hovermode="x unified"
         )
-                          
+        return fig
+
+    # --- OPCIÓN 2: GRÁFICO ESTÁTICO (MATPLOTLIB) ---
+    else:
+        fig, ax1 = plt.subplots(figsize=(12, h_estatico))
+        ax2 = ax1.twinx()  # Instancia del segundo eje
+
+        try:
+            ax1.plot(x_data, y1, label=dict_nlargos[variable1], 
+                     color='green', 
+                     # marker='o', 
+                     linewidth=3)
+            ax2.plot(x_data, y2, label=f"{dict_nlargos[variable2]}", # (Lag: {desfase})", 
+                     color='red', 
+                     # marker='s', 
+                     linewidth=3)
+
+            """
+            # Regresión V1
+            z1 = np.polyfit(x_data[y1.notna()], y1[y1.notna()], 1)
+            ax1.plot(x_data, np.poly1d(z1)(x_data), color='green', linestyle='--', alpha=0.5)
+            # Regresión V2
+            mask2 = y2.notna()
+            z2 = np.polyfit(x_data[mask2], y2[mask2], 1)
+            ax2.plot(x_data, np.poly1d(z2)(x_data), color='red', linestyle='--', alpha=0.5)
+            """
+
+            # Estética de ejes
+            ax1.set_xlabel("Periodo")
+            ax1.set_ylabel(dict_nlargos[variable1], color='green', fontsize=10)
+            ax2.set_ylabel(dict_nlargos[variable2], color='red', fontsize=10)
+            ax1.tick_params(axis='y', labelcolor='green')
+            ax2.tick_params(axis='y', labelcolor='red')
+            
+            plt.title(titulo)
+            ax1.grid(True, linestyle='--', alpha=0.3)
+            
+            # Combinar leyendas de ambos ejes
+            lines, labels = ax1.get_legend_handles_labels()
+            lines2, labels2 = ax2.get_legend_handles_labels()
+            ax1.legend(lines + lines2, labels + labels2, loc='upper left')
+
+            plt.tight_layout()
+            return fig
+            
+        finally:
+            plt.close(fig)
+
+def tab_EDA_create_actual_evolution_graph(df, indicador, variable, lag, interactivo=False):
+    # df: dataset filtrado y combinado con columnas con nombres originales
+    # indicador: nombre descriptivo corto de columna (variabe propia del cultivo)
+    # variable: nombre descriptivo corto de la columna (variable coyuntural)
+
+    # Se extrae el nombre original del diccionario a partir del nombre corto descriptivo
+    indicador = next((k for k, v in dict_ncortos.items() if v == indicador), indicador)
+    variable = next((k for k, v in dict_ncortos.items() if v == variable), variable)
+
+    # Se genera el gráfico de evolución con dos ejes Y
+    # para la variable siguiente y el indicador actual
+    figura = tab_EDA_create_evolution_graph_2Y(df, indicador, variable, desfase=lag,
+                                                                interactivo=interactivo)
+
+    return figura      
+
 # endregion FUNCIONES PARA LA PESTAÑA "EDA"
 
 
@@ -4044,6 +4526,8 @@ with gr.Blocks(title="Análisis de Cultivos") as app:
     dataset_state = gr.State(pd.DataFrame())
     # Almacenamiento para el dataset elegido y filtrado por campos clave
     dataset_filter_state = gr.State(pd.DataFrame())
+    # Concatenación del dataset con las variables externas
+    dataset_merge_state = gr.State(pd.DataFrame())
     # Almacenamiento para los tres datasets elegidos, en pestaña ST
     dataset_state_1 = gr.State(pd.DataFrame())
     dataset_state_2 = gr.State(pd.DataFrame())
@@ -4122,132 +4606,229 @@ with gr.Blocks(title="Análisis de Cultivos") as app:
 
         ###### PESTAÑA EDA
         with gr.Tab("EDA") as tab_EDA:
-            with gr.Row(): # elem_classes="title-tab"):
-                with gr.Column(elem_classes="custom-tab-2", scale=20): 
-                    gr.HTML("&nbsp;&nbsp;VISUALIZACIÓN DE DATOS DE LOS PRINCIPALES CULTIVOS DE ARGENTINA", 
-                            elem_classes="title-text")
-                with gr.Column(min_width=150):
-                    btn_EDA_mostrar = gr.Button("Mostrar Datos", variant="primary", visible=True, 
-                                                elem_classes="custom-button7")
+
+            with gr.Row(elem_classes="title-tab"):
+                gr.HTML("&nbsp;&nbsp;VISUALIZACIÓN DE DATOS DE LOS PRINCIPALES CULTIVOS DE ARGENTINA", elem_classes="title-text")
             
-            with gr.Row():
-                with gr.Column(elem_classes="custom-tab", min_width=200):
-                    gr.HTML("CULTIVO", elem_classes="info-display-7")
-                    cultivo = gr.Dropdown(label="", 
-                                        choices=["Elegir cultivo...", "ARROZ", "AVENA", "GIRASOL", "MAÍZ", "POROTO",
-                                        "SOJA", "SORGO", "TRIGO", "YERBA MATE"],
-                                        value="Elegir cultivo...", elem_classes="custom-dropdown-small")
-                    gr.HTML("PROVINCIA", elem_classes="info-display-7")
-                    provincia = gr.Dropdown(label="", choices=[], elem_classes="custom-dropdown-small")
-                    gr.HTML("ZONA", elem_classes="info-display-7")
-                    departamento = gr.Dropdown(label="", choices=[], elem_classes="custom-dropdown-small")
-                                    
-                    chk_automatico = gr.Checkbox(label="Datos automáticos", value=False, elem_classes="custom-checkbox-3")
-                    chk_interactivo = gr.Checkbox(label="Gráficos interactivos", value=False, elem_classes="custom-checkbox-3")
-                    #btn_EDA_mostrar = gr.Button("Mostrar Datos", variant="primary", visible=True, elem_classes="custom-button")
-        
-                with gr.Column(scale=20):
-                    with gr.Row(elem_classes="custom-tab"):
-                        info_label = gr.HTML(value="DEBE SELECCIONARSE EL BOTÓN \"MOSTRAR DATOS\" PARA VISUALIZAR LOS RESULTADOS", elem_classes="info-display-1")
-                    
-                    # Componente que contiene toda la información a mostrar y que alterna visible = True/False
-                    with gr.Column(visible=False, elem_classes="special-panel") as data_dataset:
+            # region SUBPESTAÑA 1: VISUALIZACIÓN DE CULTIVOS
+            with gr.Tab("Dataset del Cultivo") as subtab_EDA_data:
+                with gr.Row():
+                    with gr.Column(elem_classes="custom-tab-2", scale=20):    
+                        gr.HTML("&nbsp;&nbsp;1. DATASET DE CULTIVOS", elem_classes="subtitle-text")
+                    with gr.Column(min_width=150):
+                        btn_EDA_mostrar = gr.Button("Mostrar datos", variant="primary", visible=True, 
+                                                elem_classes="custom-button3")
+
+                with gr.Row():
+                    with gr.Column(elem_classes="custom-tab", min_width=200):
+                        gr.HTML("CULTIVO", elem_classes="info-display-7")
+                        cultivo = gr.Dropdown(label="", 
+                                            choices=["Elegir cultivo...", "ARROZ", "AVENA", "GIRASOL", "MAÍZ", "POROTO",
+                                            "SOJA", "SORGO", "TRIGO", "YERBA MATE"],
+                                            value="Elegir cultivo...", elem_classes="custom-dropdown-small")
+                        gr.HTML("PROVINCIA", elem_classes="info-display-7")
+                        provincia = gr.Dropdown(label="", choices=[], elem_classes="custom-dropdown-small")
+                        gr.HTML("ZONA", elem_classes="info-display-7")
+                        departamento = gr.Dropdown(label="", choices=[], elem_classes="custom-dropdown-small")
+                                        
+                        chk_automatico = gr.Checkbox(label="Datos automáticos", value=False, elem_classes="custom-checkbox-3")
+                        chk_interactivo = gr.Checkbox(label="Gráficos interactivos", value=False, elem_classes="custom-checkbox-3")
+                        #btn_EDA_mostrar = gr.Button("Mostrar Datos", variant="primary", visible=True, elem_classes="custom-button")
+            
+                    with gr.Column(scale=20):
                         with gr.Row(elem_classes="custom-tab"):
-                            with gr.Column():
-                                gr.HTML(value="ESTADÍSTICAS DEL DATASET", elem_classes="info-display-2")
-                                stats_table = gr.Dataframe(interactive=False, max_height=335)
-                            with gr.Column():
-                                gr.HTML(value="CONTENIDO DEL DATASET", elem_classes="info-display-2")
-                                output_table = gr.Dataframe(interactive=False, max_height=335)
-                    
-                        with gr.Row(elem_classes="custom-tab"):
-                            output_plot_box = gr.Plot(show_label=False)
+                            info_label = gr.HTML(value="DEBE SELECCIONARSE EL BOTÓN \"MOSTRAR DATOS\" PARA VISUALIZAR LOS RESULTADOS", elem_classes="info-display-1")
                         
-                        with gr.Row(elem_classes="custom-tab"):
-                            with gr.Column():
+                        # Componente que contiene toda la información a mostrar y que alterna visible = True/False
+                        with gr.Column(visible=False, elem_classes="special-panel") as data_dataset:
+                            # Descripción y contenido del dataset
+                            with gr.Row(elem_classes="custom-tab"):
+                                with gr.Column():
+                                    gr.HTML(value="ESTADÍSTICAS DE LAS VARIABLES DEL CULTIVO", elem_classes="info-display-2")
+                                    stats_table = gr.Dataframe(interactive=False, max_height=335)
+                                with gr.Column():
+                                    gr.HTML(value="CONTENIDO DE LAS VARIABLES DEL CULTIVO", elem_classes="info-display-2")
+                                    output_table = gr.Dataframe(interactive=False, max_height=335)
+
+                            # Gráfico de cajas de todos los indicadores
+                            with gr.Row(elem_classes="custom-tab"):
+                                output_plot_box = gr.Plot(show_label=False)
+                            
+                            # Gráficos de cada indicador (serie, histograma, normal)
+                            with gr.Row(elem_classes="custom-tab"):
+                                with gr.Column():
+                                    with gr.Row():
+                                        with gr.Column(min_width=150, scale=1):
+                                            with gr.Row():
+                                                indicador = gr.Dropdown(label="Indicador", choices=[],
+                                                            interactive=False,
+                                                            allow_custom_value=True,
+                                                            elem_classes="custom-dropdown")
+                                            with gr.Row(elem_classes="no-stack"):
+                                                btn_anterior = gr.Button("<", variant="primary",
+                                                                    interactive=False,
+                                                                    elem_classes="custom-button2",
+                                                                    scale=1, min_width=50)
+                                                btn_siguiente = gr.Button(">", variant="primary",
+                                                                    interactive=False,
+                                                                    elem_classes="custom-button2",
+                                                                    scale=1, min_width=50)
+                                            with gr.Row():
+                                                with gr.Column():
+                                                    chk_serie = gr.Checkbox(label="Serie", value=True, elem_classes="custom-checkbox-2")
+                                                    chk_mg = gr.Checkbox(label="Media Global", value=True, elem_classes="custom-checkbox-2")
+                                                    chk_tend = gr.Checkbox(label="Tendencia", value=True, elem_classes="custom-checkbox-2")
+                                                    chk_mm = gr.Checkbox(label="Media Móvil", value=False, elem_classes="custom-checkbox-2")
+                                                    chk_sd = gr.Checkbox(label="SD Móvil", value=False, elem_classes="custom-checkbox-2")
+                                        with gr.Column(scale=20):
+                                            output_plot_evolution = gr.Plot(show_label=False)
+                                    with gr.Row():
+                                        output_plot_histogram = gr.Plot(show_label=False)
+                                        output_plot_normal_dist = gr.Plot(show_label=False)
+            # endregion SUBPESTAÑA 1: VISUALIZACIÓN DE CULTIVOS
+
+            # region SUBPESTAÑA 2: VARIABLES EXTERNAS
+            with gr.Tab("Variables Coyunturales") as subtab_VARS_data:
+                with gr.Row():
+                    with gr.Column(elem_classes="custom-tab-2", scale=20):    
+                        gr.HTML("&nbsp;&nbsp;2. VARIABLES EXTERNAS DE LA COYUNTURA NACIONAL",
+                                                elem_classes="subtitle-text")
+
+                # Dataset con variables externas
+                with gr.Row(elem_classes="custom-tab"):
+                    info_label2 = gr.HTML(value="DEBE INDICARSE EL CULTIVO, LA PROVINCIA Y LA ZONA", elem_classes="info-display-1")
+                with gr.Row(elem_classes="custom-tab"):
+                    with gr.Column():
+                        gr.HTML(value="ESTADÍSTICAS DE LAS VARIABLES COYUNTURALES", elem_classes="info-display-2")
+                        stats_vars = gr.Dataframe(interactive=False, max_height=335)
+                    with gr.Column():
+                        gr.HTML(value="CONTENIDO DE LAS VARIABLES COYUNTURALES", elem_classes="info-display-2")
+                        output_vars = gr.Dataframe(interactive=False, max_height=335)
+
+                # Gráficos de la serie para cada indicador y variable coyuntural
+                with gr.Row(elem_classes="custom-tab"):
+                    with gr.Column():
+                        with gr.Row():
+                            with gr.Column(min_width=200):
                                 with gr.Row():
-                                    with gr.Column(min_width=150, scale=1):
-                                        with gr.Row():
-                                            indicador = gr.Dropdown(label="Indicador", choices=[],
+                                    indicador2 = gr.Dropdown(label="Indicador del Cultivo", choices=[],
+                                                interactive=False,
+                                                allow_custom_value=True,
+                                                elem_classes="custom-dropdown")
+                                with gr.Row(elem_classes="no-stack"):
+                                    btn_anterior2 = gr.Button("<", variant="primary",
                                                         interactive=False,
+                                                        elem_classes="custom-button8",
+                                                        scale=1, min_width=50)
+                                    btn_siguiente2 = gr.Button(">", variant="primary",
+                                                        interactive=False,
+                                                        elem_classes="custom-button8",
+                                                        scale=1, min_width=50)
+                                with gr.Row():
+                                    variable = gr.Dropdown(label="Variable Coyuntural", choices=[],
+                                                interactive=False,
+                                                allow_custom_value=True,
+                                                elem_classes="custom-dropdown")
+                                with gr.Row(elem_classes="no-stack"):
+                                    btn_var_ant = gr.Button("<", variant="primary",
+                                                        interactive=False,
+                                                        elem_classes="custom-button8",
+                                                        scale=1, min_width=50)
+                                    btn_var_sig = gr.Button(">", variant="primary",
+                                                        interactive=False,
+                                                        elem_classes="custom-button8",
+                                                        scale=1, min_width=50)
+                                with gr.Row():
+                                    lag = gr.Dropdown(label="Desplazamiento (años)", choices=range(-10,11),
+                                                        interactive=False, value=0,
                                                         allow_custom_value=True,
                                                         elem_classes="custom-dropdown")
-                                        with gr.Row(elem_classes="no-stack"):
-                                            btn_anterior = gr.Button("<", variant="primary",
-                                                                interactive=False,
-                                                                elem_classes="custom-button2",
-                                                                scale=1, min_width=50)
-                                            btn_siguiente = gr.Button(">", variant="primary",
-                                                                interactive=False,
-                                                                elem_classes="custom-button2",
-                                                                scale=1, min_width=50)
-                                        with gr.Row():
-                                            with gr.Column():
-                                                chk_serie = gr.Checkbox(label="Serie", value=True, elem_classes="custom-checkbox-2")
-                                                chk_mg = gr.Checkbox(label="Media Global", value=True, elem_classes="custom-checkbox-2")
-                                                chk_tend = gr.Checkbox(label="Tendencia", value=True, elem_classes="custom-checkbox-2")
-                                                chk_mm = gr.Checkbox(label="Media Móvil", value=False, elem_classes="custom-checkbox-2")
-                                                chk_sd = gr.Checkbox(label="SD Móvil", value=False, elem_classes="custom-checkbox-2")
-                                    with gr.Column(scale=20):
-                                        output_plot_evolution = gr.Plot(show_label=False)
-                                with gr.Row():
-                                    output_plot_histogram = gr.Plot(show_label=False)
-                                    output_plot_normal_dist = gr.Plot(show_label=False)
+                            with gr.Column(scale=20):
+                                output_plot_evolution2 = gr.Plot(show_label=False)
+                                
+                                    
+            # endregion SUBPESTAÑA 2: VARIABLES EXTERNAS
+
 
 
             cultivo.select(
                 fn = tab_EDA_on_cultivo,
                 inputs = [cultivo, chk_automatico, chk_interactivo],
                 outputs = [dataset_state, dataset_filter_state,
+                            dataset_merge_state,
                             provincia, departamento,
                             info_label, btn_EDA_mostrar,
                             data_dataset, stats_table, 
                             output_table, output_plot_box, output_plot_evolution,
                             output_plot_histogram, output_plot_normal_dist,
                             indicador, btn_anterior, btn_siguiente, 
-                            chk_serie, chk_mg, chk_tend, chk_mm, chk_sd]
+                            chk_serie, chk_mg, chk_tend, chk_mm, chk_sd,
+                            info_label2,
+                            stats_vars, output_vars,
+                            indicador2, btn_anterior2, btn_siguiente2,
+                            variable, btn_var_ant, btn_var_sig, lag,
+                            output_plot_evolution2]
             )
             
             provincia.select(
                 fn = tab_EDA_on_provincia,
                 inputs = [dataset_state, cultivo, provincia, 
                         chk_automatico, chk_interactivo],
-                outputs = [dataset_state, dataset_filter_state, 
+                outputs = [dataset_state, dataset_filter_state,
+                            dataset_merge_state, 
                             provincia, departamento,
                             info_label, btn_EDA_mostrar,
                             data_dataset, stats_table,
                             output_table, output_plot_box, output_plot_evolution,
                             output_plot_histogram, output_plot_normal_dist,
                             indicador, btn_anterior, btn_siguiente, 
-                            chk_serie, chk_mg, chk_tend, chk_mm, chk_sd]
+                            chk_serie, chk_mg, chk_tend, chk_mm, chk_sd,
+                            info_label2,
+                            stats_vars, output_vars,
+                            indicador2, btn_anterior2, btn_siguiente2,
+                            variable, btn_var_ant, btn_var_sig, lag,
+                            output_plot_evolution2]
             )
             
             departamento.select(
                 fn = tab_EDA_on_departamento,
                 inputs = [dataset_state, cultivo, provincia, departamento, 
                             chk_automatico, chk_interactivo],
-                outputs = [dataset_state, dataset_filter_state, 
+                outputs = [dataset_state, dataset_filter_state,
+                            dataset_merge_state, 
                             provincia, departamento,
                             info_label, btn_EDA_mostrar,
                             data_dataset, stats_table,
                             output_table, output_plot_box, output_plot_evolution,
                             output_plot_histogram, output_plot_normal_dist,
                             indicador, btn_anterior, btn_siguiente, 
-                            chk_serie, chk_mg, chk_tend, chk_mm, chk_sd]
+                            chk_serie, chk_mg, chk_tend, chk_mm, chk_sd,
+                            info_label2,
+                            stats_vars, output_vars,
+                            indicador2, btn_anterior2, btn_siguiente2,
+                            variable, btn_var_ant, btn_var_sig, lag,
+                            output_plot_evolution2]
             )
 
             btn_EDA_mostrar.click(
                 fn = tab_EDA_show_data,
-                inputs = [dataset_state, cultivo, provincia, departamento, 
+                inputs = [dataset_state,
+                            cultivo, provincia, departamento, 
                             chk_automatico, chk_interactivo],
-                outputs = [dataset_state, dataset_filter_state, 
+                outputs = [dataset_state, dataset_filter_state,
+                            dataset_merge_state, 
                             provincia, departamento,
                             info_label, btn_EDA_mostrar,
                             data_dataset, stats_table,
                             output_table, output_plot_box, output_plot_evolution,
                             output_plot_histogram, output_plot_normal_dist,
                             indicador, btn_anterior, btn_siguiente, 
-                            chk_serie, chk_mg, chk_tend, chk_mm, chk_sd]
+                            chk_serie, chk_mg, chk_tend, chk_mm, chk_sd,
+                            info_label2,
+                            stats_vars, output_vars,
+                            indicador2, btn_anterior2, btn_siguiente2,
+                            variable, btn_var_ant, btn_var_sig, lag,
+                            output_plot_evolution2]
             )
 
             indicador.select(
@@ -4313,6 +4894,7 @@ with gr.Blocks(title="Análisis de Cultivos") as app:
                 inputs = [cultivo, provincia, departamento, 
                             chk_automatico, chk_interactivo],
                 outputs = [dataset_state, dataset_filter_state, 
+                            dataset_merge_state,
                             provincia, departamento, 
                             info_label, btn_EDA_mostrar,
                             data_dataset, stats_table, output_table,
@@ -4320,15 +4902,66 @@ with gr.Blocks(title="Análisis de Cultivos") as app:
                             output_plot_histogram, output_plot_normal_dist,
                             indicador,
                             btn_anterior, btn_siguiente, 
-                            chk_serie, chk_mg, chk_tend, chk_mm, chk_sd]
+                            chk_serie, chk_mg, chk_tend, chk_mm, chk_sd,
+                            info_label2,
+                            stats_vars, output_vars,
+                            indicador2, btn_anterior2, btn_siguiente2,
+                            variable, btn_var_ant, btn_var_sig, lag,
+                            output_plot_evolution2]
             )
 
             chk_interactivo.select(
                 fn = tab_EDA_interactive,
-                inputs = [dataset_filter_state, indicador, chk_serie, chk_mg, chk_tend,
-                       chk_mm, chk_sd, chk_interactivo],
-                outputs = [output_plot_box, output_plot_evolution]
+                inputs = [dataset_filter_state, dataset_merge_state,
+                            indicador, chk_serie, chk_mg, chk_tend,
+                            chk_mm, chk_sd, 
+                            indicador2, variable, lag,
+                            chk_interactivo],
+                outputs = [output_plot_box, output_plot_evolution, output_plot_evolution2]
             )
+
+            indicador2.select(
+                fn = tab_EDA_create_actual_evolution_graph,
+                inputs = [dataset_merge_state, indicador2, variable, lag, chk_interactivo],
+                outputs = [output_plot_evolution2]
+            )
+
+            btn_anterior2.click(
+                fn = tab_EDA_create_prev_evolution_graph_ind,
+                inputs = [dataset_merge_state, indicador2, variable, lag, chk_interactivo],
+                outputs = [indicador2, output_plot_evolution2]
+            )
+            
+            btn_siguiente2.click(
+                fn = tab_EDA_create_next_evolution_graph_ind,
+                inputs = [dataset_merge_state, indicador2, variable, lag, chk_interactivo],
+                outputs = [indicador2, output_plot_evolution2]
+            )
+
+            variable.select(
+                fn = tab_EDA_create_actual_evolution_graph,
+                inputs = [dataset_merge_state, indicador2, variable, lag, chk_interactivo],
+                outputs = [output_plot_evolution2]
+            )
+
+            btn_var_ant.click(
+                fn = tab_EDA_create_prev_evolution_graph_var,
+                inputs = [dataset_merge_state, indicador2, variable, lag, chk_interactivo],
+                outputs = [variable, output_plot_evolution2]
+            )
+            
+            btn_var_sig.click(
+                fn = tab_EDA_create_next_evolution_graph_var,
+                inputs = [dataset_merge_state, indicador2, variable, lag, chk_interactivo],
+                outputs = [variable, output_plot_evolution2]
+            )
+
+            lag.select(
+                fn = tab_EDA_create_actual_evolution_graph,
+                inputs = [dataset_merge_state, indicador2, variable, lag, chk_interactivo],
+                outputs = [output_plot_evolution2]
+            )
+
 
 
         ###### PESTAÑA COMPARACIÓN DE SERIES TEMPORALES
@@ -4337,7 +4970,7 @@ with gr.Blocks(title="Análisis de Cultivos") as app:
             with gr.Row(elem_classes="title-tab"):
                 gr.HTML("&nbsp;&nbsp;COMPARACIÓN DE SERIES TEMPORALES", elem_classes="title-text")
             
-            # region SECCIÓN 1: SELECCIÓN DE LAS TRES SERIES TEMPORALES
+            # region SUBPESTAÑA 1: SELECCIÓN DE LAS TRES SERIES TEMPORALES
             with gr.Tab("Selección de las Series") as subtab_sel_series:
                
                 with gr.Row():
@@ -4581,7 +5214,7 @@ with gr.Blocks(title="Análisis de Cultivos") as app:
                                     with gr.Column(min_width=45):
                                         graph_sd = gr.Checkbox(label="SD Móvil", value=False, 
                                                         elem_classes="custom-checkbox")
-            # endregion SECCIÓN 1: SELECCIÓN DE LAS TRES SERIES TEMPORALES
+            # endregion SUBPESTAÑA 1: SELECCIÓN DE LAS TRES SERIES TEMPORALES
 
             # region SECCION 2: DESCOMPOSICIÓN DE LAS TRES SERIES TEMPORALES (MÉTODO STL)
             with gr.Tab("Descomposición de las Series") as subtab_desc_series:
@@ -4619,7 +5252,7 @@ with gr.Blocks(title="Análisis de Cultivos") as app:
                                 STL_info3 = gr.HTML("Interpretación", visible=False)
             # endregion SECCION 2: DESCOMPOSICIÓN DE LAS TRES SERIES TEMPORALES
 
-            # region SECCIÓN 3: DIFERENCIACIÓN DE LAS SERIES Y PRUEBA ADF
+            # region SUBPESTAÑA 3: DIFERENCIACIÓN DE LAS SERIES Y PRUEBA ADF
             with gr.Tab("Diferenciación de las Series") as subtab_dif_series:
                 with gr.Row():
                     with gr.Column(elem_classes="custom-tab-2", scale=20):    
@@ -4662,9 +5295,9 @@ with gr.Blocks(title="Análisis de Cultivos") as app:
                         with gr.Row():
                             with gr.Column():
                                 ADF_info3 = gr.HTML("Interpretación", visible=False)
-            # endregion SECCIÓN 3: DIFERENCIACIÓN DE LAS SERIES Y PRUEBA ADF
+            # endregion SUBPESTAÑA 3: DIFERENCIACIÓN DE LAS SERIES Y PRUEBA ADF
 
-            # region SECCIÓN 4: CÁLCULO DE AUTOCORRELACIONES DE LAS SERIES
+            # region SUBPESTAÑA 4: CÁLCULO DE AUTOCORRELACIONES DE LAS SERIES
             with gr.Tab("ACF y PACF de las Series") as subtab_ACF_PACF:
                 with gr.Row():
                     with gr.Column(elem_classes="custom-tab-2", scale=20):    
@@ -4704,9 +5337,9 @@ with gr.Blocks(title="Análisis de Cultivos") as app:
                                 ACF_info3 = gr.HTML("Interpretación ACF", visible=False)
                                 PACF_graph3 = gr.Plot(show_label=False, visible=False)
                                 PACF_info3 = gr.HTML("Interpretación PACF", visible=False)
-            # endregion SECCIÓN 4: CÁLCULO DE AUTOCORRELACIONES DE LAS SERIES
+            # endregion SUBPESTAÑA 4: CÁLCULO DE AUTOCORRELACIONES DE LAS SERIES
 
-            # region SECCIÓN 5: APLICACIÓN DEL MODELO ARIMA
+            # region SUBPESTAÑA 5: APLICACIÓN DEL MODELO ARIMA
             with gr.Tab("Modelo ARIMA") as subtab_ARIMA:
                 with gr.Row():
                     with gr.Column(elem_classes="custom-tab-2", scale=20): 
@@ -4757,9 +5390,9 @@ with gr.Blocks(title="Análisis de Cultivos") as app:
                                 ARIMA_preds3 = gr.HTML("Tabla de Valores Predichos", visible=False)
                                 ARIMA_graph3_resids = gr.Plot(show_label=False, visible=False)
                                 ARIMA_resids3 = gr.HTML("Prueba Ljung-Box de Residuos", visible=False)
-            # endregion SECCIÓN 5: APLICACIÓN DEL MODELO ARIMA
+            # endregion SUBPESTAÑA 5: APLICACIÓN DEL MODELO ARIMA
 
-            # region SECCIÓN 6: TRANSFORMADAS DE FOURIER
+            # region SUBPESTAÑA 6: TRANSFORMADAS DE FOURIER
             with gr.Tab("Transformada de Fourier") as subtab_Fourier:
                 
                 with gr.Row():
@@ -5038,7 +5671,7 @@ with gr.Blocks(title="Análisis de Cultivos") as app:
                         Fourier_btn_cerrar5 = gr.Button("Cerrar", variant="primary",
                                                         elem_classes="custom-button6")
 
-            # enderegion SECCIÓN 6: TRANSFORMADAS DE FOURIER
+            # enderegion SUBPESTAÑA 6: TRANSFORMADAS DE FOURIER
 
 
             cult1.select(
