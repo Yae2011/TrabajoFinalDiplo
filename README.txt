@@ -8,12 +8,13 @@ ESTRUCTURA DEL PROYECTO
 -----------------------
 
 /app.maf.py
-    Archivo principal de la aplicación (Versión Productiva). 
+    Archivo principal de la aplicación (Versión Productiva a compaginar). 
     Contiene toda la lógica de Gradio, procesamiento de datos 
     y modelado estadístico (ARIMA, ML).
     
 /app.py
-    Versión anterior o de desarrollo de la aplicación.
+    Versión  de la aplicación.
+
 /style.css
     Archivo de estilos personalizados. Define la estética "dark mode", 
     efectos de glassmorphism y el diseño responsivo de la interfaz.
@@ -63,6 +64,7 @@ La aplicación se divide en varias secciones clave:
 4. Módulos de Machine Learning (Educación) [EN DESARROLLO]:
    - Estructura preparada para el análisis de indicadores educativos mediante 
      Bosques Aleatorios, Probabilidad Bayesiana, Redes Neuronales y K-NN/SVM.
+    .- Redes Neuronales - Terminado (MAF)
 
 REQUISITOS Y EJECUCIÓN
 ----------------------
@@ -86,7 +88,7 @@ Para ejecutar la aplicación se recomienda utilizar un entorno virtual (venv):
    pip install -r requirements.txt
 
 4. Lanzar la aplicación productiva:
-   python app.maf.py
+   python app.py
 
 5. Abre la URL local (normalmente http://127.0.0.1:7860) en el navegador.
 
