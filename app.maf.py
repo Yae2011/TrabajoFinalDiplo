@@ -23,6 +23,10 @@ import unicodedata
 import json
 import plotly.express as px
 import unicodedata
+from sklearn.neural_network import MLPRegressor
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import StandardScaler
+from sklearn.metrics import mean_squared_error, r2_score
 # fin prg MAF
 
 
@@ -895,6 +899,132 @@ def tab_EDA_on_checkbox(dataset_type, provincia, departamento, sector, ambito, a
             gr.Checkbox(value=False), gr.Checkbox(value=False)
                           
 
+# comienzo prg MAF
+# --- FUNCIONES PARA LA PESTAÑA "REDES NEURONALES" ---
+def get_timeline_nn(df, provincia=None, departamento=None):
+    if df.empty:
+        return "Sin años disponibles"
+    
+    temp_df = df.copy()
+    if provincia:
+        temp_df = temp_df[temp_df['provincia'] == provincia]
+    if departamento:
+        temp_df = temp_df[temp_df['departamento'] == departamento]
+    
+    if temp_df.empty:
+        return "<span style='color: red;'>Sin años disponibles para esta selección</span>"
+    
+    years = sorted(temp_df['periodo'].unique())
+    if not years:
+        return "<span style='color: red;'>Sin años disponibles</span>"
+    
+    return f"<div style='background-color: #f8f9fa; padding: 10px; border-radius: 8px; border-left: 5px solid #1f77b4; margin-bottom: 15px;'>" \
+           f"<span style='color: #666; font-size: 0.9em; text-transform: uppercase;'>Línea de Tiempo</span><br>" \
+           f"<b style='color: #1f77b4; font-size: 1.1em;'>Años disponibles: {years[0]} - {years[-1]}</b> <small>({len(years)} registros)</small></div>"
+
+def tab_NN_on_crop_change(dataset_type):
+    df, provincias = load_data(dataset_type)
+    if df.empty:
+        return gr.update(choices=[], value=None), gr.update(choices=[], value=None), gr.update(choices=[], value=None), "Sin datos"
+    
+    provincias_sorted = sorted([str(p) for p in provincias])
+    prov_first = provincias_sorted[0]
+    
+    dptos = df[df['provincia'] == prov_first]['departamento'].unique()
+    dptos_sorted = sorted([str(d) for d in dptos if d is not None])
+    dpto_first = dptos_sorted[0]
+    
+    numeric_cols = df.select_dtypes(include=['number']).columns.tolist()
+    indicadores = [dict_ncortos.get(c, c) for c in numeric_cols if c != 'periodo']
+    
+    timeline = get_timeline_nn(df, prov_first, dpto_first)
+    
+    return gr.update(choices=provincias_sorted, value=prov_first), \
+           gr.update(choices=dptos_sorted, value=dpto_first), \
+           gr.update(choices=indicadores, value=indicadores[0] if indicadores else None), \
+           timeline
+
+def tab_NN_on_prov_change(dataset_type, provincia):
+    df, _ = load_data(dataset_type)
+    if df.empty: return gr.update(choices=[], value=None), "Sin datos"
+    
+    dptos = df[df['provincia'] == provincia]['departamento'].unique()
+    dptos_sorted = sorted([str(d) for d in dptos if d is not None])
+    dpto_first = dptos_sorted[0] if dptos_sorted else None
+    
+    timeline = get_timeline_nn(df, provincia, dpto_first)
+    return gr.update(choices=dptos_sorted, value=dpto_first), timeline
+
+def tab_NN_on_dept_change(dataset_type, provincia, departamento):
+    df, _ = load_data(dataset_type)
+    return get_timeline_nn(df, provincia, departamento)
+
+def tab_NN_train_and_predict(dataset_type, provincia, departamento, indicador_nc, hidden_layers, max_iter):
+    df, _ = load_data(dataset_type)
+    if df.empty:
+        return "Error: Dataset no disponible", None, None
+    
+    # Obtener el nombre original de la columna
+    indicador = next((k for k, v in dict_ncortos.items() if v == indicador_nc), indicador_nc)
+    
+    # Filtrar datos
+    res_df = df[(df['provincia'] == provincia) & (df['departamento'] == departamento)].copy()
+    if res_df.empty or len(res_df) < 5:
+        return "Error: Datos insuficientes para entrenar (se requieren al menos 5 registros)", None, None
+    
+    res_df = res_df.sort_values('periodo')
+    X = res_df[['periodo']].values
+    y = res_df[indicador].values
+    
+    # Escalamiento
+    scaler_X = StandardScaler()
+    scaler_y = StandardScaler()
+    X_scaled = scaler_X.fit_transform(X)
+    y_scaled = scaler_y.fit_transform(y.reshape(-1, 1)).flatten()
+    
+    # Configuración de capas ocultas
+    try:
+        layers = tuple(map(int, hidden_layers.split(',')))
+    except:
+        layers = (100,)
+    
+    # Modelo
+    model = MLPRegressor(hidden_layer_sizes=layers, max_iter=int(max_iter), random_state=42)
+    model.fit(X_scaled, y_scaled)
+    
+    # Predicción
+    y_pred_scaled = model.predict(X_scaled)
+    y_pred = scaler_y.inverse_transform(y_pred_scaled.reshape(-1, 1)).flatten()
+    
+    # Métricas
+    r2 = r2_score(y, y_pred)
+    mse = mean_squared_error(y, y_pred)
+    
+    # Gráfico
+    fig = go.Figure()
+    fig.add_trace(go.Scatter(x=res_df['periodo'], y=y, mode='lines+markers', name='Actual', line=dict(color='blue')))
+    fig.add_trace(go.Scatter(x=res_df['periodo'], y=y_pred, mode='lines+markers', name='Predicho (RN)', line=dict(color='red', dash='dash')))
+    
+    fig.update_layout(
+        title=f"RED NEURONAL: {indicador_nc.upper()} - {provincia} ({departamento})",
+        xaxis_title="Año",
+        yaxis_title=indicador_nc,
+        template="plotly_white",
+        height=450
+    )
+    
+    stats_text = f"<b>Métricas del Modelo:</b><br>R²: {r2:.4f}<br>MSE: {mse:.4f}"
+    
+    # Tabla de resultados
+    results_df = pd.DataFrame({
+        "Año": res_df['periodo'],
+        "Valor Real": y,
+        "Valor Predicho": y_pred.round(2)
+    })
+    
+    return stats_text, fig, results_df
+# fin prg MAF
+
 # endregion FUNCIONES PARA LA PESTAÑA "EDA"
 
 # comienzo prg MAF
@@ -911,7 +1041,7 @@ def tab_Dashboard_load_geojsons():
             with open(p_path, "r", encoding="utf-8") as f:
                 prov = json.load(f)
 
-        # Inicio MAF: Carga de GeoJSON segmentado en 5 partes
+        #Carga de GeoJSON segmentado en 5 partes
         dept = {"type": "FeatureCollection", "features": []}
         for i in range(1, 6):
             part_path = f"Datasets/DepartamentosArgentina_part{i}.geojson"
@@ -923,7 +1053,7 @@ def tab_Dashboard_load_geojsons():
         
         if not dept['features']:
             dept = None
-        # Fin MAF
+
 
         return prov, dept
     except Exception as e:
@@ -4136,9 +4266,69 @@ with gr.Blocks(title="Análisis de Cultivos") as app:
         
         
         ###### PESTAÑA REDES NEURONALES
-        with gr.Tab("Redes Neuronales"):
+        with gr.Tab("Redes Neuronales") as tab_NN:
+            # comienzo prg MAF
             with gr.Row(elem_classes="title-tab"):
                 gr.HTML("&nbsp;&nbsp;ANÁLISIS DE INDICADORES EDUCATIVOS MEDIANTE REDES NEURONALES", elem_classes="title-text")
+            
+            # --- Timeline / Year Range ---
+            with gr.Row():
+                nn_timeline = gr.HTML("<div style='color: gray; padding: 10px;'>Cargando información del periodo...</div>")
+
+            with gr.Row():
+                with gr.Column(scale=1):
+                    with gr.Row():
+                        nn_cultivo = gr.Dropdown(label="CULTIVO", choices=list(FILE_MAP.keys()), value="ARROZ")
+                    with gr.Row():
+                        nn_provincia = gr.Dropdown(label="PROVINCIA", choices=[])
+                    with gr.Row():
+                        nn_departamento = gr.Dropdown(label="DEPARTAMENTO", choices=[])
+                    with gr.Row():
+                        nn_indicador = gr.Dropdown(label="INDICADOR", choices=[])
+                    with gr.Row():
+                        nn_hidden = gr.Textbox(label="Capas Ocultas (ej: 100,50)", value="100")
+                    with gr.Row():
+                        nn_iter = gr.Number(label="Iteraciones Máx.", value=1000)
+                    with gr.Row():
+                        nn_btn_train = gr.Button("Entrenar y Predecir", variant="primary")
+                
+                with gr.Column(scale=2):
+                    nn_stats = gr.HTML("<b>Resultados del Entrenamiento</b>")
+                    nn_plot = gr.Plot()
+                    nn_table = gr.Dataframe(label="Datos Comparativos")
+
+            # Eventos
+            tab_NN.select(
+                fn=tab_NN_on_crop_change,
+                inputs=[nn_cultivo],
+                outputs=[nn_provincia, nn_departamento, nn_indicador, nn_timeline]
+            )
+            
+            nn_cultivo.change(
+                fn=tab_NN_on_crop_change,
+                inputs=[nn_cultivo],
+                outputs=[nn_provincia, nn_departamento, nn_indicador, nn_timeline]
+            )
+
+            nn_provincia.change(
+                fn=tab_NN_on_prov_change,
+                inputs=[nn_cultivo, nn_provincia],
+                outputs=[nn_departamento, nn_timeline]
+            )
+
+            nn_departamento.change(
+                fn=tab_NN_on_dept_change,
+                inputs=[nn_cultivo, nn_provincia, nn_departamento],
+                outputs=[nn_timeline]
+            )
+
+
+            nn_btn_train.click(
+                fn=tab_NN_train_and_predict,
+                inputs=[nn_cultivo, nn_provincia, nn_departamento, nn_indicador, nn_hidden, nn_iter],
+                outputs=[nn_stats, nn_plot, nn_table]
+            )
+            # fin prg MAF
         
         
         ###### PESTAÑA KNN & SVM
