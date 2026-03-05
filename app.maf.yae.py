@@ -1173,7 +1173,7 @@ def tab_Dashboard_update_charts(df, indicador, top_n):
     # Gráfico de Evolución: A lo largo de los años
     df_year = df.groupby('periodo')[indicador].sum().reset_index()
     fig_evo = px.area(df_year, x='periodo', y=indicador, 
-                     title=f"Evolución Histórica: {ind_label}",
+                     title=f"Evolgución Histórica: {ind_label}",
                      color_discrete_sequence=['#1f77b4'])
     
     # Agregar Línea de Tendencia
@@ -2999,64 +2999,50 @@ portada_video = f'''
 
 #### YAE: CODIGO RandonForest
 # region FUNCIONES PARA LA PESTAÑA "BOSQUES ALEATORIOS"
-def tab_RF_train_and_predict(df, indicador_corto):
+def tab_RF_ejecutar_autonomo(df_completo, provincia, departamento, indicador_corto):
+    # 1. Validaciones de seguridad
+    if df_completo is None or df_completo.empty:
+        return "❌ No hay datos cargados. Seleccione un cultivo en la pestaña principal.", None, None
+    if not provincia or not departamento:
+        return "⚠️ Seleccione Provincia y Departamento en esta pestaña.", None, None
 
-    if df is None or df.empty:
-        return "No hay datos disponibles para entrenar el modelo.", None, None
+    # 2. Reutilizamos tu función de filtrado (usando las constantes de tu código)
+    # Nota: KEY_COLUMNS debe estar definida en tu bloque de constantes
+    df_filtrado = get_filtered_subset(df_completo, "", provincia, departamento, KEY_COLUMNS)
 
-    # Nos aseguramos de ordenar por año
-    df = df.sort_values("year")
+    if df_filtrado.empty:
+        return f"❌ Sin datos para {departamento}, {provincia}.", None, None
 
-    # Variable objetivo
-    y = df[indicador_corto]
+    # 3. Obtener el nombre real de la columna (ej: de 'Producción' a 'prod_ton')
+    indicador_real = next((k for k, v in dict_ncortos.items() if v == indicador_corto), indicador_corto)
+    
+    # Limpiar nulos para el modelo
+    df_ml = df_filtrado[['periodo', indicador_real]].dropna()
+    
+    if len(df_ml) < 4:
+        return f"❌ Datos insuficientes (solo {len(df_ml)} años). Pruebe otra zona.", None, None
 
-    # Variable independiente (año)
-    X = df[["year"]]
-
-    # Entrenamiento
-    model = RandomForestRegressor(
-        n_estimators=200,
-        random_state=42
-    )
-
+    # 4. Entrenamiento de Random Forest
+    X = df_ml[['periodo']]
+    y = df_ml[indicador_real]
+    model = RandomForestRegressor(n_estimators=100, random_state=42)
     model.fit(X, y)
 
-    # Predicción sobre mismos datos (histórico)
-    y_pred = model.predict(X)
+    # 5. Proyectar próximos 5 años
+    ultimo_anio = int(X.max())
+    futuro = np.array([[i] for i in range(ultimo_anio + 1, ultimo_anio + 6)])
+    preds_futuro = model.predict(futuro)
 
-    # Métricas
-    mse = mean_squared_error(y, y_pred)
-    r2 = r2_score(y, y_pred)
-
-    metrics_text = (
-        f"Cantidad de registros: {len(df)}\n"
-        f"Error Cuadrático Medio (MSE): {mse:.4f}\n"
-        f"Coeficiente de Determinación (R²): {r2:.4f}"
-    )
-
-    # 🔮 Proyección a futuro (5 años)
-    ultimo_anio = df["year"].max()
-    futuros_anios = np.arange(ultimo_anio + 1, ultimo_anio + 6)
-
-    X_futuro = futuros_anios.reshape(-1, 1)
-    pred_futuro = model.predict(X_futuro)
-
-    # 📊 Gráfico
-    fig, ax = plt.subplots()
-
-    ax.scatter(df["year"], y, label="Datos reales")
-    ax.plot(df["year"], y_pred, label="Predicción histórica")
-    ax.plot(futuros_anios, pred_futuro, linestyle="--", label="Proyección futura")
-
-    ax.set_xlabel("Año")
-    ax.set_ylabel(indicador_corto)
-    ax.set_title("Modelo Random Forest")
+    # 6. Gráfico de resultados
+    fig, ax = plt.subplots(figsize=(10, 4))
+    ax.scatter(X, y, color='blue', label='Histórico Real')
+    ax.plot(futuro, preds_futuro, color='red', marker='o', linestyle='--', label='Proyección RF')
+    ax.set_title(f"PREDICCIÓN: {indicador_corto.upper()} EN {departamento.upper()}")
     ax.legend()
+    plt.tight_layout()
 
-    # 📋 Tabla resultados futuros
-    table_data = list(zip(futuros_anios, pred_futuro))
-
-    return metrics_text, fig, table_data
+    res_df = pd.DataFrame({"Año": futuro.flatten(), "Predicción": preds_futuro.round(2)})
+    return "✅ Modelo entrenado con éxito.", fig, res_df
 
 # endregion  FUNCIONES PARA LA PESTAÑA "BOSQUES ALEATORIOS" 
 #### YAE: FIN CODIGO RandonForest
@@ -4199,44 +4185,41 @@ with gr.Blocks(title="Análisis de Cultivos") as app:
                   
             with gr.Row():
                 with gr.Column(scale=1):
-
-                    gr.Markdown("### Configuración del Modelo")
-
+                    gr.Markdown("### Configuración de Zona")
+                    rf_prov = gr.Dropdown(label="Seleccione Provincia")
+                    rf_dpto = gr.Dropdown(label="Seleccione Departamento")
                     rf_indicador = gr.Dropdown(
-                        choices=list(dict_ncortos.values()),
-                        label="Indicador",
-                        value=list(dict_ncortos.values())[0]
+                        choices=list(dict_ncortos.values()) if 'dict_ncortos' in locals() else [], 
+                        label="Variable a Predecir"
                     )
-
-                    btn_run_rf = gr.Button(
-                        "Entrenar Modelo y Proyectar",
-                        variant="primary"
-                    )
-
-                    rf_metrics = gr.Textbox(
-                        label="Desempeño del Modelo",
-                        interactive=False
-                    )
-
+                    btn_rf = gr.Button("ENTRENAR Y PROYECTAR", variant="primary")
+                    rf_status = gr.Textbox(label="Estado", interactive=False)
+                
                 with gr.Column(scale=2):
+                    rf_plot = gr.Plot(label="Gráfico de Proyección")
+            
+            rf_tabla = gr.DataFrame(label="Tabla de Predicciones")
 
-                    rf_plot = gr.Plot(label="Visualización del Modelo")
+            # --- EVENTOS DE LA PESTAÑA ---
 
-                with gr.Row():
-                    rf_table = gr.DataFrame(
-                        headers=["Año", "Predicción"],
-                        interactive=False
-                    )
+            # Actualizar departamentos cuando cambia la provincia en esta pestaña
+            def rf_update_dptos(df, provincia):
+                if df is None or provincia is None: return gr.update(choices=[])
+                dptos = sorted(df[df['provincia'] == provincia]['departamento'].unique().tolist())
+                return gr.update(choices=dptos, value=dptos[0] if dptos else None)
 
+            rf_prov.change(
+                fn=rf_update_dptos,
+                inputs=[dataset_state, rf_prov],
+                outputs=rf_dpto
+            )
 
-                    # 🔗 Conexión del botón con el dataset filtrado global
-
-                    btn_run_rf.click(
-                        fn=tab_RF_train_and_predict,
-                        inputs=[dataset_filter_state, rf_indicador],
-                        outputs=[rf_metrics, rf_plot, rf_table]
-                    )
-                    
+            # Botón principal
+            btn_rf.click(
+                fn=tab_RF_ejecutar_autonomo,
+                inputs=[dataset_state, rf_prov, rf_dpto, rf_indicador],
+                outputs=[rf_status, rf_plot, rf_tabla]
+            )
         ###### FIN YAE        
         
         ###### PESTAÑA PROBABILIDAD BAYESIANA
