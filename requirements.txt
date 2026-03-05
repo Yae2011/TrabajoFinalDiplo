@@ -59,3 +59,7 @@ typer-slim==0.21.1
 typing-inspection==0.4.2
 typing_extensions==4.15.0
 uvicorn==0.40.0
+scikit-learn==1.6.1
+PyWavelets
+pmdarima
+
