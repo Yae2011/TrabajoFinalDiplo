@@ -6329,21 +6329,17 @@ with gr.Blocks(title="Análisis de Cultivos") as app:
             with gr.Row():
             # COLUMNA IZQUIERDA (COMBOS)
                 with gr.Column( elem_classes="custom-tab", min_width=200):
-                    gr.HTML("otro", elem_classes="info-display-7")
-                    prov_rf = gr.Dropdown(label="", 
-                                            choices=["Elegir prov...", "Buenos Aires"],
-                                            value="Elegir prov...", elem_classes="custom-dropdown-small")
-                    gr.HTML("CULTIVO", elem_classes="info-display-7")
-                    cultivo_rf = gr.Dropdown(label="", 
+                     gr.HTML("CULTIVO", elem_classes="info-display-7")
+                     cultivo_rf = gr.Dropdown(label="", 
                                             choices=["Elegir cultivo..."] + list(FILE_MAP.keys()),
                                             value="Elegir cultivo...", elem_classes="custom-dropdown-small")
-                    gr.HTML("PROVINCIA", elem_classes="info-display-7")
-                    provincia_rf = gr.Dropdown(label="", 
+                     gr.HTML("PROVINCIA", elem_classes="info-display-7")
+                     provincia_rf = gr.Dropdown(label="", 
                                             choices=[""],
-                                            value="",
+                                            value=None, 
+                                            interactive=True, 
                                             elem_classes="custom-dropdown-small")
-                    
-                    btn_rf = gr.Button("Predecir")
+                     btn_rf = gr.Button("Predecir")
 
                 # COLUMNA DERECHA (GRAFICOS)
                 with gr.Column(scale=3):
