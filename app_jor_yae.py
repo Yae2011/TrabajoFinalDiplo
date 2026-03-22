@@ -6320,7 +6320,7 @@ with gr.Blocks(title="Análisis de Cultivos") as app:
             Fourier_btn_cerrar5.click(fn = lambda: gr.update(visible=False), 
                                         inputs = None, outputs = Fourier_modal_5)
 
-        #YAE: ###############################
+        #YAE_GRF: ###############################
         ###### PESTAÑA BOSQUES ALEATORIOS
         with gr.Tab("Bosques Aleatorios"):
             with gr.Row(elem_classes="title-tab"):
@@ -6339,25 +6339,34 @@ with gr.Blocks(title="Análisis de Cultivos") as app:
                                             value=None, 
                                             interactive=True, 
                                             elem_classes="custom-dropdown-small")
-                     btn_rf = gr.Button("Predecir")
+            # COLUMNA DERECHA (SUBPESTAÑA)
+                with gr.Column(scale=20):
+                    #SUBPESTAÑA RF: 
+                    with gr.Tab("Algoritmo") as rfPredecir:
+                        with gr.Row():
+                             with gr.Column(elem_classes="custom-tab-2", scale=20):  
+                                gr.HTML(value="PREDICCION", elem_classes="info-display-2")
+                             with gr.Column(min_width=150):
+                                btnPredecir_rf = gr.Button("Predecir",variant="primary", visible=True,                                                 elem_classes="custom-button3")
+                        salida_rf = gr.Plot(label="Predicción Random Forest")  
 
-                # COLUMNA DERECHA (GRAFICOS)
-                with gr.Column(scale=3):
-                    salida_rf = gr.Plot(label="Predicción Random Forest")  
+                    #SUBPESTAÑA DataSet:
+                    with gr.Tab("DataSet") as rfEda:
+                        with gr.Row():
+                            with gr.Column(elem_classes="custom-tab-2", scale=20):   
+                                 gr.HTML(value="CONTENIDO DE LAS VARIABLES", elem_classes="info-display-2")
+                            with gr.Column(min_width=150):
+                                btnEda_rf = gr.Button("Visualizar", variant="primary", visible=True,                                                 elem_classes="custom-button3")
+                        tableOut_rf = gr.Dataframe(interactive=False, max_height=335)
 
             # Eventos YAE
             cultivo_rf.change(
                                rf_on_cultivo,
                                inputs=cultivo_rf,
-                                outputs=provincia_rf
+                               outputs=provincia_rf
                            ) 
-            #cultivo_rf.select(
-             #                   rf_on_cultivo,
-              #                  inputs=cultivo_rf,
-               #                 outputs=provincia_rf
-                #            ) 
-        # fin BOSQUES ALEATORIOS
-        #YAE: ###############################
+         # fin BOSQUES ALEATORIOS
+        #YAE_GRF: ###############################
         
         ###### PESTAÑA PROBABILIDAD BAYESIANA
         with gr.Tab("Probabilidad Bayesiana"):
