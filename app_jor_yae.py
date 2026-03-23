@@ -25,6 +25,7 @@ from scipy.signal import stft, welch
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import mean_squared_error, r2_score
+from sklearn.preprocessing import StandardScaler #Escalar valores para RF -Red Neuronal o Regresion Lineal
 # YAE: fin bibliotecas 
 
 # region CONSTANTES Y DICCIONARIOS
@@ -4528,12 +4529,12 @@ portada_video = f'''
 def rf_on_cultivo(cultivo):
 
     if cultivo == "Elegir cultivo..." or cultivo is None:
-            return gr.update(choices=[], value=None)
+            return gr.update(choices=[], value=None), None
     
     df, provincias = load_data(cultivo)
 
     if df.empty:
-        return gr.update(choices=[], value=None)
+        return gr.update(choices=[], value=None), None
 
     provincias_sorted = sorted([str(p) for p in provincias])
 
@@ -4541,8 +4542,81 @@ def rf_on_cultivo(cultivo):
     return gr.update(
         choices= ["Elegir provincia..."] + provincias_sorted,
         value="Elegir provincia..."
-    )
+    ), df
 
+
+
+def rf_df_escalar(df_esc):
+    
+    cols_a_escalar = df_esc.select_dtypes(include=['float64', 'int64', 'int8']).columns
+    cols_a_escalar = [c for c in cols_a_escalar if c != 'rend_kgxha' and c != 'periodo']
+
+    scaler = StandardScaler()
+    df_esc[cols_a_escalar] = scaler.fit_transform(df_esc[cols_a_escalar])
+    # Solo redondeamos las columnas que acabamos de escalar para mayor precisión
+    df_esc[cols_a_escalar] = df_esc[cols_a_escalar].round(4)
+
+    return df_esc.fillna(0)
+
+def rf_df_varNro(df_varNro, cultivo_seleccionado):
+    # 1. Definimos las columnas de texto que queremos convertir a números
+    # Incluimos 'departamento' porque dentro de una provincia sí aporta info local
+    columnas_texto = ['nino', 'nina', 'gobierno', 'departamento']
+    
+    for col in columnas_texto:
+        if col in df_varNro.columns:
+            # Convertimos el texto a códigos numéricos (Label Encoding)
+            df_varNro[col] = df_varNro[col].astype('category').cat.codes
+
+    # 2. SELECCIÓN DINÁMICA DEL PRECIO
+    # Como el nacional tiene precios de todos los granos, 
+    # buscamos la columna que coincida con nuestro cultivo (ej: arroz_usdxton)
+    col_precio = f"{cultivo_seleccionado.lower()}_usdxton"
+    
+    # Creamos una lista de columnas a eliminar
+    # Eliminamos 'cultivo' y 'provincia' porque son constantes (siempre es el mismo)
+    # Eliminamos los precios de los OTROS cultivos para no marear al modelo
+    columnas_a_borrar = ['cultivo', 'provincia']
+    todas_las_columnas = df_varNro.columns
+    precios_otros = [c for c in todas_las_columnas if 'usdxton' in c and c != col_precio]
+    
+    df_varNro = df_varNro.drop(columns=columnas_a_borrar + precios_otros, errors='ignore')
+
+    # 3. Limpieza final: quitar nulos
+    df_varNro = df_varNro.fillna(0) 
+
+    return df_varNro
+
+def rf_cargaDatos(dfData, cultivo_seleccionado, provincia_seleccionada):
+    # Validación de seguridad: si algo falta
+    if dfData is None or cultivo_seleccionado == "Elegir cultivo..." or provincia_seleccionada in ["Elegir provincia...", None]:
+        return None, None, None, None
+
+        
+    # Filtramos el df que estaba en memoria
+    df_filt = dfData[dfData['provincia'] == provincia_seleccionada]
+    
+    # Cargamos variables nacional
+    df_vars = load_vars("VARIABLES") # Se carga el df de variables externas
+    
+    # Unimos por periodo
+    df_final = pd.merge(df_filt, df_vars, on='periodo', how='inner')
+    
+    # 2. RENOMBRAR ENCABEZADO
+    # Esto busca el nombre técnico y lo cambia por el 'lindo' del archivo
+    df_visible = df_final.rename(columns=dict_ncortos).rename(columns=str.upper)
+
+    #3. CONVERTIR VARIABLES CATEGORICAS Y COLUMNA CULTIVO
+    df_finalVarNro =  rf_df_varNro(df_final.copy(), cultivo_seleccionado)
+
+    #4. VARIABLES CON ESCALA COMUN
+    df_finalEscalar = rf_df_escalar(df_finalVarNro.copy())
+    
+    # RENOMBRAMOS ENCABEZADOS DE LOS DATASET
+    df_visibleVarNro = df_finalVarNro.rename(columns=dict_ncortos).rename(columns=str.upper)
+    df_visibleEscalar = df_finalEscalar.rename(columns=dict_ncortos).rename(columns=str.upper)
+
+    return df_visible, df_final, df_visibleVarNro, df_visibleEscalar 
 # #################################################################
 # endregion  FUNCIONES PARA LA PESTAÑA "BOSQUES ALEATORIOS" 
 # YAE: ############################################################
@@ -6323,6 +6397,10 @@ with gr.Blocks(title="Análisis de Cultivos") as app:
         #YAE_GRF: ###############################
         ###### PESTAÑA BOSQUES ALEATORIOS
         with gr.Tab("Bosques Aleatorios"):
+            # DEFINICIÓN DEL ESTADO (Variable invisible en memoria)
+            df_rf = gr.State()
+            df_combinar_rf = gr.State()
+
             with gr.Row(elem_classes="title-tab"):
                 gr.HTML("&nbsp;&nbsp;ANÁLISIS DE INDICADORES EDUCATIVOS MEDIANTE BOSQUES ALEATORIOS", elem_classes="title-text")
 
@@ -6358,13 +6436,20 @@ with gr.Blocks(title="Análisis de Cultivos") as app:
                             with gr.Column(min_width=150):
                                 btnEda_rf = gr.Button("Visualizar", variant="primary", visible=True,                                                 elem_classes="custom-button3")
                         tableOut_rf = gr.Dataframe(interactive=False, max_height=335)
+                        tableOutNro_rf = gr.Dataframe(interactive=False, max_height=335)
+                        tableOutEsc_rf = gr.Dataframe(interactive=False, max_height=335)
 
             # Eventos YAE
             cultivo_rf.change(
-                               rf_on_cultivo,
+                               fn=rf_on_cultivo,
                                inputs=cultivo_rf,
-                               outputs=provincia_rf
-                           ) 
+                               outputs=[provincia_rf, df_rf]
+                            ) 
+            btnEda_rf.click(
+                            fn=rf_cargaDatos, # Esta es la función nueva que debes crear
+                            inputs=[df_rf, cultivo_rf, provincia_rf], 
+                            outputs=[tableOut_rf, df_combinar_rf, tableOutNro_rf, tableOutEsc_rf]
+                            )
          # fin BOSQUES ALEATORIOS
         #YAE_GRF: ###############################
         

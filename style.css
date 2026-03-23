@@ -783,21 +783,4 @@ table th,
     z-index: 999 !important;
 }
 /*YAE: custom css*/
-.css1-custom-Column {
-    background-color: var(--container-bg-color) !important;
-    border-left: 5px solid #00FF00 !important; /* Tu línea verde */
-    border-radius: 10px !important;
-    box-shadow: var(--shadow-soft) !important;
-    padding: 10px 15px !important;
-    margin: 0 !important; /* IMPORTANTE: Sin márgenes que desplacen */
-    display: flex;
-    align-items: center;
-    min-height: 45px;
-}
-.css1-custom-Row {
-   align-items: center !important; 
-    display: flex !important;
-    gap: 10px !important;
-    padding-top: 15px !important; /* Aquí controlas el espacio superior de todo el conjunto */
-}
-
+/*FIN YAE: custom css*/
