@@ -4712,7 +4712,39 @@ def rf_cargaPredecir(dfData, cultivo_seleccionado, provincia_seleccionada, btnRa
     # Ordenar cronológicamente
     df_anual = df_anual.sort_values(by='Año', ascending=False)
 
-    return fig, texto_resumen, df_anual
+    #12. GRAFICO PREDICCION
+    figPrediccion = go.Figure()
+    # Línea Azul (Valor Actual/Real)
+    figPrediccion.add_trace(go.Scatter(
+        x=df_anual['Año'], 
+        y=df_anual['Real'],
+        mode='lines+markers',
+        name='Actual',
+        line=dict(color='blue', width=2),
+        marker=dict(symbol='circle', size=6)
+    ))
+    # Línea Roja Punteada (Predicción del Modelo)
+    figPrediccion.add_trace(go.Scatter(
+        x=df_anual['Año'], 
+        y=df_anual['Prediccion'],
+        mode='lines+markers',
+        name='Predicho (RF)',
+        line=dict(color='red', width=2, dash='dash'),
+        marker=dict(symbol='circle', size=6)
+    ))
+    # Estética idéntica a tu imagen
+    figPrediccion.update_layout(
+        title=f"BOSQUES ALEATORIOS: REND.[KG/HA] - {provincia_seleccionada.upper()} ({cultivo_seleccionado.upper()})",
+        xaxis_title="Año",
+        yaxis_title="Rend.[kg/ha]",
+        plot_bgcolor='white',
+        hovermode="x",
+        legend=dict(orientation="v", yanchor="top", y=1, xanchor="right", x=1.15)
+    )
+    # Añadir cuadrícula 
+    figPrediccion.update_xaxes(showgrid=True, gridwidth=1, gridcolor='#f0f0f0')
+    figPrediccion.update_yaxes(showgrid=True, gridwidth=1, gridcolor='#f0f0f0')
+    return fig, texto_resumen, figPrediccion, df_anual
 
 
 # #################################################################
@@ -6506,8 +6538,9 @@ with gr.Blocks(title="Análisis de Cultivos") as app:
             # COLUMNA IZQUIERDA (COMBOS)
                 with gr.Column( elem_classes="custom-tab", min_width=200):
                      gr.HTML("CULTIVO", elem_classes="info-display-7")
+                     cultivos_disponibles = [c for c in FILE_MAP.keys() if c != "VARIABLES"]
                      cultivo_rf = gr.Dropdown(label="", 
-                                            choices=["Elegir cultivo..."] + list(FILE_MAP.keys()),
+                                            choices=["Elegir cultivo..."] + sorted(cultivos_disponibles),
                                             value="Elegir cultivo...", elem_classes="custom-dropdown-small")
                      gr.HTML("PROVINCIA", elem_classes="info-display-7")
                      provincia_rf = gr.Dropdown(label="", 
@@ -6533,12 +6566,13 @@ with gr.Blocks(title="Análisis de Cultivos") as app:
                                 gr.HTML(value="PREDICCION DE RENDIMIENTO", elem_classes="info-display-2")
                              with gr.Column(min_width=150):
                                 btnPredecir_rf = gr.Button("Predecir",variant="primary", visible=True,                                                 elem_classes="custom-button3")
-                        salida_rf = gr.Plot(label="Predicción Random Forest")  
+                        salida_rf = gr.Plot(label="Importancia de Variables")  
                         metricas_rf = gr.Textbox(label="Evaluación del Modelo", interactive=False)
+                        salidaPrediccion_rf = gr.Plot(label="Predicción Random Forest") 
                         tableOutErrorP_rf = gr.Dataframe(interactive=False, max_height=335)
 
                     #SUBPESTAÑA DataSet:
-                    with gr.Tab("DataSet") as rfEda:
+                    with gr.Tab("Set de Datos") as rfEda:
                         with gr.Row():
                             with gr.Column(elem_classes="custom-tab-2", scale=20):   
                                  gr.HTML(value="CONTENIDO DE LAS VARIABLES", elem_classes="info-display-2")
@@ -6563,7 +6597,7 @@ with gr.Blocks(title="Análisis de Cultivos") as app:
             btnPredecir_rf.click(
                             fn=rf_cargaPredecir,
                             inputs=[df_rf, cultivo_rf, provincia_rf, radio_datos],
-                            outputs=[salida_rf, metricas_rf, tableOutErrorP_rf] # El gráfico y el texto de métricas
+                            outputs=[salida_rf, metricas_rf, salidaPrediccion_rf, tableOutErrorP_rf] # El gráfico y el texto de métricas
                             )
          # fin BOSQUES ALEATORIOS
         #YAE_GRF: ###############################
