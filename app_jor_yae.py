@@ -24,8 +24,9 @@ from scipy.signal import stft, welch
 # YAE: comienzo bibliotecas 
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.model_selection import train_test_split
-from sklearn.metrics import mean_squared_error, r2_score
+from sklearn.metrics import mean_squared_error, r2_score, mean_absolute_error
 from sklearn.preprocessing import StandardScaler #Escalar valores para RF -Red Neuronal o Regresion Lineal
+import plotly.express as px
 # YAE: fin bibliotecas 
 
 # region CONSTANTES Y DICCIONARIOS
@@ -4544,8 +4545,6 @@ def rf_on_cultivo(cultivo):
         value="Elegir provincia..."
     ), df
 
-
-
 def rf_df_escalar(df_esc):
     
     cols_a_escalar = df_esc.select_dtypes(include=['float64', 'int64', 'int8']).columns
@@ -4587,36 +4586,135 @@ def rf_df_varNro(df_varNro, cultivo_seleccionado):
 
     return df_varNro
 
-def rf_cargaDatos(dfData, cultivo_seleccionado, provincia_seleccionada):
-    # Validación de seguridad: si algo falta
+def df_base(dfData, cultivo_seleccionado, provincia_seleccionada):
+    # Validación de seguridad
     if dfData is None or cultivo_seleccionado == "Elegir cultivo..." or provincia_seleccionada in ["Elegir provincia...", None]:
-        return None, None, None, None
+        return None, None, None
 
-        
-    # Filtramos el df que estaba en memoria
+    # Filtrado y Cruce
     df_filt = dfData[dfData['provincia'] == provincia_seleccionada]
-    
-    # Cargamos variables nacional
-    df_vars = load_vars("VARIABLES") # Se carga el df de variables externas
-    
-    # Unimos por periodo
+    df_vars = load_vars("VARIABLES")
     df_final = pd.merge(df_filt, df_vars, on='periodo', how='inner')
-    
-    # 2. RENOMBRAR ENCABEZADO
-    # Esto busca el nombre técnico y lo cambia por el 'lindo' del archivo
-    df_visible = df_final.rename(columns=dict_ncortos).rename(columns=str.upper)
 
-    #3. CONVERTIR VARIABLES CATEGORICAS Y COLUMNA CULTIVO
-    df_finalVarNro =  rf_df_varNro(df_final.copy(), cultivo_seleccionado)
-
-    #4. VARIABLES CON ESCALA COMUN
+    # Transformaciones numéricas
+    df_finalVarNro = rf_df_varNro(df_final.copy(), cultivo_seleccionado)
     df_finalEscalar = rf_df_escalar(df_finalVarNro.copy())
     
-    # RENOMBRAMOS ENCABEZADOS DE LOS DATASET
-    df_visibleVarNro = df_finalVarNro.rename(columns=dict_ncortos).rename(columns=str.upper)
-    df_visibleEscalar = df_finalEscalar.rename(columns=dict_ncortos).rename(columns=str.upper)
+    return df_final, df_finalVarNro, df_finalEscalar
 
-    return df_visible, df_final, df_visibleVarNro, df_visibleEscalar 
+def rf_cargaEDA(dfData, cultivo_seleccionado, provincia_seleccionada, btnRadioDatos):
+# Obtenemos los datos técnicos primero
+    df_final, df_nro, df_esc = df_base(dfData, cultivo_seleccionado, provincia_seleccionada)
+    
+    if df_final is None: return None
+
+    # Aplicamos la estética (Renombrar)
+    df_visible = df_final.rename(columns=dict_ncortos).rename(columns=str.upper)
+    
+    if btnRadioDatos == "Originales (Numéricos)":
+        df_final_sel = df_nro
+        df_vis_sel = df_nro.rename(columns=dict_ncortos).rename(columns=str.upper)
+    else:
+        df_final_sel = df_esc
+        df_vis_sel = df_esc.rename(columns=dict_ncortos).rename(columns=str.upper)
+
+    # Retorno completo para las tablas del EDA
+    return df_visible, df_final, df_vis_sel
+
+def rf_cargaPredecir(dfData, cultivo_seleccionado, provincia_seleccionada, btnRadioDatos):
+    #1. Obtenemos los datos técnicos primero
+    df_final, df_nro, df_esc = df_base(dfData, cultivo_seleccionado, provincia_seleccionada)
+    
+    if df_final is None: return "Faltan datos para procesar."
+
+    #2. Seleccionar Dataset para el RandomForest
+    df_trabajo = df_nro if btnRadioDatos == "Originales (Numéricos)" else df_esc
+    
+    # 3. Preparar X e y
+    # Eliminamos 'periodo' y cualquier otra columna no predictora que haya quedado
+    target = 'rend_kgxha'
+    if target not in df_trabajo.columns:
+        return None, f"Error: No se encontró la columna objetivo '{target}'."
+
+    X = df_trabajo.drop(columns=[target, 'periodo'], errors='ignore')
+    y = df_trabajo[target]
+
+    # 4. Dividir datos y Entrenar
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+    
+    model = RandomForestRegressor(n_estimators=100, random_state=42)
+    model.fit(X_train, y_train)
+
+    # 5. Predicción y Métricas
+    predicciones = model.predict(X_test)
+    mae = mean_absolute_error(y_test, predicciones)
+    r2 = r2_score(y_test, predicciones)
+
+    # 6. IMPORTANCIA DE VARIABLES
+    importancias = model.feature_importances_
+    df_imp = pd.DataFrame({
+        'Variable_Tecnica': X.columns,
+        'Importancia': importancias
+    }).sort_values(by='Importancia', ascending=True) # Ascendente para el gráfico de barras horizontal
+
+    # Traducir nombres técnicos a "lindos" para el gráfico usando tu dict_ncortos
+    df_imp['Variable'] = df_imp['Variable_Tecnica'].apply(lambda x: dict_ncortos.get(x, x).upper())
+
+    # 7. CREAR GRÁFICO (Plotly es ideal para Gradio)
+    fig = px.bar(
+        df_imp.tail(15), # Mostramos las 15 más importantes
+        x='Importancia', 
+        y='Variable',
+        orientation='h',
+        title=f"Variables más influyentes: {cultivo_seleccionado} ({provincia_seleccionada})",
+        labels={'Importancia': 'Nivel de Influencia', 'Variable': 'Factor'},
+        color='Importancia',
+        color_continuous_scale='Greens'
+    )
+    fig.update_layout(showlegend=False)
+
+    # 8. TEXTO DE RESUMEN
+    texto_resumen = f"""
+    ### 📊 Resultados del Modelo (Random Forest)
+    - **Dataset utilizado:** {btnRadioDatos}
+    - **Error Medio Absoluto (MAE):** {mae:,.2f} Kg/Ha
+    - **Precisión (R² Score):** {r2:.4f}
+    
+    *El MAE indica que, en promedio, el modelo se equivoca por {mae:,.2f} kilos por hectárea.*
+    """
+    
+    # 9. Crear un DataFrame con los resultados del Test
+    # Recuperamos el 'periodo' para las filas que se usaron en el Test
+    indices_test = X_test.index
+    periodos_test = df_trabajo.loc[indices_test, 'periodo']
+
+    df_resultados = pd.DataFrame({
+        'Año': periodos_test,
+        'Real': y_test.values,
+        'Prediccion': predicciones
+    })
+
+    # 10. AGRUPAR POR AÑO
+    # Esto promedia los rendimientos si hay varios registros por año
+    df_anual = df_resultados.groupby('Año').agg({
+        'Real': 'mean',
+        'Prediccion': 'mean'
+    }).reset_index()
+
+    # 11. Cálculos de error sobre el promedio anual
+    df_anual['Error Absoluto (Kg)'] = (df_anual['Real'] - df_anual['Prediccion']).abs().round(2)
+    df_anual['Precisión %'] = (100 - (df_anual['Error Absoluto (Kg)'] / df_anual['Real'] * 100)).round(2)
+    
+    # Redondear valores principales
+    df_anual['Real'] = df_anual['Real'].round(2)
+    df_anual['Prediccion'] = df_anual['Prediccion'].round(2)
+
+    # Ordenar cronológicamente
+    df_anual = df_anual.sort_values(by='Año', ascending=False)
+
+    return fig, texto_resumen, df_anual
+
+
 # #################################################################
 # endregion  FUNCIONES PARA LA PESTAÑA "BOSQUES ALEATORIOS" 
 # YAE: ############################################################
@@ -6417,16 +6515,27 @@ with gr.Blocks(title="Análisis de Cultivos") as app:
                                             value=None, 
                                             interactive=True, 
                                             elem_classes="custom-dropdown-small")
+                     gr.HTML("TIPO DE DATOS", elem_classes="info-display-7")
+                     radio_datos = gr.Radio(
+                                        choices=["Originales (Numéricos)", "Escalados (Normalizados)"],
+                                        value="Originales (Numéricos)", # Opción por defecto
+                                        # label="", 
+                                        show_label=False,
+                                        interactive=True,
+                                        elem_classes="custom-radio"
+                                     )
             # COLUMNA DERECHA (SUBPESTAÑA)
                 with gr.Column(scale=20):
                     #SUBPESTAÑA RF: 
                     with gr.Tab("Algoritmo") as rfPredecir:
                         with gr.Row():
                              with gr.Column(elem_classes="custom-tab-2", scale=20):  
-                                gr.HTML(value="PREDICCION", elem_classes="info-display-2")
+                                gr.HTML(value="PREDICCION DE RENDIMIENTO", elem_classes="info-display-2")
                              with gr.Column(min_width=150):
                                 btnPredecir_rf = gr.Button("Predecir",variant="primary", visible=True,                                                 elem_classes="custom-button3")
                         salida_rf = gr.Plot(label="Predicción Random Forest")  
+                        metricas_rf = gr.Textbox(label="Evaluación del Modelo", interactive=False)
+                        tableOutErrorP_rf = gr.Dataframe(interactive=False, max_height=335)
 
                     #SUBPESTAÑA DataSet:
                     with gr.Tab("DataSet") as rfEda:
@@ -6435,9 +6544,10 @@ with gr.Blocks(title="Análisis de Cultivos") as app:
                                  gr.HTML(value="CONTENIDO DE LAS VARIABLES", elem_classes="info-display-2")
                             with gr.Column(min_width=150):
                                 btnEda_rf = gr.Button("Visualizar", variant="primary", visible=True,                                                 elem_classes="custom-button3")
-                        tableOut_rf = gr.Dataframe(interactive=False, max_height=335)
-                        tableOutNro_rf = gr.Dataframe(interactive=False, max_height=335)
-                        tableOutEsc_rf = gr.Dataframe(interactive=False, max_height=335)
+                        tableOut_rf = gr.Dataframe(interactive=False, max_height=335, label="Datos registrados")
+                        tableOutConvertida_rf = gr.Dataframe(interactive=False, max_height=335, label="Tipo de Datos con los que trabajamos")
+                       # tableOutNro_rf  = gr.Dataframe(interactive=False, max_height=335)
+                       # tableOutEsc_rf = gr.Dataframe(interactive=False, max_height=335)
 
             # Eventos YAE
             cultivo_rf.change(
@@ -6446,9 +6556,14 @@ with gr.Blocks(title="Análisis de Cultivos") as app:
                                outputs=[provincia_rf, df_rf]
                             ) 
             btnEda_rf.click(
-                            fn=rf_cargaDatos, # Esta es la función nueva que debes crear
-                            inputs=[df_rf, cultivo_rf, provincia_rf], 
-                            outputs=[tableOut_rf, df_combinar_rf, tableOutNro_rf, tableOutEsc_rf]
+                            fn=rf_cargaEDA, 
+                            inputs=[df_rf, cultivo_rf, provincia_rf, radio_datos], 
+                            outputs=[tableOut_rf, df_combinar_rf, tableOutConvertida_rf] 
+                            )
+            btnPredecir_rf.click(
+                            fn=rf_cargaPredecir,
+                            inputs=[df_rf, cultivo_rf, provincia_rf, radio_datos],
+                            outputs=[salida_rf, metricas_rf, tableOutErrorP_rf] # El gráfico y el texto de métricas
                             )
          # fin BOSQUES ALEATORIOS
         #YAE_GRF: ###############################
