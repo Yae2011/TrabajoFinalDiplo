@@ -1,0 +1,20 @@
+<div style='text-align: left; line-height: 1.6; font-size: 14pt;'>
+    <p><b>RESIDUOS (ERROR DE AJUSTE DEL MODELO)</b></p>
+    <br>
+</div>
+<div style='text-align: left; line-height: 1.6; font-size: 12pt;'>
+    <p>El componente de residuos en Holt-Winters representa la diferencia 
+    entre el dato real y la estimación del modelo. Es el "error" que el 
+    nivel, la tendencia y la estacionalidad no pudieron capturar.</p>
+    <p>A diferencia de otros métodos, estos residuos miden la <b>eficiencia 
+    del aprendizaje</b> del modelo. Un residuo cercano a cero indica que 
+    las constantes de suavizado están capturando correctamente la dinámica 
+    del indicador. Valores que superan las dos desviaciones estándar 
+    son marcados como <b>Años Críticos</b>.</p>
+    <p>Si la <b>Variabilidad No Explicada</b> es alta, sugiere que la 
+    serie es errática y que las proyecciones futuras tendrán un mayor 
+    margen de error. Es la herramienta principal para identificar 
+    impactos externos imprevisibles, como crisis sanitarias, shocks 
+    de precios o eventos climáticos extremos que rompen la lógica histórica 
+    del suavizado exponencial.</p>
+</div>

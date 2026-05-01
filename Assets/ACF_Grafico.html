@@ -1,0 +1,24 @@
+<div style='text-align: left; line-height: 1.6; font-size: 14pt;'>
+    <p><b>FUNCIÓN DE AUTOCORRELACIÓN (ACF) Y EL PROCESO DE MEDIA MÓVIL (q)</b></p>
+    <br>
+</div>
+<div style='text-align: left; line-height: 1.6; font-size: 12pt;'>
+    <p>La <b>Función de Autocorrelación (ACF)</b> es una herramienta diagnóstica 
+    que cuantifica la memoria de la serie temporal. Su objetivo es medir la correlación 
+    lineal entre el valor actual y sus valores pasados a distintos retardos o <i>lags</i>. 
+    En la arquitectura de un modelo <b>ARIMA</b>, la ACF es el indicador principal 
+    para determinar el parámetro <b>q</b>, que representa el orden del componente de 
+    <b>Media Móvil (MA)</b>.</p>
+    <p style='text-align: center;'>
+    <i>q = último retardo cuya correlación sobresale de las bandas de confianza</i></p>
+    <p>Un coeficiente que supera el intervalo de confianza (1.96 / √n) indica que el error 
+    o "choque" de ese año en particular tiene una influencia estadística persistente 
+    en los valores futuros. En el análisis de cultivos, un proceso MA sugiere que eventos 
+    aleatorios de corto plazo (como una sequía puntual o una plaga) afectan la serie 
+    durante <i>q</i> períodos antes de disiparse.</p>
+    <p>El sistema analiza estos picos aplicando el <b>Principio de Parsimonia</b>: 
+    aunque matemáticamente se pueden calcular muchos retardos, para datos anuales se 
+    priorizan los primeros 5 años (max_horizonte). Esto evita el sobreajuste del modelo, 
+    asegurando que el parámetro <i>q</i> capturado represente una dinámica estructural y 
+    no simplemente ruido histórico irrepetible.</p>
+</div>

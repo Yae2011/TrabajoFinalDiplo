@@ -1,0 +1,52 @@
+<div style='text-align: left; line-height: 1.6; font-size: 14pt;'>
+    <p><b>PERIODOGRAMA DE LOMB-SCARGLE</b></p>
+    <br>
+</div>
+<div style='text-align: left; line-height: 1.6; font-size: 12pt;'>
+    <p>Tanto el <b>Periodograma de Lomb-Scargle</b> como la 
+    <b>Transformada Rápida de Fourier (FFT)</b> permiten identificar 
+    las frecuencias dominantes dentro de una serie temporal para 
+    revelar su periodicidad.</p>
+    <p>La <b>Transformada Rápida de Fourier (FFT)</b> es una herramienta 
+    de procesamiento de señales que descompone 
+    una función en una suma de funciones sinusoidales. Se requiere que la 
+    serie temporal sea <i>equiespaciada</i>, es decir, que los datos estén 
+    separados por intervalos de tiempo constantes. La FFT es muy eficiente 
+    computacionalmente, pero sufre significativamente si hay datos faltantes.
+    Al interpolar para rellenar la serie, se introduce ruido 
+    artificial que distorsiona el espectro. Su aplicación es ideal en el
+    caso de señales físicas o datos donde el muestreo es perfecto y continuo.
+    <p>El <b>Periodograma de Lomb-Scargle (LS)</b> es una aproximación 
+    de mínimos cuadrados que ajusta funciones sinusoidales a los datos 
+    y está diseñado específicamente para tratar con muestreos irregulares. 
+    La principal ventaja del modelo LS es que funciona perfectamente con valores 
+    faltantes o desigualmente espaciados sin necesidad de interpolación.</p>
+    <p>En agricultura, donde los registros pueden perderse por problemas de lectura o 
+    errores de archivo, el método LS mantiene la integridad de la muestra. 
+    Es muy robusto para detectar periodicidades en series temporales con lagunas;
+    si bien es más exigente que la FFT en el cálculo computacional, 
+    este costo es reducido en series agrícolas cortas.</p>
+    <p>En el Periodograma LS, cada pico representa una frecuencia (o período) 
+    que captura una proporción significativa de la varianza total de la serie. 
+    Al analizarlo, no solo se debe observar la altura del pico (intensidad), 
+    sino su ubicación en el eje del tiempo (período temporal).</p>
+    <p> Algunas interpretaciones:</p>
+    <ul>
+    <li>Pico en el rango de 2 años (alta frecuencia): la causa agronómica puede
+    ser un fenómeno biológico interno en especies 
+    agrícolas como el olivo o los cítricos, donde la planta alterna entre 
+    crecimiento vegetativo y carga de frutos.</li>
+    <li>Pico en el rango de 3 a 7 años (frecuencia media): puede indicar 
+    una variabilidad climática macro-regional, como el fenómenos ENSO 
+    (El Niño/La Niña), que altera los patrones de precipitación y temperatura.</li>
+    <li>Pico en el rango de 8 a 15 años (baja frecuencia): puede referirse
+    a ciclos económicos o de inversión en tecnología. Estos picos representan
+    el ciclo de vida de una tecnología o cambios en el uso del suelo, como la 
+    renovación de sistemas de riego o la adopción de nuevos cultivares.</li>
+    <p>No todos los picos son significativos. En el análisis espectral, 
+    se debe distinguir entre ruido blanco y señales reales. En el eje Y 
+    (potencia normalizada), valores cercanos a 1 indican que ese 
+    ciclo explica una parte muy grande de la varianza; valores muy 
+    cercanos a 0 son ruido. Si el pico supera un umbral de confianza, 
+    se puede descartar la hipótesis de que el ciclo se deba al azar.</p>
+</div>

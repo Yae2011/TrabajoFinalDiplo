@@ -1,0 +1,26 @@
+<div style='text-align: left; line-height: 1.6; font-size: 14pt;'>
+    <p><b>AUTOCORRELACIÓN PARCIAL (PACF) Y EL PROCESO AUTORREGRESIVO (p)</b></p>
+    <br>
+</div>
+<div style='text-align: left; line-height: 1.6; font-size: 12pt;'>
+    <p>La <b>Función de Autocorrelación Parcial (PACF)</b> permite profundizar 
+    en la estructura de dependencia de la serie al aislar la relación directa entre 
+    el presente y un retardo específico, eliminando matemáticamente la influencia 
+    de los años intermedios. Es el instrumento fundamental para identificar 
+    el parámetro <b>p</b> del modelo ARIMA, correspondiente al componente 
+    <b>Autorregresivo (AR)</b>.</p>
+    <p style='text-align: center;'>
+    <i>p = punto donde la función se corta bruscamente, indicando el alcance 
+    del impacto directo</i></p>
+    <p>A diferencia de la ACF, la PACF no permite que la correlación se "filtre" 
+    a través de pasos intermedios. Si el lag 1 es fuerte, la ACF siempre mostrará 
+    un lag 2 significativo por herencia; la PACF, en cambio, limpia esa relación 
+    para decirnos si el año <i>t-2</i> realmente aporta información nueva más allá 
+    de lo que ya sabemos por el año <i>t-1</i>.</p>
+    <p>Para garantizar estabilidad en series agrícolas (que suelen tener muestras 
+    históricas limitadas), se utiliza el método de <b>Yule-Walker Modificado (ywm)</b>. 
+    Si se observan valores de <b>p > 3</b> en indicadores de superficie sembrada, 
+    suele ser una señal de alerta: es probable que la serie aún contenga una tendencia 
+    residual que la diferenciación no logró eliminar por completo, o que existan ciclos 
+    multianuales complejos que requieren una revisión del grado de estacionariedad.</p>
+</div>

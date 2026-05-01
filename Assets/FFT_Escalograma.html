@@ -1,0 +1,48 @@
+<div style='text-align: left; line-height: 1.6; font-size: 14pt;'>
+    <p><b>ESCALOGRAMA:<br>ANÁLISIS TIEMPO-FRECUENCIA<br>MEDIANTE TRANSFORMADA WAVELET CONTINUA (CWT)</b></p>
+    <br>
+</div>
+<div style='text-align: left; line-height: 1.6; font-size: 12pt;'>
+    <p>La <b>Transformada Wavelet (Ondícula)</b> ofrece una resolución 
+    multiescala superior a la STFT. Utilizando la familia de wavelets de 
+    <i>Morlet Compleja</i>, este gráfico descompone la serie en componentes 
+    que están localizados tanto en tiempo como en frecuencia de forma óptima.</p>
+    <p>Este análisis es especialmente eficaz para señales no estacionarias 
+    y con transitorios abruptos. Las regiones de mayor intensidad 
+    revelan dónde se concentra la energía de la señal. Permite identificar 
+    <b>fenómenos cíclicos transitorios</b> que podrían diluirse en un análisis 
+    de Fourier global, proporcionando una visión detallada de la intermitencia 
+    de los ciclos. Este método se aplica a la serie original, sin diferenciar,
+    La CWT es una herramienta diseñada para analizar señales no estacionarias.
+    La Wavelet se expande y se contrae (escalamiento) para detectar tanto cambios 
+    abruptos como tendencias de largo plazo. No necesita que la serie sea 
+    estacionaria porque su base (la wavelet madre) es local en el tiempo. 
+    Captura la estructura multiescala de la serie original. Si se aplica 
+    Wavelets a la serie diferenciada, se estarían analizando las oscilaciones 
+    de los cambios marginales, perdiendo la información de la evolución 
+    de los ciclos en sus niveles de magnitud originales.</p>
+    <p><b>Nota sobre la visualización:</b> para mejorar la interpretabilidad, 
+    los valores de intensidad (color) representan el <b>logaritmo de la 
+    potencia de la wavelet</b>. Esta transformación logarítmica es fundamental 
+    para normalizar la escala visual, permitiendo identificar simultáneamente 
+    ciclos de gran magnitud y fluctuaciones sutiles que, de otro modo, 
+    quedarían ocultas por la dominancia de las bajas frecuencias.</p>
+    <p>A diferencia de los métodos globales, la CWT revela la intermitencia 
+    de los fenómenos, mostrando con precisión en qué momentos históricos se 
+    activan o disipan ciertas periodicidades.</p>
+    <p><b>Nota: </b>la barra de color representa el Logaritmo de la Potencia 
+    de la Wavelet. Colores hacia el Blanco/Amarillo representan los "picos de potencia". 
+    Al aplicar el logaritmo, estos puntos resaltan las periodicidades que dominan 
+    la estructura de la serie original. Colores Oscuros/Azules representan zonas de 
+    silencio espectral donde no existe una oscilación coherente con la escala 
+    (frecuencia) analizada.</p>
+    <p>La escala de color es el indicador de relevancia:</p>
+    <ul>
+    <li>Densidad: indica qué tan "fuerte" es un ciclo.</li>
+    <li>Persistencia: si una franja de color intenso se extiende horizontalmente,
+    el ciclo es persistente en el tiempo.</li>
+    <li>Localización: si el color intenso es solo una mancha aislada, indica 
+    un evento cíclico transitorio o un choque externo que afectó la serie 
+    solo en un momento dado.</li>
+    </ul>
+</div>

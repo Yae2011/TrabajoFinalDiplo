@@ -1,0 +1,49 @@
+<div style='text-align: left; line-height: 1.6; font-size: 14pt;'>
+    <p><b>PRUEBAS DE RESIDUOS</b></p>
+    <br>
+</div>
+<div style='text-align: left; line-height: 1.6; font-size: 12pt;''>
+    <p>En el análisis de series temporales mediante modelos ARIMA, la validación del modelo 
+    se realiza mediante el estudio de los residuos (el error entre el valor observado y el predicho). 
+    Para que un modelo se considere adecuado, sus residuos deben comportarse como ruido blanco. 
+    Las tres pruebas fundamentales aplicadas para diagnosticar la validez de un modelo ARIMA son:</p><br>
+    <p><b>1. Test de Jarque-Bera (Normalidad de los Residuos)</b></p>
+    <p>Esta prueba permite verificar si los residuos siguen una distribución normal, basándose en su 
+    curtosis y su simetría. Detecta desviaciones significativas de la distribución normal; 
+    en un modelo ideal, los errores deben distribuirse normalmente alrededor de cero. Si los residuos 
+    no son normales, las estimaciones de los parámetros pueden seguir siendo insesgadas, pero 
+    los intervalos de confianza y las predicciones probabilísticas pueden ser poco fiables. 
+    Si se acepta la Hipótesis Nula, los datos siguen una distribución normal. Un estadístico alto 
+    y un <i>p-value</i> < 0.05 indican que los residuos presentan colas pesadas o asimetría, 
+    invalidando el supuesto de normalidad.</p><br>
+    <p><b>2. Test de Ljung-Box (Independencia de los Residuos)</b></p>
+    <p>El propósito de esta prueba es determinar si los residuos del modelo están correlacionados 
+    entre sí o si son independientes. Detecta la presencia de autocorrelación residual. 
+    Si existe autocorrelación, entonces el modelo ARIMA no ha capturado toda la estructura de 
+    dependencia temporal de los datos y, por lo tanto, todavía queda información útil dentro 
+    del error que podría ser modelada (por ejemplo, aumentando el orden <i>p</i> o <i>q</i>). 
+    Si el p-value > 0.05, se acepta la Hipótesis Nula, es decir, los residuos están distribuidos 
+    de forma independiente (no hay autocorrelación); en este caso los residuos 
+    son <i>ruido blanco.</i></p><br>
+    <p><b>3. Test de Engle (o Test de Multiplicador de Lagrange para ARCH)</b></p>
+    <p>Es una prueba estadística diseñada específicamente para detectar la presencia de 
+    <b>Heterocedasticidad Condicional Autorregresiva (ARCH)</b> en los residuos de un modelo de 
+    serie temporal. Mientras que las pruebas anteriores (Ljung-Box y Jarque-Bera, ADF) validan 
+    la media y la estructura lineal, el Test de Engle se enfoca en la varianza del error. 
+    En un modelo ARIMA clásico, se asume que los residuos son homocedásticos, es decir, 
+    que su varianza es constante a lo largo del tiempo. Sin embargo, en muchas series, 
+    la varianza suele ser volátil: periodos de alta volatilidad son seguidos por más volatilidad, 
+    y periodos de calma por más calma. El Test de Engle sirve para determinar si la varianza 
+    de los residuos en el tiempo <i>t</i> depende de la magnitud de los residuos cuadrados 
+    en tiempos anteriores (<i>t</i>1, <i>t</i>2, …). Esta prueba permite detectar efectos ARCH, 
+    es decir, si existe una estructura de dependencia no lineal en los residuos. 
+    Si el test es significativo, los residuos no son puramente ruido blanco fuerte, 
+    aunque hayan pasado el test de Ljung-Box. Esto indica la inadecuación del modelo ARIMA 
+    para la varianza; aunque el modelo haya capturado bien la tendencia y la estacionalidad 
+    (la media), no es capaz de modelar la variabilidad de la serie. Cuando se detectan efectos ARCH, 
+    debe complementarse el modelo ARIMA con otro de tipo GARCH (<i>Generalized Autoregressive 
+    Conditional Heteroskedasticity</i>) para modelar explícitamente la volatilidad. 
+    En el test de Engle si se acepta la Hipótesis Nula, no existen efectos ARCH en los residuos 
+    (la varianza es constante); un <i>p-value</i> < 0.05 indica el rechazo de Ho, 
+    confirmando que los residuos presentan heterocedasticidad condicional.</p>
+</div>

@@ -1,0 +1,40 @@
+<div style='text-align: left; line-height: 1.6; font-size: 14pt;'>
+    <p><b>GRÁFICOS DE RESIDUOS</b></p>
+    <br>
+</div>
+<div style='text-align: left; line-height: 1.6; font-size: 12pt;''>
+    <p>La evaluación de los residuos en un modelo ARIMA es un paso crítico para validar 
+    los supuestos estadísticos del modelado de series temporales. El objetivo principal es 
+    confirmar que los residuos se comporten como ruido blanco (procesos aleatorios con media cero, 
+    varianza constante y ausencia de autocorrelación).</p><br>
+    <p><b>1. Residuos Estandarizados</b></p>
+    <p>Este gráfico muestra la evolución de los errores de predicción a lo largo del tiempo. 
+    Se pretende detectar la estacionariedad en la media y la varianza. Se espera que los residuos 
+    fluctúen de forma aleatoria alrededor de la línea horizontal que corresponde al cero. 
+    Si hay tendencias ascendentes o descendentes o cambios bruscos en la dispersión 
+    (heterocedasticidad), el modelo no está capturando toda la estructura de los datos. 
+    Lo ideal es tener una nube de puntos sin patrones identificables.</p><br>
+    <p><b>2. Histograma y Densidad (KDE)</b></p>
+    <p>Compara la distribución empírica de los residuos con una distribución teórica 
+    (distribución Normal en este caso, representada por una curva en color rojo). Se pretende 
+    detectar la simetría y normalidad de los residuos; el histograma de los errores debe 
+    asemejarse a la campana de Gauss. La línea de densidad (KDE) permite visualizar si existen 
+    sesgos (asimetría) o colas pesadas (curtosis). En modelos ARIMA, se asume que los errores 
+    tienen una distribución normal, es decir, una curva acampanada centrada en cero.</p><br>
+    <p><b>3. Probabilidad Normal (Q-Q Plot)</b></p>
+    <p>Relaciona los cuantiles de los residuos con los cuantiles de una distribución normal 
+    teórica, para validar el supuesto de normalidad en las colas de la distribución. Los puntos 
+    correspondientes a los cuantiles de los errores deben alinearse sobre la línea roja, que 
+    representa los cuantiles de la distribución normal teórica. Si los puntos se desvían 
+    significativamente en los extremos, indica que los residuos tienen colas más pesadas 
+    o ligeras que las correspondientes a una distribución normal. Lo ideal es que todos 
+    los puntos se ubiquen sobre la línea de referencia.</p><br>
+    <p><b>4. Correlograma (ACF)</b></p>
+    <p>Mide la correlación de los residuos con sus propios valores pasados (<i>lags</i>), 
+    para detectar independencia de los errores, es decir, ausencia de autocorrelación. 
+    Si hay autocorrelación, entonces hay información que el modelo ARIMA no logró considerar. 
+    Si alguna barra (especialmente en los primeros lags) sobresale significativamente 
+    de las bandas de confianza, significa que el orden del modelo (p, d, q) es insuficiente. 
+    En una situación ideal solo el <i>lag</i> o retardo 0 (desplazamiento de cero años), 
+    es igual a 1; el resto deben ser cercanos a cero y estadísticamente no significativos.</p>
+</div>

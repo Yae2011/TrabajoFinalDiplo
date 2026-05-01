@@ -1,0 +1,24 @@
+<div style='text-align: left; line-height: 1.6; font-size: 14pt;'>
+    <p><b>TENDENCIA DE LA SERIE (SUAVIZADO EXPONENCIAL)</b></p>
+    <br>
+</div>
+<div style='text-align: left; line-height: 1.6; font-size: 12pt;'>
+    <p>El modelo <b>Holt-Winters</b>, también conocido como Suavizado 
+    Exponencial Triple, descompone la serie considerando que el valor 
+    actual es un promedio ponderado de observaciones pasadas.</p>
+    <p style='text-align: center;'>
+    <i>Valor Ajustado = nivel + tendencia + estacionalidad</i></p>
+    <p>A diferencia de los filtros estáticos, esta técnica utiliza tres 
+    parámetros de aprendizaje: <b>Alfa (α)</b> para el nivel, 
+    <b>Beta (β)</b> para la tendencia y <b>Gamma (γ)</b> para la 
+    estacionalidad. La tendencia en este gráfico representa la trayectoria 
+    suavizada que combina el nivel base y la pendiente calculada 
+    recursivamente.</p>
+    <p>Este método es superior para la detección de cambios estructurales 
+    recientes, ya que otorga mayor peso a los datos más nuevos sin perder 
+    la perspectiva histórica. El sistema selecciona automáticamente 
+    entre una tendencia <b>Aditiva</b> (cambios constantes) o 
+    <b>Multiplicativa</b> (cambios proporcionales) mediante el Griterio 
+    de Información de Akaike Corregido (AICc), asegurando el mejor ajuste 
+    estadístico posible.</p>
+</div>

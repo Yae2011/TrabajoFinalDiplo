@@ -1,0 +1,38 @@
+<div style='text-align: left; line-height: 1.6; font-size: 14pt;'>
+    <p><b>ESPECTROGRAMA:<br>TRANSFORMADA DE FOURIER DE 
+    TIEMPO REDUCIDO (STFT)</b></p>
+    <br>
+</div>
+<div style='text-align: left; line-height: 1.6; font-size: 12pt;'>
+    <p>La FFT estándar asume que las frecuencias son estacionarias 
+    (no cambian con el tiempo). El <b>Espectrograma</b> supera esta 
+    limitación mediante una ventana deslizante que calcula la distribución 
+    de frecuencias en diferentes segmentos cronológicos.</p>
+    <p>El mapa de calor (Heatmap) permite observar la <b>evolución temporal 
+    de las frecuencias</b>: el eje X representa el tiempo, el eje Y 
+    la frecuencia, y la intensidad del color la magnitud. 
+    Es una herramienta crítica para detectar cambios en la estructura 
+    de la serie, como la aparición o desaparición de ciclos en períodos 
+    específicos. Se aplica a series temporales sin diferenciar. El método
+    STFT permite revelar la dinámica temporal de las frecuencias 
+    que la diferenciación suele ocultar.</p>
+    <p>La STFT aborda la no estacionariedad de una manera distinta a la 
+    diferenciación: en lugar de estabilizar la media de toda la serie, 
+    divide la señal original en pequeños segmentos o "ventanas" de tiempo. 
+    Al ser las ventanas lo suficientemente cortas, se asume que dentro de 
+    ese breve intervalo la señal es cuasi-estacionaria. Este método permite 
+    observar cómo cambian las frecuencias de la serie original (incluyendo tendencias 
+    de baja frecuencia) a lo largo del tiempo, algo que la diferenciación eliminaría.</p>
+    <p><b>Nota: </b>la barra de color representa la magnitud de la Transformada de Fourier
+    de Tiempo Reducido; colores claros indican una alta concentración de energía o amplitud 
+    en esa combinación específica de tiempo y frecuencia (el ciclo está muy presente 
+    en ese momento histórico); colores xscuros indican que esa frecuencia tiene una 
+    presencia nula o insignificante en ese punto del tiempo.</p>
+    <p>La escala de color es el indicador de relevancia:</p>
+    <p>* Densidad: indica qué tan "fuerte" es un ciclo.</p>
+    <p>* Persistencia: si una franja de color intenso se extiende horizontalmente,
+    el ciclo es persistente en el tiempo.</p>
+    <p>* Localización: si el color intenso es solo una mancha aislada, indica 
+    un evento cíclico transitorio o un choque externo que afectó la serie 
+    solo en un momento dado.</p>
+</div>

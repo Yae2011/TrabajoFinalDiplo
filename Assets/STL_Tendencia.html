@@ -1,0 +1,88 @@
+<div style='text-align: left; line-height: 1.6;
+    font-size: 14pt;'>
+    <p><b>TENDENCIA DE LA SERIE (SUAVIZADO LOESS)</b></p>
+    <br>
+</div>
+<div style='text-align: left; line-height: 1.6; font-size: 12pt;''>
+    <p>La técnica <b>STL (Seasonal-Trend decomposition using LOESS)</b> 
+    es un método de filtrado estadístico robusto que descompone 
+    una serie temporal en componentes aditivos. </p>
+    <p style='text-align: center;'>
+    <i>Serie original = tendencia + estacionalidad + residuos</i></p>
+    <p>El gráfico de Tendencia (Suavizado LOESS) muestra el primer 
+    componente de la serie, que representa la evolución a largo plazo, 
+    eliminando las fluctuaciones de corto plazo y el ruido aleatorio. 
+    Se obtiene mediante <b>LOESS (Locally Estimated Scatterplot Smoothing)</b>, 
+    que aplica regresiones locales ponderadas en ventanas móviles de 
+    datos. A diferencia de una media móvil simple, LOESS no pierde datos 
+    en los extremos y es menos sensible a valores atípicos.</p>
+    <p>Permite ver si la curva es ascendente o descendente de forma 
+    sostenida y si hay cambios en la pendiente que indican aceleración 
+    o desaceleración en el fenómeno estudiado (por ejemplo, cambio en 
+    la tasa de producción de un cultivo). La tendencia permite 
+    identificar la trayectoria real del indicador, aislándolo de eventos 
+    circunstanciales o ciclos anuales.</p>
+    <p> El LOESS, también 
+    conocido como LOWESS (Locally Weighted Scatterplot Smoothing), 
+    es un método de regresión no paramétrico que combina modelos de 
+    regresión lineal con la flexibilidad de los enfoques no lineales. 
+    Permite ajustar una curva suave a un conjunto de datos sin suponer que 
+    estos siguen una función global (como una línea recta o una parábola).</p>
+    <p>A diferencia de los Mínimos Cuadrados Ordinarios (OLS), donde se 
+    busca una única ecuación que minimice el error para todos los datos 
+    simultáneamente, LOESS opera bajo la premisa de que el 
+    comportamiento de un punto se explica mejor por sus vecinos más 
+    cercanos. Para cada punto de la serie, este método define una 
+    subserie de datos circundantes (ventana) y ajusta un modelo simple 
+    para esa vecindad. El <b>ancho de banda (span) </b> es el parámetro 
+    más crítico ya que determina qué proporción del total de datos se incluirá 
+    en cada ventana local. Con un span pequeño (0.3), la curva será muy 
+    sensible a las variaciones locales, pudiendo capturar ruido (sobreajuste). 
+    Con un span grande (0.8), la curva será mucho más suave, capturando solo 
+    la tendencia macro y perdiendo detalles locales. Dentro de cada ventana, 
+    se realiza un ajuste mediante Mínimos Cuadrados Ponderados (WLS), 
+    de grado 1 (lineal) para modelar la pendiente local; y de grado 2 
+    (cuadrático) para capturar picos y valles locales (la curvatura de 
+    la serie). La robustez ante valores atípicos (<i>outliers</i>) se logra mediante 
+    un procedimiento iterativo: se realiza un ajuste inicial; se calculan los 
+    residuos (distancia entre el dato real y la curva LOESS); se recalculan 
+    los pesos, penalizando a los puntos con residuos grandes (posibles 
+    anomalías) y se repite el ajuste. Esto asegura que un año de sequía extrema 
+    o una crisis puntual no "desvíen" la tendencia hacia arriba o hacia abajo 
+    erróneamente.</p>
+    <p>La descomposición STL es muy adecuada para series cortas 
+    por su flexibilidad frente a métodos tradicionales como la 
+    descomposición clásica. Esta capacidad se debe a:</p>
+    <ul><li>No se pierden los datos de los extremos: en series cortas, 
+    cada dato es muy importante; los métodos clásicos utilizan medias 
+    móviles simples, que implican la pérdida de datos. Como STL 
+    utiliza regresiones locales ponderadas, puede estimar la tendencia 
+    hasta el mismo borde de la serie, sin pérdida de datos en 
+    los extremos.</li>
+    <li>Manejo de <i>outliers</i> (valores atípicos): en series con pocos 
+    datos, un solo año atípico (una inundación, una crisis) puede desviar 
+    completamente una media aritmética, falseando la tendencia. STL 
+    puede realizar un ajuste robusto que, mediante iteraciones, detecta 
+    si un dato está muy lejos de la tendencia estimada, asignándole un 
+    peso menor o nulo en la siguiente iteración, evitando que la 
+    tendencia se contamine con eventos excepcionales, algo vital 
+    cuando no se tienen miles de datos para compensar errores.</li>
+    <li>Flexibilidad en la curvatura: a diferencia de una regresión lineal 
+    (que asume que todo crece o decrece en línea recta), STL permite 
+    que la tendencia cambie de dirección de forma suave. En series de 
+    cultivos, donde un cambio tecnológico o climático puede alterar la 
+    trayectoria en pocos años, esta adaptabilidad local es crucial.</li></ul>
+    <p>Aplicar STL tiene sus riesgos:</p>
+    <ul><li>Sobreajuste (<i>overfitting</i>): si la ventana es muy pequeña 
+    en relación al total de datos, se puede confundir el ruido 
+    con la tendencia.</li>
+    <li>Inestabilidad de la estacionalidad: con pocos datos, es difícil 
+    para el modelo distinguir si un pico se debe a un ciclo real o 
+    simplemente al azar. STL asume que el ciclo es constante o cambia 
+    muy lentamente; con pocos datos, el modelo tiene poca base para 
+    aprender el patrón estacional.</li>
+    <li>Grados de libertad: estadísticamente, cada parámetro que el LOESS 
+    intenta ajustar consume grados de libertad. Si se tienen pocos 
+    datos y el modelo ajusta una curva muy compleja, los resultados 
+    carecerán de significancia estadística.</li></ul>
+</div>
