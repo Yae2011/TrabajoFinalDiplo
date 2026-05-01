@@ -765,4 +765,31 @@ table th,
     z-index: 999 !important;
 }
 /*YAE: custom css*/
+.portrait-st-2{ /* Área derecha de la portada: fondo gris y subtítulo */
+    background-color: var(--container-bg-color) !important;
+    border-left: 5px solid #4CAF50;
+    border-radius: 25px !important;
+    padding-left: 10px !important;
+    box-shadow: var(--shadow-soft) !important;
+    min-height: 520px !important;
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: flex-start !important;
+}
+
+/* Contenedor interno */
+.info-box {
+    padding: 15px;
+    margin: 0;
+}
+
+/* elimina margen del título */
+.info-box h2 {
+    margin-top: 0;
+}
+
+/* FIX  */
+.integrantes {
+    padding-left: 18px;
+}
 /*FIN YAE: custom css*/

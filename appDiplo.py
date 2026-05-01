@@ -6076,17 +6076,33 @@ with gr.Blocks(title="Análisis de Cultivos") as app:
                     gr.HTML("ANÁLISIS <br> DE SERIES<br>TEMPORALES<br>"
                             "ANUALES<br>DE LOS<br>PRINCIPALES<br>CULTIVOS<br>"
                             "DE LA<br>REPÚBLICA ARGENTINA", elem_classes="portrait-title")
-                with gr.Column(scale=2, elem_classes="portrait-bg-2"):
-                    gr.HTML("Aplicación de algoritmos de Machine Learning "
-                            "a las Bases de Datos Abiertas "
-                            "de la Dirección Nacional de Agricultura "
-                            "del Ministerio de Agricultura, Ganadería y Pesca "
-                            "de la República Argentina, "
-                            "para el análisis de series temporales anuales "
-                            "de los cultivos más importantes "
-                            "en las principales regiones productoras del país.",
-                            elem_classes="portrait-subtitle")
-        
+                #with gr.Column(scale=2, elem_classes="portrait-bg-2"):
+                #    gr.HTML("Aplicación de algoritmos de Machine Learning "
+                #            "a las Bases de Datos Abiertas "
+                #            "de la Dirección Nacional de Agricultura "
+                #            "del Ministerio de Agricultura, Ganadería y Pesca "
+                #            "de la República Argentina, "
+                #            "para el análisis de series temporales anuales "
+                #            "de los cultivos más importantes "
+                #            "en las principales regiones productoras del país.",
+                #           elem_classes="portrait-subtitle")
+                with gr.Column(scale=3, elem_classes="portrait-st-2"): 
+                       gr.HTML(""" <div class="info-box"> 
+                               <h2>Sobre el proyecto</h2> 
+                               <p> Aplicación de algoritmos de Machine Learning a las Bases de Datos Abiertas de la Dirección Nacional de Agricultura del Ministerio de Agricultura, Ganadería y Pesca de la República Argentina. </p> 
+                               <p> Permite analizar series temporales anuales de los cultivos más importantes en las principales regiones productoras del país. </p> 
+                                <!-- Integrantes -->
+                                <h3>Trabajo en equipo</h3>
+                                <ul class="integrantes">
+                                    <li>Jorge Perera</li>
+                                    <li>Marco Ferrara</li>
+                                    <li>Yael Moretti</li>
+                                </ul>
+
+                                <!-- Opcional -->
+                                <p class="footer-info">Instito Data Science Año: 2026</p>
+                               </div> """)
+            
         ###### PESTAÑA DASHBOARD
         # comienzo prg MAF
         with gr.Tab("Dashboard") as tab_Dashboard:
@@ -8401,9 +8417,9 @@ with gr.Blocks(title="Análisis de Cultivos") as app:
                 
         
         ###### PESTAÑA PROBABILIDAD BAYESIANA
-        with gr.Tab("Probabilidad Bayesiana"):
-            with gr.Row(elem_classes="title-tab"):
-                gr.HTML("&nbsp;&nbsp;ANÁLISIS DE SERIES TEMPORALES MEDIANTE PROBABILIDAD BAYESIANA", elem_classes="title-text")
+     ######   with gr.Tab("Probabilidad Bayesiana"):
+     ######       with gr.Row(elem_classes="title-tab"):
+    ######         gr.HTML("&nbsp;&nbsp;ANÁLISIS DE SERIES TEMPORALES MEDIANTE PROBABILIDAD BAYESIANA", elem_classes="title-text")
         
         
         ###### PESTAÑA REDES NEURONALES
@@ -8473,9 +8489,9 @@ with gr.Blocks(title="Análisis de Cultivos") as app:
             # fin prg MAF
         
         ###### PESTAÑA KNN & SVM
-        with gr.Tab("KNN & SVM"):
-            with gr.Row(elem_classes="title-tab"):
-                gr.HTML("&nbsp;&nbsp;ANÁLISIS DE INDICADORES EDUCATIVOS CON K-NN Y SVM", elem_classes="title-text")
+     ######   with gr.Tab("KNN & SVM"):
+     ######       with gr.Row(elem_classes="title-tab"):
+     ######           gr.HTML("&nbsp;&nbsp;ANÁLISIS DE INDICADORES EDUCATIVOS CON K-NN Y SVM", elem_classes="title-text")
             
         
         ###### PESTAÑA CONCLUSIONES
