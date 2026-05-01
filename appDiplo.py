@@ -22,7 +22,6 @@ import scipy.stats as stats
 import seaborn as sns
 import pywt
 from scipy.signal import stft, welch
-
 # YAE: comienzo bibliotecas 
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.model_selection import train_test_split
@@ -30,6 +29,16 @@ from sklearn.metrics import mean_squared_error, r2_score, mean_absolute_error
 from sklearn.preprocessing import StandardScaler #Escalar valores para RF -Red Neuronal o Regresion Lineal
 import plotly.express as px
 # YAE: fin bibliotecas 
+# comienzo prg MAF
+import json
+import plotly.express as px
+import unicodedata
+from sklearn.neural_network import MLPRegressor
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import StandardScaler
+from sklearn.metrics import mean_squared_error, r2_score
+# fin prg MAF
+
 
 # region CONSTANTES Y DICCIONARIOS
 # --- Constantes ---
@@ -47,6 +56,19 @@ FILE_MAP = {
     "YERBA MATE": "yerbamate_depurado.csv",
     "VARIABLES": "variables_nacionales.csv"
 }
+#### MAF
+IMAGE_MAP = {
+    "ARROZ": "arroz.png",
+    "AVENA": "avena.png",
+    "GIRASOL": "girasol.png",
+    "MAÍZ": "maiz.png",
+    "POROTO": "poroto.png",
+    "SOJA": "soja.png",
+    "SORGO": "sorgo.png",
+    "TRIGO": "trigo.png",
+    "YERBA MATE": "yerbamate.png",
+}
+#### FIN MAF
 KEY_COLUMNS = ['cultivo', 'periodo', 'provincia', 'departamento']
 MIN_REG = 20 # Cantidad mínima de registros para cada serie temporal
 NO_EXISTE = 999 # Para indicar que no se aplicó la prueba ADF o que no se calcularon grados de diferenciación en las series
@@ -94,6 +116,12 @@ def load_vars(file_vars):
         return df
     except Exception as e:
         return [f"Error cargando: {e}"]
+
+def load_html(file_path):
+    if os.path.exists(file_path):
+        with open(file_path, 'r', encoding='utf-8') as f:
+            return f.read()
+    return f"<p style='color:red;'>Error: No se encontró el archivo {file_path}</p>"
 
 # endregion
 
@@ -1548,15 +1576,24 @@ def tab_ST_on_cult_select(dataset_type, serie, mg, tend, mm, sd):
                 gr.update(),
                 # Gráfico de tendencia
                 gr.update(visible=False),
-                ## Dataset filtrado se devuelvn vacío
+                ## Dataset filtrado se devuele vacío
                 pd.DataFrame(),
                 ## Dataset diferenciado se devuelve vacío
                 pd.DataFrame(),
-                ## Sección de Descomposición de la Serie
+                ## Sección de Descomposición de la Serie - STL
                 # Información de filtros
                 gr.update(visible=False),
-                # Gráfico de descomposición e interpretación
-                gr.Plot(visible=False), gr.update(visible=False),
+                # Área de cuatro gráficos de descomposición 
+                gr.update(visible=False), 
+                # Interpretación
+                gr.update(visible=False),
+                ## Sección de Descomposición de la Serie - HW
+                # Información de filtros
+                gr.update(visible=False),
+                # Área de cuatro gráficos de descomposición 
+                gr.update(visible=False), 
+                # Interpretación
+                gr.update(visible=False),
                 ## Sección de Diferenciación y Prueba ADF
                 # Información de filtros
                 gr.update(visible=False),
@@ -1571,26 +1608,17 @@ def tab_ST_on_cult_select(dataset_type, serie, mg, tend, mm, sd):
                 ## Sección de ACF y PACF
                 # Información de filtros
                 gr.update(visible=False),
-                # Gráfico e interpretación de ACF
-                gr.Plot(visible=False), gr.update(visible=False),
-                # Gráfico e interpretación de PACF
-                gr.Plot(visible=False), gr.update(visible=False),
+                # Mensaje de error
+                gr.update(visible=False),
+                # Área de gráficos e info de ACF y PACF
+                gr.update(visible=False),
                 ## Sección ARIMA
                 # Variables de estado 'p' y 'q'
                 gr.update(value=NO_EXISTE), gr.update(value=NO_EXISTE),
                 # Información de filtros y parámetros de ARIMA
                 gr.update(visible=False), gr.update(visible=False),
-                # Gráfico de predicciones y tabla de predicciones
-                gr.Plot(visible=False), gr.update(visible=False),
-                # Gráficos de residuos e info de residuos
-                gr.Plot(visible=False), gr.update(visible=False),
-                ## Sección AUTO-ARIMA
-                # Información de filtros y parámetros de AUTO-ARIMA
-                # gr.update(visible=False), gr.update(visible=False),
-                # Gráfico de predicciones y tabla de predicciones
-                # gr.Plot(visible=False), gr.update(visible=False),
-                # Info de residuos
-                # gr.update(visible=False),
+                # Área de tablas y gráficos de ARIMA
+                gr.update(visible=False),
                 ## Sección FOURIER
                 # Información de filtros
                 gr.update(visible=False),
@@ -1678,11 +1706,20 @@ def tab_ST_on_cult_select(dataset_type, serie, mg, tend, mm, sd):
                 filtered,
                 ## Dataset diferenciads se devuelve vacío
                 pd.DataFrame(),
-                ## Sección de Descomposición de la Serie
+                ## Sección de Descomposición de la Serie - STL
                 # Información de filtros
                 msg,
-                # Gráfico de descomposición e interpretación
-                gr.Plot(visible=False), gr.update(visible=False),
+                # Área de cuatro gráficos de descomposición 
+                gr.update(visible=False), 
+                # Interpretación
+                gr.update(visible=False),
+                ## Sección de Descomposición de la Serie - HW
+                # Información de filtros
+                msg,
+                # Área de cuatro gráficos de descomposición 
+                gr.update(visible=False), 
+                # Interpretación
+                gr.update(visible=False),
                 ## Sección de Diferenciación y Prueba ADF
                 # Información de filtros
                 msg,
@@ -1697,26 +1734,17 @@ def tab_ST_on_cult_select(dataset_type, serie, mg, tend, mm, sd):
                 ## Sección de ACF y PACF
                 # Información de filtros
                 msg,
-                # Gráfico e interpretación de ACF
-                gr.Plot(visible=False), gr.update(visible=False),
-                # Gráfico e interpretación de PACF
-                gr.Plot(visible=False), gr.update(visible=False),
+                # Mensaje de error
+                gr.update(visible=False),
+                # Área de gráficos e info de ACF y PACF
+                gr.update(visible=False),
                 ## Sección ARIMA
                 # Variables de estado 'p' y 'q'
                 gr.update(value=NO_EXISTE), gr.update(value=NO_EXISTE),
                 # Información de filtros y parámetros de ARIMA
                 msg, gr.update(visible=False),
-                # Gráfico de predicciones y tabla de predicciones
-                gr.Plot(visible=False), gr.update(visible=False),
-                # Gráficos de residuos e info de residuos
-                gr.Plot(visible=False), gr.update(visible=False),
-                ## Sección AUTO-ARIMA
-                # Información de filtros y parámetros de AUTO-ARIMA
-                # gr.update(visible=False), gr.update(visible=False),
-                # Gráfico de predicciones y tabla de predicciones
-                # gr.Plot(visible=False), gr.update(visible=False),
-                # Info de residuos
-                # gr.update(visible=False),
+                # Área de tablas y gráficos de ARIMA
+                gr.update(visible=False),
                 ## Sección FOURIER
                 # Información de filtros
                 msg,
@@ -1764,11 +1792,20 @@ def tab_ST_on_prov_select(df, cultivo, provincia, indicador,
                 gr.update(),
                 # Gráfico de tendencia
                 gr.update(visible=False),
-                ## Sección de Descomposición de la Serie
+                ## Sección de Descomposición de la Serie - STL
                 # Información de filtros
                 gr.update(visible=False),
-                # Gráfico de descomposición e interpretación
-                gr.Plot(visible=False), gr.update(visible=False),
+                # Área de cuatro gráficos de descomposición 
+                gr.update(visible=False), 
+                # Interpretación
+                gr.update(visible=False),
+                ## Sección de Descomposición de la Serie - HW
+                # Información de filtros
+                gr.update(visible=False),
+                # Área de cuatro gráficos de descomposición 
+                gr.update(visible=False), 
+                # Interpretación
+                gr.update(visible=False),
                 ## Sección de Diferenciación y Prueba ADF
                 # Información de filtros
                 gr.update(visible=False),
@@ -1783,26 +1820,17 @@ def tab_ST_on_prov_select(df, cultivo, provincia, indicador,
                 ## Sección de ACF y PACF
                 # Información de filtros
                 gr.update(visible=False),
-                # Gráfico e interpretación de ACF
-                gr.Plot(visible=False), gr.update(visible=False),
-                # Gráfico e interpretación de PACF
-                gr.Plot(visible=False), gr.update(visible=False),
+                # Mensaje de error
+                gr.update(visible=False),
+                # Área de gráficos e info de ACF y PACF
+                gr.update(visible=False),
                 ## Sección ARIMA
                 # Variables de estado 'p' y 'q'
                 gr.update(value=NO_EXISTE), gr.update(value=NO_EXISTE),
                 # Información de filtros y parámetros de ARIMA
                 gr.update(visible=False), gr.update(visible=False),
-                # Gráfico de predicciones y tabla de predicciones
-                gr.Plot(visible=False), gr.update(visible=False),
-                # Gráficos de residuos e info de residuos
-                gr.Plot(visible=False), gr.update(visible=False),
-                ## Sección AUTO-ARIMA
-                # Información de filtros y parámetros de AUTO-ARIMA
-                # gr.update(visible=False), gr.update(visible=False),
-                # Gráfico de predicciones y tabla de predicciones
-                # gr.Plot(visible=False), gr.update(visible=False),
-                # Info de residuos
-                # gr.update(visible=False),
+                # Área de tablas y gráficos de ARIMA
+                gr.update(visible=False),
                 ## Sección FOURIER
                 # Información de filtros
                 gr.update(visible=False),
@@ -1853,11 +1881,20 @@ def tab_ST_on_prov_select(df, cultivo, provincia, indicador,
                 gr.update(),
                 # Gráfico de tendencia
                 gr.update(visible=True, value=graph),
-                ## Sección de Descomposición de la Serie
+                ## Sección de Descomposición de la Serie - STL
                 # Información de filtros
                 msg,
-                # Gráfico de descomposición e interpretación
-                gr.Plot(visible=False), gr.update(visible=False),
+                # Área de cuatro gráficos de descomposición 
+                gr.update(visible=False), 
+                # Interpretación
+                gr.update(visible=False),
+                ## Sección de Descomposición de la Serie - HW
+                # Información de filtros
+                msg,
+                # Área de cuatro gráficos de descomposición 
+                gr.update(visible=False), 
+                # Interpretación
+                gr.update(visible=False),
                 ## Sección de Diferenciación y Prueba ADF
                 # Información de filtros
                 msg,
@@ -1872,26 +1909,17 @@ def tab_ST_on_prov_select(df, cultivo, provincia, indicador,
                 ## Sección de ACF y PACF
                 # Información de filtros
                 msg,
-                # Gráfico e interpretación de ACF
-                gr.Plot(visible=False), gr.update(visible=False),
-                # Gráfico e interpretación de PACF
-                gr.Plot(visible=False), gr.update(visible=False),
+                # Mensaje de error
+                gr.update(visible=False),
+                # Área de gráficos e info de ACF y PACF
+                gr.update(visible=False),
                 ## Sección ARIMA
                 # Variables de estado 'p' y 'q'
                 gr.update(value=NO_EXISTE), gr.update(value=NO_EXISTE),
                 # Información de filtros y parámetros de ARIMA
                 msg, gr.update(visible=False),
-                # Gráfico de predicciones y tabla de predicciones
-                gr.Plot(visible=False), gr.update(visible=False),
-                # Gráficos de residuos e info de residuos
-                gr.Plot(visible=False), gr.update(visible=False),
-                ## Sección AUTO-ARIMA
-                # Información de filtros y parámetros de AUTO-ARIMA
-                # gr.update(visible=False), gr.update(visible=False),
-                # Gráfico de predicciones y tabla de predicciones
-                # gr.Plot(visible=False), gr.update(visible=False),
-                # Info de residuos
-                # gr.update(visible=False),
+               # Área de tablas y gráficos de ARIMA
+                gr.update(visible=False),
                 ## Sección FOURIER
                 # Información de filtros
                 msg,
@@ -1931,11 +1959,20 @@ def tab_ST_on_option_select(df, cultivo, provincia, departamento, indicador,
                 gr.update(),
                 # Gráfico de tendencia
                 gr.update(visible=False),
-                ## Sección de Descomposición de la Serie
+                ## Sección de Descomposición de la Serie - STL
                 # Información de filtros
                 gr.update(visible=False),
-                # Gráfico de descomposición e interpretación
-                gr.Plot(visible=False), gr.update(visible=False),
+                # Área de cuatro gráficos de descomposición 
+                gr.update(visible=False), 
+                # Interpretación
+                gr.update(visible=False),
+                ## Sección de Descomposición de la Serie - HW
+                # Información de filtros
+                gr.update(visible=False),
+                # Área de cuatro gráficos de descomposición 
+                gr.update(visible=False), 
+                # Interpretación
+                gr.update(visible=False),
                 ## Sección de Diferenciación y Prueba ADF
                 # Información de filtros
                 gr.update(visible=False),
@@ -1950,26 +1987,17 @@ def tab_ST_on_option_select(df, cultivo, provincia, departamento, indicador,
                 ## Sección de ACF y PACF
                 # Información de filtros
                 gr.update(visible=False),
-                # Gráfico e interpretación de ACF
-                gr.Plot(visible=False), gr.update(visible=False),
-                # Gráfico e interpretación de PACF
-                gr.Plot(visible=False), gr.update(visible=False),
+                # Mensaje de error
+                gr.update(visible=False),
+                # Área de gráficos e info de ACF y PACF
+                gr.update(visible=False),
                 ## Sección ARIMA
                 # Variables de estado 'p' y 'q'
                 gr.update(value=NO_EXISTE), gr.update(value=NO_EXISTE),
                 # Información de filtros y parámetros de ARIMA
                 gr.update(visible=False), gr.update(visible=False),
-                # Gráfico de predicciones y tabla de predicciones
-                gr.Plot(visible=False), gr.update(visible=False),
-                # Gráficos de residuos e info de residuos
-                gr.Plot(visible=False), gr.update(visible=False),
-                ## Sección AUTO-ARIMA
-                # Información de filtros y parámetros de AUTO-ARIMA
-                # gr.update(visible=False), gr.update(visible=False),
-                # Gráfico de predicciones y tabla de predicciones
-                # gr.Plot(visible=False), gr.update(visible=False),
-                # Info de residuos
-                # gr.update(visible=False),
+                # Área de tablas y gráficos de ARIMA
+                gr.update(visible=False),
                 ## Sección FOURIER
                 # Información de filtros
                 gr.update(visible=False),
@@ -2018,11 +2046,20 @@ def tab_ST_on_option_select(df, cultivo, provincia, departamento, indicador,
                 gr.update(),
                 # Gráfico de tendencia
                 gr.update(visible=True, value=graph),
-                ## Sección de Descomposición de la Serie
+                ## Sección de Descomposición de la Serie - STL
                 # Información de filtros
                 msg,
-                # Gráfico de descomposición e interpretación
-                gr.Plot(visible=False), gr.update(visible=False),
+                # Área de cuatro gráficos de descomposición 
+                gr.update(visible=False), 
+                # Interpretación
+                gr.update(visible=False),
+                ## Sección de Descomposición de la Serie - HW
+                # Información de filtros
+                msg,
+                # Área de cuatro gráficos de descomposición 
+                gr.update(visible=False), 
+                # Interpretación
+                gr.update(visible=False),
                 ## Sección de Diferenciación y Prueba ADF
                 # Información de filtros
                 msg,
@@ -2037,26 +2074,17 @@ def tab_ST_on_option_select(df, cultivo, provincia, departamento, indicador,
                 ## Sección de ACF y PACF
                 # Información de filtros
                 msg,
-                # Gráfico e interpretación de ACF
-                gr.Plot(visible=False), gr.update(visible=False),
-                # Gráfico e interpretación de PACF
-                gr.Plot(visible=False), gr.update(visible=False),
+                # Mensaje de error
+                gr.update(visible=False),
+                # Área de gráficos e info de ACF y PACF
+                gr.update(visible=False),
                 ## Sección ARIMA
                 # Variables de estado 'p' y 'q'
                 gr.update(value=NO_EXISTE), gr.update(value=NO_EXISTE),
                 # Información de filtros y parámetros de ARIMA
                 msg, gr.update(visible=False),
-                # Gráfico de predicciones y tabla de predicciones
-                gr.Plot(visible=False), gr.update(visible=False),
-                # Gráficos de residuos e info de residuos
-                gr.Plot(visible=False), gr.update(visible=False),
-                ## Sección AUTO-ARIMA
-                # Información de filtros y parámetros de AUTO-ARIMA
-                # msg, gr.update(visible=False),
-                # Gráfico de predicciones y tabla de predicciones
-                # gr.Plot(visible=False), gr.update(visible=False),
-                # Info de residuos
-                # gr.update(visible=False),
+                # Área de tablas y gráficos de ARIMA
+                gr.update(visible=False),
                 ## Sección FOURIER
                 # Información de filtros
                 msg,
@@ -2094,7 +2122,7 @@ def tab_ST_on_graph_change(filtered1, filtered2, filtered3, ind1, ind2, ind3,
     return gr.update(visible=True), gr.update(visible=True), gr.update(visible=True), \
                 graph1, graph2, graph3
 
-def tab_ST_stl_decomp(df, indicador):
+def tab_ST_STL_decomp_onegraph(df, indicador):
     """
     Se aplica la descomposición STL (Seasonal-Trend decomposition using LOESS).
     Este enfoque se destaca por tres ventajas clave:
@@ -2221,18 +2249,521 @@ def tab_ST_stl_decomp(df, indicador):
     
     return fig, reporte
 
-def tab_ST_stl_decomp_all(df1, df2, df3, var1, var2, var3):
+def tab_ST_STL_decomp(df, indicador, graf_dev=0):
+    """
+    Se aplica la descomposición STL (Seasonal-Trend decomposition using LOESS).
+    Este enfoque se destaca por tres ventajas clave:
+    * Robustez ante anomalías: STL ignora valores atípicos mediante un ajuste robusto, 
+      evitando que eventos excepcionales desvíen la tendencia real.
+    * Integridad de la serie: a diferencia de las medias móviles, no existe pérdida de datos 
+      en los extremos; STL calcula la tendencia y los residuos para el periodo completo 
+      mediante LOESS (regresiones locales ponderadas en ventanas móviles).
+    * Flexibilidad local: STL no asume un crecimiento lineal, lo que le permite adaptarse a 
+      cambios de dirección en la trayectoria de los datos.
+    Además, permite ajustar la ventana de suavizado para capturar variaciones cíclicas multianuales, 
+    superando la limitación de la falta de estacionalidad mensual en datos anuales.
 
-    fig1, desc1 = tab_ST_stl_decomp(df1, var1)
-    fig2, desc2 = tab_ST_stl_decomp(df2, var2)
-    fig3, desc3 = tab_ST_stl_decomp(df3, var3)
+    Parámetros de la función:
+    - df: dataset filtrado con columnas con nombres originales ['periodo', indicadores]
+    - indicador: nombre corto del indicador
+    - grf_dev: tipo de gráfico que devuelve la función: 
+        0 - todos; 1 - original; 2 - tendencia; 3 - estacionalidad; 4 - residuos; 5 - periodograma
+    """
+    
+    if df.empty:
+        reporte = """
+            <div style="padding:15px; border:2px solid #ffa000; background-color:#fff9c4; border-radius:8px;">
+                <strong style="color:#f57c00;"> ERROR EN EL ANÁLISIS:</strong><br>
+                No se seleccionó una serie temporal.
+            </div>
+            """
+        if graf_dev == 0:
+            return None, None, None, None, None, reporte
+        else:
+            return None
 
-    return (gr.update(value = fig1, visible = fig1 is not None),
+    # Se convierte el nombre corto del "indicador" a su nombre original
+    ind_orig = next((k for k, v in dict_ncortos.items() if v == indicador), indicador)
+
+    df = df.sort_values('periodo').reset_index(drop=True)
+    serie = df[ind_orig]
+    
+    # Se entrena el modelo STL
+    res = STL(serie, period=2, robust=True).fit()
+    
+    df['tendencia'] = res.trend
+    df['estacional'] = res.seasonal
+    df['residuo'] = res.resid
+    
+    # Configuración común para los ejes
+    if graf_dev == 0:
+        layout_base = dict(
+            template="plotly_white", 
+            autosize=True, 
+            height=300, 
+            showlegend=False, 
+            margin=dict(l=10, r=10, t=60, b=10),
+            title=dict(font=dict(size=12, family='Arial Black'))
+        )
+        config_x = dict(
+            tickmode='auto', nticks=10, tickangle=0,
+            tickfont=dict(size=10, color='black', family='Arial Black'),
+            tickformat='d', showticklabels=True
+        )
+        config_y = dict(tickfont=dict(size=10, color='black', family='Arial Black'))
+        # Definición del estilo base para las líneas de datos
+        linea_base = dict(
+            width=2,            # Espesor de la línea (ajustado a tu preferencia de "más gruesa")
+            shape='spline',       # Opcional: suaviza la línea entre puntos (ajuste estético)
+            smoothing=1.3         # Grado de suavizado si usas 'spline'
+        )
+        # Definición del estilo para líneas de umbral/referencia
+        linea_umbral = dict(
+            width=2, 
+            dash='dash', 
+            color='red'
+        )
+    else:
+        GRIS_OSCURO = "#D3D3D3" # Gris plateado más visible que el estándar
+
+        layout_base = dict(
+            template="plotly_white", 
+            autosize=True, 
+            height=530, 
+            showlegend=False, 
+            margin=dict(l=10, r=10, t=60, b=10),
+            title=dict(font=dict(size=18, family='Arial Black'))
+        )
+        # Configuración del eje X con cuadrícula reforzada
+        config_x = dict(
+            tickmode='auto', 
+            nticks=20, 
+            tickangle=0,
+            tickfont=dict(size=14, color='black', family='Arial Black'),
+            tickformat='d', 
+            showticklabels=True,
+            showgrid=True,           # Habilita la cuadrícula
+            gridcolor=GRIS_OSCURO,   # Color gris más oscuro
+            gridwidth=1              # Grosor de la línea de la cuadrícula
+        )
+        # Configuración del eje Y con cuadrícula reforzada
+        config_y = dict(
+            tickfont=dict(size=12, color='black', family='Arial Black'),
+            showgrid=True,           # Habilita la cuadrícula
+            gridcolor=GRIS_OSCURO,   # Color gris más oscuro
+            gridwidth=1              # Grosor de la línea de la cuadrícula
+        )
+        # Definición del estilo base para las líneas de datos
+        linea_base = dict(
+            width=4,            # Espesor de la línea (ajustado a tu preferencia de "más gruesa")
+            shape='spline',       # Opcional: suaviza la línea entre puntos (ajuste estético)
+            smoothing=1.3         # Grado de suavizado si usas 'spline'
+        )
+        # Definición del estilo para líneas de umbral/referencia
+        linea_umbral = dict(
+            width=3, 
+            dash='dash', 
+            color='red'
+        )
+    
+    # FIGURA 1: Serie Original
+    fig1 = go.Figure()
+    fig1.add_trace(go.Scatter(x=df['periodo'], y=serie, name="Original", 
+                              line=dict(**linea_base, color='blue')))
+    fig1.update_layout(**layout_base) # Aplica template, márgenes y tamaño de fuente
+    fig1.update_layout(title_text=f"<b>SERIE ORIGINAL</b>")
+    fig1.update_xaxes(**config_x)
+    fig1.update_yaxes(**config_y)
+
+    # FIGURA 2: Tendencia
+    fig2 = go.Figure()
+    fig2.add_trace(go.Scatter(x=df['periodo'], y=df['tendencia'], name="Tendencia", 
+                              line=dict(**linea_base, color='green')))
+    fig2.update_layout(**layout_base) # Aplica template, márgenes y tamaño de fuente
+    fig2.update_layout(title_text=f"<b>TENDENCIA (SUAVIZADO LOESS)</b>")
+    fig2.update_xaxes(**config_x)
+    fig2.update_yaxes(**config_y)
+
+    # FIGURA 3: Estacionalidad/Ciclo
+    fig3 = go.Figure()
+    fig3.add_trace(go.Scatter(x=df['periodo'], y=df['estacional'], name="Estacional", 
+                              line=dict(**linea_base, color='orange')))
+    fig3.update_layout(**layout_base) # Aplica template, márgenes y tamaño de fuente
+    fig3.update_layout(title_text=f"<b>COMPONENTE ESTACIONAL/CÍCLICO</b>")
+    fig3.update_xaxes(**config_x)
+    fig3.update_yaxes(**config_y)
+
+    # FIGURA 4: Residuos
+    fig4 = go.Figure()
+    fig4.add_trace(go.Bar(x=df['periodo'], y=df['residuo'], name="Residuos", marker_color='red'))
+    fig4.update_layout(**layout_base) # Aplica template, márgenes y tamaño de fuente
+    fig4.update_layout(title_text=f"<b>RESIDUOS (RUIDO)</b>")
+    fig4.update_xaxes(**config_x)
+    fig4.update_yaxes(**config_y)
+    
+    # FIGURA 5: Periodograma de Lomb-Scargle con significancia estadística
+    n = len(serie)
+    tiempos = df['periodo'].values
+    valores = (serie - serie.mean()).values # Centrado de la serie
+
+    # 1. Definición de frecuencias y periodos
+    periodos_search = np.linspace(2, 30, 500)
+    frecuencias_rad = (2 * np.pi) / periodos_search
+
+    # 2. Cálculo del periodograma normalizado (valores entre 0 y 1)
+    # La normalización correcta para que el máximo sea 1 es crucial aquí
+    pgram = lombscargle(tiempos, valores, frecuencias_rad, normalize=True)
+
+    # 3. Cálculo del umbral de significancia para periodograma NORMALIZADO
+    # Para un nivel de confianza (1 - alpha), el umbral en un periodograma 
+    # normalizado se aproxima mediante la distribución Beta o la relación:
+    alpha = 0.05
+    # Probabilidad de Falso Alarma (FAP): 1 - (1 - exp(-z))^(N/2)
+    # Invirtiendo para z (potencia normalizada):
+    umbral_normalizado = 1 - (alpha)**(2 / (n - 3))
+
+    # --- GENERACIÓN DE FIGURA ---
+    fig5 = go.Figure()
+
+    # Trazo del Periodograma
+    fig5.add_trace(go.Scatter(
+        x=periodos_search, 
+        y=pgram, 
+        name="Lomb-Scargle", 
+        line=dict(**linea_base, color='blue')
+    ))
+
+    # Línea de significancia ajustada a la escala 0-1
+    fig5.add_hline(
+        y=umbral_normalizado, 
+        line=dict(**linea_umbral), 
+        annotation_text=f"Confianza 95% ({umbral_normalizado:.3f})", 
+        annotation_position="top right"
+    )
+
+    # Configuración de Layout y Ejes
+    fig5.update_layout(**layout_base)
+    fig5.update_layout(
+        title_text="<b>PERIODOGRAMA (LOMB-SCARGLE)</b>",
+        yaxis_range=[0, max(pgram.max(), umbral_normalizado) * 1.1] # Ajuste dinámico del eje Y
+    )
+    fig5.update_xaxes(**config_x, title_text="Periodo (años)")
+    fig5.update_yaxes(**config_y, title_text="Potencia Normalizada (0-1)")
+    
+    # Métricas e interpretación
+    variabilidad_residuo = (df['residuo'].std() / serie.mean()) * 100
+    puntos_atipicos = df[np.abs(df['residuo']) > 2 * df['residuo'].std()]
+    
+    cambio_total = res.trend.iloc[-1] - res.trend.iloc[0]
+    umbral_estabilidad = 0.01
+    if abs(cambio_total) < umbral_estabilidad * res.trend.mean():
+        interpretacion_tendencia = "estabilidad (sin tendencia significativa)"
+    else:
+        interpretacion_tendencia = "crecimiento" if cambio_total > 0 else "decrecimiento"
+
+    if variabilidad_residuo < 5:
+        desc_ruido = "baja. El modelo explica casi la totalidad de los datos; los factores externos son mínimos."
+    elif variabilidad_residuo < 15:
+        desc_ruido = "moderada. Existen fluctuaciones aleatorias o eventos puntuales que afectan el cultivo."
+    else:
+        desc_ruido = "alta. La serie es altamente impredecible; hay una fuerte influencia de variables no capturadas por la tendencia."
+
+    reporte = (f"<b>Variabilidad No Explicada (Ruido): </b>"
+                f"{variabilidad_residuo:.2f}% respecto a la media. La variabilidad es {desc_ruido}<br>"
+                f"<b>Tendencia: </b>"
+                f"La serie presenta {interpretacion_tendencia} del cultivo.<br>"
+                f"<b>Años con Desviaciones Significativas: </b>"
+                f"{puntos_atipicos['periodo'].tolist() if not puntos_atipicos.empty else 'Ninguno'}<br>"
+                )
+    
+    if graf_dev == 0:
+        return fig1, fig2, fig3, fig4, fig5, reporte
+    elif graf_dev == 1: return fig1
+    elif graf_dev == 2: return fig2
+    elif graf_dev == 3: return fig3
+    elif graf_dev == 4: return fig4
+    elif graf_dev == 5: return fig5
+
+def tab_ST_STL_decomp_all(df1, df2, df3, var1, var2, var3):
+
+    fig1a, fig1b, fig1c, fig1d, fig1e, desc1 = tab_ST_STL_decomp(df1, var1, graf_dev=0)
+    fig2a, fig2b, fig2c, fig2d, fig2e, desc2 = tab_ST_STL_decomp(df2, var2, graf_dev=0)
+    fig3a, fig3b, fig3c, fig3d, fig3e, desc3 = tab_ST_STL_decomp(df3, var3, graf_dev=0)
+
+    return (# Area de la serie 1 (se hace visible si se generó el primer gráfico)
+            gr.update(value = fig1a, visible = fig1a is not None),
+            # Gráficos de la serie 1
+            gr.update(value = fig1a, visible = fig1a is not None),
+            gr.update(value = fig1b, visible = fig1b is not None),
+            gr.update(value = fig1c, visible = fig1c is not None),
+            gr.update(value = fig1d, visible = fig1d is not None),
+            gr.update(value = fig1e, visible = fig1e is not None),
+            # Informe de la serie 1
             gr.update(value = desc1, visible = True),
-            gr.update(value = fig2, visible = fig2 is not None),
+            # Area de la serie 2 (se hace visible si se generó el primer gráfico)
+            gr.update(value = fig2a, visible = fig2a is not None),
+            # Gráficos de la serie 2
+            gr.update(value = fig2a, visible = fig2a is not None),
+            gr.update(value = fig2b, visible = fig2b is not None),
+            gr.update(value = fig2c, visible = fig2c is not None),
+            gr.update(value = fig2d, visible = fig2d is not None),
+            gr.update(value = fig2e, visible = fig2e is not None),
+            # Informe de la serie 2
             gr.update(value = desc2, visible = True),
-            gr.update(value = fig3, visible = fig3 is not None),
+            # Area de la serie 3 (se hace visible si se generó el primer gráfico)
+            gr.update(value = fig3a, visible = fig3a is not None),
+            # Gráficos de la serie 3
+            gr.update(value = fig3a, visible = fig3a is not None),
+            gr.update(value = fig3b, visible = fig3b is not None),
+            gr.update(value = fig3c, visible = fig3c is not None),
+            gr.update(value = fig3d, visible = fig3d is not None),
+            gr.update(value = fig3e, visible = fig3e is not None),
+            # Informe de la serie 3
             gr.update(value = desc3, visible = True)
+            )
+
+def tab_ST_STL_graph(df, var, tipo_graf):
+
+    fig = tab_ST_STL_decomp(df, var, tipo_graf)
+
+    return (gr.update(visible=True), # Ventana modal del gráfico ampliado
+            fig # Gráfico ampliado de la descomposición STL
+            )
+
+def tab_ST_HW_decomp(df, indicador, graf_dev=0):
+    """
+    Se aplica la descomposición mediante Holt-Winters con selección automática de tipo de modelo.
+    Este enfoque optimizado ofrece tres ventajas adicionales:
+    * Selección de Modelo (AICc): Compara automáticamente si la naturaleza de la serie 
+      es aditiva o multiplicativa, eligiendo la que minimice la pérdida de información.
+    * Flexibilidad de Amplitud: El modelo multiplicativo permite capturar estacionalidades 
+      cuya magnitud crece proporcionalmente al nivel de la serie.
+    * Optimización de Verosimilitud: Ajusta los parámetros alfa, beta y gamma para 
+      maximizar la probabilidad estadística de los datos observados.
+
+    Parámetros de la función:
+    - df: dataset filtrado con columnas con nombres originales ['periodo', indicadores]
+    - indicador: nombre corto del indicador
+    - grf_dev: tipo de gráfico que devuelve la función: 
+                0 - todos; 1 - original; 2 - tendencia; 3 - estacionalidad; 4 - residuos
+    """
+    
+    if df.empty:
+        reporte = """
+            <div style="padding:15px; border:2px solid #ffa000; background-color:#fff9c4; border-radius:8px;">
+                <strong style="color:#f57c00;"> ERROR EN EL ANÁLISIS:</strong><br>
+                No se seleccionó una serie temporal.
+            </div>
+            """
+        if graf_dev == 0:
+            return None, None, None, None, reporte
+        else:
+            return None
+
+    # Se convierte el nombre corto del "indicador" a su nombre original
+    ind_orig = next((k for k, v in dict_ncortos.items() if v == indicador), indicador)
+
+    df = df.sort_values('periodo').reset_index(drop=True)
+    serie = df[ind_orig]
+    
+    # SELECCIÓN AUTOMÁTICA DEL MODELO (ADITIVO VS MULTIPLICATIVO)
+    modelos_candidatos = []
+    configs = [
+        {'trend': 'add', 'seasonal': 'add', 'name': 'Aditivo'},
+        {'trend': 'add', 'seasonal': 'mul', 'name': 'Multiplicativo'}
+    ]
+
+    for config in configs:
+        try:
+            m = ExponentialSmoothing(
+                serie, 
+                trend=config['trend'], 
+                seasonal=config['seasonal'], 
+                seasonal_periods=2, 
+                initialization_method="estimated"
+            ).fit()
+            modelos_candidatos.append({'model': m, 'aicc': m.aicc, 'type': config['name']})
+        except:
+            continue
+
+    # Elegimos el modelo con el menor AICc (mejor balance ajuste/complejidad)
+    mejor_ajuste = min(modelos_candidatos, key=lambda x: x['aicc'])
+    model = mejor_ajuste['model']
+    tipo_modelo = mejor_ajuste['type']
+    
+    # Extracción de componentes
+    df['tendencia'] = model.level + model.trend
+    df['estacional'] = model.season
+    df['residuo'] = serie - model.fittedvalues
+    
+    # GENERACIÓN DE GRÁFICOS
+    if graf_dev == 0:
+        layout_base = dict(
+            template="plotly_white", 
+            autosize=True, 
+            height=300, 
+            showlegend=False, 
+            margin=dict(l=10, r=10, t=60, b=10),
+            title=dict(font=dict(size=12, family='Arial Black'))
+        )
+        config_x = dict(
+            tickmode='auto', nticks=10, tickangle=0,
+            tickfont=dict(size=10, color='black', family='Arial Black'),
+            tickformat='d', showticklabels=True
+        )
+        config_y = dict(tickfont=dict(size=10, color='black', family='Arial Black'))
+        # Definición del estilo base para las líneas de datos
+        linea_base = dict(
+            width=2,            # Espesor de la línea (ajustado a tu preferencia de "más gruesa")
+            shape='spline',       # Opcional: suaviza la línea entre puntos (ajuste estético)
+            smoothing=1.3         # Grado de suavizado si usas 'spline'
+        )
+        # Definición del estilo para líneas de umbral/referencia
+        linea_umbral = dict(
+            width=2, 
+            dash='dash', 
+            color='red'
+        )
+    else:
+        GRIS_OSCURO = "#D3D3D3" # Gris plateado más visible que el estándar
+
+        layout_base = dict(
+            template="plotly_white", 
+            autosize=True, 
+            height=530, 
+            showlegend=False, 
+            margin=dict(l=10, r=10, t=60, b=10),
+            title=dict(font=dict(size=18, family='Arial Black'))
+        )
+        config_x = dict(
+            tickmode='auto', nticks=20, tickangle=0,
+            tickfont=dict(size=14, color='black', family='Arial Black'),
+            tickformat='d', showticklabels=True,
+            showgrid=True,           # Habilita la cuadrícula
+            gridcolor=GRIS_OSCURO,   # Color gris más oscuro
+            gridwidth=1              # Grosor de la línea de la cuadrícula
+        )
+        config_y = dict(
+            tickfont=dict(size=12, color='black', family='Arial Black'),
+            showgrid=True,           # Habilita la cuadrícula
+            gridcolor=GRIS_OSCURO,   # Color gris más oscuro
+            gridwidth=1              # Grosor de la línea de la cuadrícula)
+        )
+        # Definición del estilo base para las líneas de datos
+        linea_base = dict(
+            width=4,            # Espesor de la línea (ajustado a tu preferencia de "más gruesa")
+            shape='spline',       # Opcional: suaviza la línea entre puntos (ajuste estético)
+            smoothing=1.3         # Grado de suavizado si usas 'spline'
+        )
+        # Definición del estilo para líneas de umbral/referencia
+        linea_umbral = dict(
+            width=3, 
+            dash='dash', 
+            color='red'
+        )
+
+    # FIGURA 1: Serie Original
+    fig1 = go.Figure()
+    fig1.add_trace(go.Scatter(x=df['periodo'], y=serie, name="Original", 
+                              line=dict(**linea_base, color='blue')))
+    fig1.update_layout(**layout_base) # Aplica template, márgenes y tamaño de fuente
+    fig1.update_layout(title_text=f"<b>SERIE ORIGINAL ({tipo_modelo.upper()})</b>")
+    fig1.update_xaxes(**config_x)
+    fig1.update_yaxes(**config_y)
+
+    # FIGURA 2: Tendencia
+    fig2 = go.Figure()
+    fig2.add_trace(go.Scatter(x=df['periodo'], y=df['tendencia'], name="Tendencia", 
+                              line=dict(**linea_base, color='green')))
+    fig2.update_layout(**layout_base) # Aplica template, márgenes y tamaño de fuente
+    fig2.update_layout(title_text=f"<b>TENDENCIA (SUAVIZADO EXPONENCIAL)</b>")
+    fig2.update_xaxes(**config_x)
+    fig2.update_yaxes(**config_y)
+
+    # FIGURA 3: Estacionalidad
+    fig3 = go.Figure()
+    fig3.add_trace(go.Scatter(x=df['periodo'], y=df['estacional'], name="Estacional", 
+                              line=dict(**linea_base, color='orange')))
+    fig3.update_layout(**layout_base) # Aplica template, márgenes y tamaño de fuente
+    fig3.update_layout(title_text=f"<b>COMPONENTE ESTACIONAL</b>")
+    fig3.update_xaxes(**config_x)
+    fig3.update_yaxes(**config_y)
+
+    # FIGURA 4: Residuos
+    fig4 = go.Figure()
+    fig4.add_trace(go.Bar(x=df['periodo'], y=df['residuo'], name="Residuos", marker_color='red'))
+    fig4.update_layout(**layout_base) # Aplica template, márgenes y tamaño de fuente
+    fig4.update_layout(title_text=f"<b>RESIDUOS (ERROR DE AJUSTE)</b>")
+    fig4.update_xaxes(**config_x)
+    fig4.update_yaxes(**config_y)
+
+    # MÉTRICAS E INTERPRETACIÓN
+    variabilidad_residuo = (df['residuo'].std() / serie.mean()) * 100
+    puntos_atipicos = df[np.abs(df['residuo']) > 2 * df['residuo'].std()]
+    
+    cambio_total = df['tendencia'].iloc[-1] - df['tendencia'].iloc[0]
+    umbral_estabilidad = 0.01
+    interpretacion_tendencia = "estabilidad" if abs(cambio_total) < umbral_estabilidad * df['tendencia'].mean() else ("crecimiento" if cambio_total > 0 else "decrecimiento")
+
+    desc_ruido = "baja" if variabilidad_residuo < 5 else ("moderada" if variabilidad_residuo < 15 else "alta")
+
+    reporte = (f"<b>Modelo Seleccionado: </b>Holt-Winters {tipo_modelo} (Optimizado por AICc)<br>"
+                f"<b>Variabilidad No Explicada: </b>{variabilidad_residuo:.2f}%. La variabilidad es {desc_ruido}.<br>"
+                f"<b>Tendencia: </b>La serie presenta {interpretacion_tendencia} del cultivo.<br>"
+                f"<b>Años Críticos: </b>{puntos_atipicos['periodo'].tolist() if not puntos_atipicos.empty else 'Ninguno'}<br>")
+    
+    if graf_dev == 0:
+        return fig1, fig2, fig3, fig4, reporte
+    elif graf_dev == 1:
+        return fig1
+    elif graf_dev == 2:
+        return fig2
+    elif graf_dev == 3:
+        return fig3
+    elif graf_dev == 4:
+        return fig4
+    
+def tab_ST_HW_decomp_all(df1, df2, df3, var1, var2, var3):
+
+    fig1a, fig1b, fig1c, fig1d, desc1 = tab_ST_HW_decomp(df1, var1, graf_dev=0)
+    fig2a, fig2b, fig2c, fig2d, desc2 = tab_ST_HW_decomp(df2, var2, graf_dev=0)
+    fig3a, fig3b, fig3c, fig3d, desc3 = tab_ST_HW_decomp(df3, var3, graf_dev=0)
+
+    return (# Area de la serie 1 (se hace visible si se generó el primer gráfico)
+            gr.update(value = fig1a, visible = fig1a is not None),
+            # Gráficos de la serie 1
+            gr.update(value = fig1a, visible = fig1a is not None),
+            gr.update(value = fig1b, visible = fig1b is not None),
+            gr.update(value = fig1c, visible = fig1c is not None),
+            gr.update(value = fig1d, visible = fig1d is not None),
+            # Informe de la serie 1
+            gr.update(value = desc1, visible = True),
+            # Area de la serie 2 (se hace visible si se generó el primer gráfico)
+            gr.update(value = fig2a, visible = fig2a is not None),
+            # Gráficos de la serie 2
+            gr.update(value = fig2a, visible = fig2a is not None),
+            gr.update(value = fig2b, visible = fig2b is not None),
+            gr.update(value = fig2c, visible = fig2c is not None),
+            gr.update(value = fig2d, visible = fig2d is not None),
+            # Informe de la serie 2
+            gr.update(value = desc2, visible = True),
+            # Area de la serie 3 (se hace visible si se generó el primer gráfico)
+            gr.update(value = fig3a, visible = fig3a is not None),
+            # Gráficos de la serie 3
+            gr.update(value = fig3a, visible = fig3a is not None),
+            gr.update(value = fig3b, visible = fig3b is not None),
+            gr.update(value = fig3c, visible = fig3c is not None),
+            gr.update(value = fig3d, visible = fig3d is not None),
+            # Informe de la serie 3
+            gr.update(value = desc3, visible = True)
+            )
+
+def tab_ST_HW_graph(df, var, tipo_graf):
+
+    fig = tab_ST_HW_decomp(df, var, tipo_graf)
+
+    return (gr.update(visible=True), # Ventana modal del gráfico ampliado
+            fig # Gráfico ampliado de la descomposición Holt-Winters
             )
 
 def tab_ST_ACF_old(df, indicador, grado_dif):
@@ -2482,20 +3013,21 @@ def tab_ST_ACF(df, indicador, grado_dif):
                 <strong style="color:#f57c00;"> ERROR EN EL ANÁLISIS:</strong><br>
                 La serie aún no fue diferenciada. Debe aplicarse la diferenciación (si corresponde) y 
                 la prueba ADF para verificar estacionariedad, para luego graficar
-                la FUNCIÓN DE AUTOCORRELACIÓN.</b></div>
+                la FUNCIÓN DE AUTOCORRELACIÓN y la FUNCIÓN DE AUTOCORRELACIÓN PARCIAL.</b></div>
             """
-        return None, reporte, NO_EXISTE
+        return reporte, None, None, NO_EXISTE
     
     # Se verifica que la serie sea estacionaria (NO_EXISTE = sin prueba ADF, no se verificó estacionariedad)
     if grado_dif == NO_EXISTE:
         reporte = """
             <div style="padding:15px; border:2px solid #ffa000; background-color:#fff9c4; border-radius:8px;">
                 <strong style="color:#f57c00;"> ERROR EN EL ANÁLISIS:</strong><br>
-                La serie debe ser estacionaria para que la función de AUTOCORRELACIÓN tenga relevancia estadística.
+                La serie debe ser estacionaria para que la FUNCIÓN DE AUTOCORRELACIÓN 
+                y la FUNCIÓN DE AUTOCORRELACIÓN PARCIAL tengan relevancia estadística.
                 Debe aplicarse previamente la prueba ADF para verificar estacionariedad 
                 y diferenciar la serie si corresponde.</div>
             """
-        return None, reporte, NO_EXISTE
+        return reporte, None, None, NO_EXISTE
 
     # Se convierte el nombre corto del  "indicador" a su nombre original
     ind_orig = next((k for k, v in dict_ncortos.items() if v == indicador), indicador)
@@ -2513,7 +3045,7 @@ def tab_ST_ACF(df, indicador, grado_dif):
         reporte = (f"<div style='font-size: 16px !important; color: #FF0000; font-weight: bold;'>"
                     f"El tamaño de la serie ({n_obs} observaciones) es demasiado pequeño "
                     f"para calcular la FUNCIÓN DE AUTOCORRELACIÓN.</div>")
-        return None, reporte, NO_EXISTE
+        return reporte, None, None, NO_EXISTE
 
     # En agricultura anual, un proceso MA superior a 5 años es improbable.
     max_horizonte = 5 
@@ -2558,7 +3090,7 @@ def tab_ST_ACF(df, indicador, grado_dif):
         f"años para evitar sobreajuste en series anuales de {n_obs} datos.</i>"
     )
     
-    return fig, reporte, q_sugerido
+    return None, fig, reporte, q_sugerido
 
 def tab_ST_PACF(df, indicador, grado_dif):
     """
@@ -2576,22 +3108,23 @@ def tab_ST_PACF(df, indicador, grado_dif):
         reporte = """
             <div style="padding:15px; border:2px solid #ffa000; background-color:#fff9c4; border-radius:8px;">
                 <strong style="color:#f57c00;"> ERROR EN EL ANÁLISIS:</strong><br>
-                "La serie aún no fue diferenciada. Debe aplicarse la diferenciación (si corresponde) y "
-                "la prueba ADF para verificar estacionariedad, para luego graficar "
-                "la FUNCIÓN DE AUTOCORRELACIÓN PARCIAL.</b></div>"
+                La serie aún no fue diferenciada. Debe aplicarse la diferenciación (si corresponde) y 
+                la prueba ADF para verificar estacionariedad, para luego graficar
+                la FUNCIÓN DE AUTOCORRELACIÓN y la FUNCIÓN DE AUTOCORRELACIÓN PARCIAL.</b></div>
             """
-        return None, reporte, NO_EXISTE
+        return reporte, None, None, NO_EXISTE
     
     # Se verifica que la serie sea estacionaria (NO_EXISTE = sin prueba ADF, no se verificó estacionariedad)
     if grado_dif == NO_EXISTE:
         reporte = """
             <div style="padding:15px; border:2px solid #ffa000; background-color:#fff9c4; border-radius:8px;">
                 <strong style="color:#f57c00;"> ERROR EN EL ANÁLISIS:</strong><br>
-                La serie debe ser estacionaria para que la función de AUTOCORRELACIÓN PARCIAL tenga relevancia estadística.
+                La serie debe ser estacionaria para que la FUNCIÓN DE AUTOCORRELACIÓN 
+                y la FUNCIÓN DE AUTOCORRELACIÓN PARCIAL tengan relevancia estadística.
                 Debe aplicarse previamente la prueba ADF para verificar estacionariedad 
                 y diferenciar la serie si corresponde.</div>
             """
-        return None, reporte, NO_EXISTE
+        return reporte, None, None, NO_EXISTE
     
     # Modificaciones similares a las aplicadas para ACF
     ind_orig = next((k for k, v in dict_ncortos.items() if v == indicador), indicador)
@@ -2607,7 +3140,7 @@ def tab_ST_PACF(df, indicador, grado_dif):
         reporte = (f"<div style='font-size: 16px !important; color: #FF0000; font-weight: bold;'>"
                     f"Muestra insuficiente: {n_obs} observaciones. "
                     f"No se puede calcular la FUNCIÓN DE AUTOCORRELACIÓN PARCIAL.</div>")
-        return None, reporte, NO_EXISTE
+        return reporte, None, None, NO_EXISTE
     
     # ywm = Yule-Walker modificado, ideal para series cortas
     valores_pacf = pacf(serie, nlags=lags_a_calcular, method='ywm')
@@ -2654,7 +3187,7 @@ def tab_ST_PACF(df, indicador, grado_dif):
         f"valores de p > 3 suelen indicar una tendencia mal corregida más que un patrón AR real.</i>"
     )
     
-    return fig, reporte, p_sugerido
+    return None, fig, reporte, p_sugerido
 
 def tab_ST_ACF_PACF_all(df1, df2, df3, var1, var2, var3, level1, level2, level3):
 
@@ -2662,37 +3195,44 @@ def tab_ST_ACF_PACF_all(df1, df2, df3, var1, var2, var3, level1, level2, level3)
     ### para que la función de autocorrelación y la función de autocorrelación parcial
     ### tengan relevancia estadística.
 
-    fig1a, desc1a, q1 = tab_ST_ACF(df1, var1, level1)
-    fig2a, desc2a, q2 = tab_ST_ACF(df2, var2, level2)
-    fig3a, desc3a, q3 = tab_ST_ACF(df3, var3, level3)
+    err1a, fig1a, desc1a, q1 = tab_ST_ACF(df1, var1, level1)
+    err2a, fig2a, desc2a, q2 = tab_ST_ACF(df2, var2, level2)
+    err3a, fig3a, desc3a, q3 = tab_ST_ACF(df3, var3, level3)
 
-    fig1b, desc1b, p1 = tab_ST_PACF(df1, var1, level1)
-    fig2b, desc2b, p2 = tab_ST_PACF(df2, var2, level2)
-    fig3b, desc3b, p3 = tab_ST_PACF(df3, var3, level3)
+    # Los mensajes de error de tab_ST_PACF() son los mismos que tab_ST_ACF()
+    err1a, fig1b, desc1b, p1 = tab_ST_PACF(df1, var1, level1)
+    err2a, fig2b, desc2b, p2 = tab_ST_PACF(df2, var2, level2)
+    err3a, fig3b, desc3b, p3 = tab_ST_PACF(df3, var3, level3)
 
-    return (# ACF de la Serie 1: gráfico, interpretación, q sugerido para ARIMA
+    return (# ACF de la Serie 1: mensaje de error, gráfico, interpretación, q sugerido para ARIMA
+            gr.update(value = err1a, visible = err1a is not None),
+            gr.update(visible = fig1a is not None), # Área de gráfico e info
             gr.update(value = fig1a, visible = fig1a is not None),
-            gr.update(value = desc1a, visible = True),
+            gr.update(value = desc1a, visible = desc1a is not None),
             q1,
-            # ACF de la Serie 2: gráfico, interpretación, q sugerido para ARIMA
+            # ACF de la Serie 2: mensaje de error, gráfico, interpretación, q sugerido para ARIMA
+            gr.update(value = err2a, visible = err2a is not None),
+            gr.update(visible = fig2a is not None), # Área de gráfico e info
             gr.update(value = fig2a, visible = fig2a is not None),
-            gr.update(value = desc2a, visible = True),
+            gr.update(value = desc2a, visible = desc2a is not None),
             q2,
-            # ACF de la Serie 3: gráfico, interpretación, q sugerido para ARIMA
+            # ACF de la Serie 3: mensaje de error, gráfico, interpretación, q sugerido para ARIMA
+            gr.update(value = err3a, visible = err3a is not None),
+            gr.update(visible = fig3a is not None), # Área de gráfico e info
             gr.update(value = fig3a, visible = fig3a is not None),
-            gr.update(value = desc3a, visible = True),
+            gr.update(value = desc3a, visible = desc3a is not None),
             q3,
-            # PACF de la Serie 1: gráfico, interpretación, p sugerido para ARIMA
+            # PACF de la Serie 1: mensaje de error, gráfico, interpretación, p sugerido para ARIMA
             gr.update(value = fig1b, visible = fig1b is not None),
-            gr.update(value = desc1b, visible = True),
+            gr.update(value = desc1b, visible = desc1b is not None),
             p1,
-            # PACF de la Serie 2: gráfico, interpretación, p sugerido para ARIMA
+            # PACF de la Serie 2: mensaje de error, gráfico, interpretación, p sugerido para ARIMA
             gr.update(value = fig2b, visible = fig2b is not None),
-            gr.update(value = desc2b, visible = True),
+            gr.update(value = desc2b, visible = desc2b is not None),
             p2,
-            # PACF de la Serie 3: gráfico, interpretación, p sugerido para ARIMA
+            # PACF de la Serie 3: mensaje de error, gráfico, interpretación, p sugerido para ARIMA
             gr.update(value = fig3b, visible = fig3b is not None),
-            gr.update(value = desc3b, visible = True),
+            gr.update(value = desc3b, visible = desc3b is not None),
             p3
             )
 
@@ -2888,18 +3428,13 @@ def tab_ST_on_level_change():
             gr.update(visible=False), # Estadísticos e informe de Prueba ADF
             gr.update(value=NO_EXISTE), # Variable para grado de dif. (NO_EXISTE = no estacionaria)
             ## Sección ACF y PACF
-            gr.Plot(visible=False), # Gráfico de ACF
-            gr.update(visible=False), # Informe de ACF
-            gr.Plot(visible=False), # Gráfico de PACF
-            gr.update(visible=False), # Informe de PACF
+            gr.update(visible=False), # Mensaje de error
+            gr.update(visible=False), # Área de gráficos e informes de ACF yde PACF
             gr.update(value=NO_EXISTE), # Variable 'p' de ARIMA
             gr.update(value=NO_EXISTE), # Variable 'q' de ARIMA
             ## Sección ARIMA
             gr.update(visible=False), # Informe de ARIMA
-            gr.Plot(visible=False), # Gráfico de ARIMA predicciones
-            gr.update(visible=False), # Tabla de ARIMA predicciones
-            gr.Plot(visible=False), # Gráfico de ARIMA residuos
-            gr.update(visible=False), # Informe de ARIMA residuos
+            gr.update(visible=False), # Área de tablas y gráficos de ARIMA
             ## Sección FOURIER
             gr.Plot(visible=False), # Gráfico de series originales
             gr.Plot(visible=False), # Gráfico de series diferenciadas
@@ -2918,36 +3453,52 @@ def tab_ST_ARIMA_all(df1, df2, df3, var1, var2, var3, p1, p2, p3, d1, d2, d3, q1
     - d1, d2, d3: grados de diferenciación para que la prueba ADF arroje ESTACIONARIEDAD
     - q1, q2, q3: obtenidos en la función de autocorrelación ACF
     - p1, p2, p3: obtenidos en la función de autocorrelación parcial PACF
+    - graf: si es FALSE muestra toda la información (tablas y gráficos)
     '''
 
-    df_final1, desc1, fig1a, predic1, fig1b, resid1 = tab_ST_ARIMA(df1, var1, p1, d1, q1, n = 5)
-    df_final2, desc2, fig2a, predic2, fig2b, resid2 = tab_ST_ARIMA(df2, var2, p2, d2, q2, n = 5)
-    df_final3, desc3, fig3a, predic3, fig3b, resid3 = tab_ST_ARIMA(df3, var3, p3, d3, q3, n = 5)
+    df_final1, desc1, fig1a, predic1, fig1b, resid1, comparat1 = tab_ST_ARIMA(df1, var1, p1, d1, q1, n = 5, graf = False)
+    df_final2, desc2, fig2a, predic2, fig2b, resid2, comparat2 = tab_ST_ARIMA(df2, var2, p2, d2, q2, n = 5, graf = False)
+    df_final3, desc3, fig3a, predic3, fig3b, resid3, comparat3 = tab_ST_ARIMA(df3, var3, p3, d3, q3, n = 5, graf = False)
 
     return (# ARIMA de la Serie 1
             df_final1,
+            # Informe de la serie 1
             gr.update(value = desc1, visible = True),
+            # Area de la serie 1 (se hace visible si se generó el primer gráfico)
+            gr.update(visible = fig1a is not None),
+            # Tablas y gráficos de la serie 1
             gr.update(value = fig1a, visible = fig1a is not None),
             gr.update(value = predic1, visible = True),
             gr.update(value = fig1b, visible = fig1b is not None),
             gr.update(value = resid1, visible = True),
+            gr.update(value = comparat1, visible = True),
             # ARIMA de la Serie 2
             df_final2,
+            # Informe de la serie 2
             gr.update(value = desc2, visible = True),
+            # Area de la serie 2 (se hace visible si se generó el primer gráfico)
+            gr.update(visible = fig2a is not None),
+            # Tablas y gráficos de la serie 1
             gr.update(value = fig2a, visible = fig2a is not None),
             gr.update(value = predic2, visible = True),
             gr.update(value = fig2b, visible = fig2b is not None),
             gr.update(value = resid2, visible = True),
+            gr.update(value = comparat2, visible = True),
             # ARIMA de la Serie 3
             df_final3,
+            # Informe de la serie 3
             gr.update(value = desc3, visible = True),
+            # Area de la serie 3 (se hace visible si se generó el primer gráfico)
+            gr.update(visible = fig3a is not None),
+            # Tablas y gráficos de la serie 1
             gr.update(value = fig3a, visible = fig3a is not None),
             gr.update(value = predic3, visible = True),
             gr.update(value = fig3b, visible = fig3b is not None),
             gr.update(value = resid3, visible = True),
+            gr.update(value = comparat3, visible = True)
             )
 
-def tab_ST_ARIMA(df, indicador, p, d, q, n):
+def tab_ST_ARIMA(df, indicador, p, d, q, n, graf=False):
    
     """
     Entrena un modelo ARIMA y genera pronósticos integrados a la escala original.
@@ -2970,6 +3521,7 @@ def tab_ST_ARIMA(df, indicador, p, d, q, n):
        Se identifica como un modelo MA puro si la ACF muestra un corte abrupto 
        y la PACF decae gradualmente.
     n: Número de periodos futuros a predecir.
+    graf: si es TRUE, genera únicamente el gráfico de la serie (histórica + predicha)
 
     NOTA: 
     - Modelo AR puro: ARIMA(p, d, 0)
@@ -2988,7 +3540,10 @@ def tab_ST_ARIMA(df, indicador, p, d, q, n):
                 No se seleccionó una serie temporal.
             </div>
             """
-        return pd.DataFrame(), reporte, None, None, None, None
+        if graf:
+            return None
+        else:
+            return pd.DataFrame(), reporte, None, None, None, None, None
 
     # Se verifica que la serie sea estacionaria (NO_EXISTE = sin prueba ADF, no se verificó estacionariedad)
     if d == NO_EXISTE:
@@ -2999,7 +3554,10 @@ def tab_ST_ARIMA(df, indicador, p, d, q, n):
                 Debe aplicarse la diferenciación (si corresponde) y 
                 la prueba ADF para verificar ESTACIONARIEDAD.</div>
             """
-        return pd.DataFrame(), reporte, None, None, None, None
+        if graf:
+            return None
+        else:
+            return pd.DataFrame(), reporte, None, None, None, None, None
     
     # Se verifica que el dataframe con la serie diferenciada ya exista
     if p == NO_EXISTE or q == NO_EXISTE:
@@ -3010,7 +3568,10 @@ def tab_ST_ARIMA(df, indicador, p, d, q, n):
                 <i style='color: #FF0000;'>p</i> se obtiene con la FUNCIÓN DE AUTOCORRELACIÓN (ACF) y
                 el coeficiente <i style='color: #FF0000;'>q</i> con la FUNCIÓN DE AUTOCORRELACIÓN PARCIAL (PACF).</div>
             """
-        return pd.DataFrame(), reporte, None, None, None, None
+        if graf:
+            return None
+        else:
+            return pd.DataFrame(), reporte, None, None, None, None, None
     
     # Se convierte el nombre corto del  "indicador" a su nombre original
     ind_orig = next((k for k, v in dict_ncortos.items() if v == indicador), indicador)
@@ -3038,21 +3599,40 @@ def tab_ST_ARIMA(df, indicador, p, d, q, n):
                     "<i>p</i>  y <i>q</i> calculados.<br>"
                     f"<i>p</i> = {p}; <i>q</i> = {q}.</div>"
                     )
-        return reporte, None, None, None, None
+        return pd.DataFrame(), reporte, None, None, None, None, None
 
-    # Ajuste del Modelo ARIMA (p, d, q)
+
+
+    ###### AJUSTE DEL MODELO ARIMA (p, d, q)
     try:
         # La serie que se le pasa al modelo ARIMA es la ORIGINAL; el parámetro 'd' le indica que debe
         # diferenciarla y al hacer la predicción los valores son integrados a la escala orginal.
         # ARIMA significa: AR = auto-regresivo; I = integrado (para desdiferenciar); MA = medias móviles.
         # enforce_stationarity=False y enforce_invertibility=False ayudan a evitar los UserWarnings
         # de parámetros iniciales, permitiendo que el optimizador encuentre la solución.
-        modelo = ARIMA(serie, order=(p, d, q), enforce_stationarity=False, enforce_invertibility=False)
-        resultado = modelo.fit()
+        modelo = ARIMA(serie, order=(p, d, q), 
+                       enforce_stationarity=False, 
+                       enforce_invertibility=False)
+        # resultado = modelo.fit()
+        resultado = modelo.fit(
+                    method_kwargs={
+                        # 'method': 'lbfgs',    # Optimizador por defecto (Limited-memory Broyden-Fletcher-Goldfarb-Shanno)
+                        'method': 'nm',         # Optimizador Nelder-Mead
+                        # 'maxiter': 50,        # Iteraciones por defecto
+                        'maxiter': 500,
+                        'disp': False           # Evita mensajes de depuración excesivos
+                    }
+                )
     except Exception as e:
         return f"Error al ajustar el modelo: {str(e)}", None, None, None, None
 
-    # --- CÁLCULOS ESTADÍSTICOS ---
+    residuos = resultado.resid
+    n_obs = len(serie)
+    lag_val = min(10, n_obs // 5)
+
+
+
+    ###### CÁLCULO DE MÉTRICAS Y COEFICIENTES DEL MODELO ARIMA
     n_obs = len(serie)
     k_params = p + q + 1 
     gl = n_obs - k_params
@@ -3065,12 +3645,6 @@ def tab_ST_ARIMA(df, indicador, p, d, q, n):
     # RMSE y MAPE
     rmse_val = np.sqrt(np.mean(residuos_raw**2))
     mape_val = np.mean(np.abs(residuos_raw / serie)) * 100
-
-    # Test Jarque-Bera con Interpretación
-    jb_test = resultado.test_normality(method='jarquebera')
-    jb_p_value = jb_test[0, 1]
-    jb_status = "Normal" if jb_p_value > 0.05 else "No normal"
-    jb_color = "#28B463" if jb_p_value > 0.05 else "#CB4335"
 
     if k_params <= 2: complejidad = "Baja"
     elif k_params <= 4: complejidad = "Media"
@@ -3091,15 +3665,14 @@ def tab_ST_ARIMA(df, indicador, p, d, q, n):
         "BIC (Bayesiano)": f"{bic_val:.2f}",
         "RMSE (Raíz Error Cuadrático Medio)": f"{rmse_val:,.2f}",
         "MAPE (Error Porcentual)": f"{mape_val:.2f}%",
-        "Normalidad Errores (Jarque-Bera)": f"<b style='color: {jb_color};'>{jb_status}</b> (p={jb_p_value:.4f})",
         "Complejidad del Modelo": complejidad,
         "Nivel de Riesgo en Estimación": f"<span style='color: {color_riesgo};'>{riesgo}</span>"
     }
 
-    # 1. Obtener la tabla de coeficientes como HTML
+    # Tabla de coeficientes como HTML
     html_str = resultado.summary().tables[1].as_html()
 
-    # 2. Leer la tabla usando StringIO para evitar el FutureWarning
+    # Leer la tabla usando StringIO para evitar el FutureWarning
     try:
         df_coef = pd.read_html(StringIO(html_str), header=0, index_col=0)[0]
         df_coef_t = df_coef.transpose()
@@ -3116,18 +3689,23 @@ def tab_ST_ARIMA(df, indicador, p, d, q, n):
             </tr>
         """
 
-    reporte = f"""
+    reporte_metricas = f"""
         <div style='font-family: Arial; font-size: 14px; overflow-x: auto;'>
-            <h4 style='color: #000000;'>Coeficientes ARIMA: <i>p</i> = {p}, <i>d</i> = {d}, <i>q</i> = {q}</h4>
-            
+            <h4 style='color: #000000;'>PARÁMETROS DEL MODELO: <i>p</i> = {p}, <i>d</i> = {d}, <i>q</i> = {q}</h4><br>
+            <h4 style='color: #000000;'>MÉTRICAS DEL MODELO</h4>
             <table style='width: 100%; border-collapse: collapse; margin-bottom: 20px; border: 1px solid black;'>
                 <tr style='background-color: #F2F4F4;'>
-                    <th style='padding: 10px; border: 1px solid black; text-align: center; color: black;'>Parámetro / Métrica</th>
+                    <th style='padding: 10px; border: 1px solid black; text-align: center; color: black; width: 250px;'>Métrica</th>
                     <th style='padding: 10px; border: 1px solid black; text-align: center; color: black;'>Valor Estimado</th>
                 </tr>
                 {filas_info_html}
             </table>
-
+            <br>
+        </div>
+        """
+    reporte_coeficientes = f"""
+        <div style='font-family: Arial; font-size: 14px; overflow-x: auto; height: 330px;'>
+        <h4 style='color: #000000;'>COEFICIENTES DEL MODELO</h4>
             <style>
                 .table_arima {{ 
                     width: 100%; 
@@ -3144,6 +3722,10 @@ def tab_ST_ARIMA(df, indicador, p, d, q, n):
                     font-size: 15px;
                     font-weight: bold;
                 }}
+                .table_arima th:first-child, .table_arima td:first-child {{
+                    width: 100px; /* Para que la primera columna de la tabla no modifique su ancho */
+                    white-space: nowrap; 
+                }}
                 .table_arima td {{ 
                     background-color: #FFFFFF !important;
                     color: #000000 !important;
@@ -3156,79 +3738,24 @@ def tab_ST_ARIMA(df, indicador, p, d, q, n):
                 }}
             </style>
             {coef_html}
-        </div>
+        </div><br>
         """
+    reporte_general = reporte_metricas + reporte_coeficientes
 
 
-    # Ejecución de la prueba de Ljung-Box sobre los residuos
-    # Los residuos se obtienen del modelo ajustado
-    residuos = resultado.resid
 
-    # Definición de rezagos a evaluar: 
-    # Generalmente se evalúan varios o un valor basado en la longitud de la serie (n_obs)
-    lag_val = min(10, len(residuos) // 5) 
-
-    # Es vital pasar model_df = p + q para ajustar los grados de libertad.
-    # Esto resta los parámetros del modelo ARIMA de la distribución Chi-cuadrado.
-    lb_test = acorr_ljungbox(
-        residuos, 
-        lags=[lag_val], 
-        return_df=True, 
-        model_df=(p + q)
-    )
-
-    p_value_lb = lb_test['lb_pvalue'].iloc[0]
-
-
-    # Determinación del estado de ruido blanco
-    # H0: Los residuos están distribuidos independientemente (Ruido Blanco)
-    # Ha: Los residuos presentan autocorrelación (Modelo insuficiente)
-    es_ruido_blanco = p_value_lb > 0.05
-    color_status = "#28B463" if es_ruido_blanco else "#CB4335"
-    mensaje_lb = "Residuos independientes (Ruido Blanco)" if es_ruido_blanco else "Residuos Autocorrelacionados"
-
-    reporte_lb = f"""
-    <div style='font-family: Arial; font-size: 14px; margin-top: 10px; border-top: 1px solid #ddd; padding-top: 10px;'>
-        <b style='color: #000000;'>Validación de Residuos (Prueba Ljung-Box):</b><br>
-        Estadístico p-value: <span style='color: {color_status}; font-weight: bold;'>{p_value_lb:.4f}</span><br>
-        Estado: <b style='color: {color_status};'>{mensaje_lb}</b>
-        <p style='font-size: 12px; color: #566573;'>
-            <i>Nota: Un p-value > 0.05 indica que los residuos son independientes, 
-            lo cual es un requisito para un modelo ARIMA robusto.</i><br><br>
-        </p>
-    </div>
-    """
-
-    # Determinación del estado de ruido blanco
-    # H0: Los residuos están distribuidos independientemente (Ruido Blanco)
-    # Ha: Los residuos presentan autocorrelación (Modelo insuficiente)
-    es_ruido_blanco = p_value_lb > 0.05
-    color_status = "#28B463" if es_ruido_blanco else "#CB4335"
-    mensaje_lb = "Residuos independientes (Ruido Blanco)" if es_ruido_blanco else "Residuos Autocorrelacionados"
-
-    # Interpretación técnica para el reporte
-    nota_tecnica = (
-        "Los residuos no muestran patrones sistemáticos." 
-        if es_ruido_blanco else 
-        "El modelo no capturó toda la estructura; deben ajustarse p o q."
-    )
-
-    mensaje_lb = mensaje_lb + nota_tecnica
-
-
-    # Predicción de 'n' pasos futuros
+    ###### PREDICCIÓN DE VALORES FUTUROS (n)
     forecast_obj = resultado.get_forecast(steps=n)
     pronostico = forecast_obj.predicted_mean
     intervalos = forecast_obj.conf_int()
 
-    # extraemos los años directamente del índice de la serie filtrada y limpia.
+    # Se extrane los años directamente del índice de la serie filtrada y limpia.
     anios_hist = serie.index.astype(str).tolist()
 
-    # Para los años futuros (predicción), partimos del último periodo de la serie
+    # Para los años futuros (predicción), se parte del último periodo de la serie
     ultimo_periodo = serie.index[-1]
     anios_fut = [str(ultimo_periodo + i) for i in range(1, n + 1)]
 
-    # Ahora ambas estructuras tendrán garantizada la misma longitud
     df_plot_hist = pd.DataFrame({
         'Año': anios_hist, 
         'Valor': serie.values.flatten()
@@ -3241,10 +3768,10 @@ def tab_ST_ARIMA(df, indicador, p, d, q, n):
         'Sup': intervalos.iloc[:, 1].values
     })
 
-    # Se agrega al df histórico el primer dato del df predicho para que no quede un salto en el gráfico
+    # Se agrega al df histórico el primer dato del df predicho para 
+    # que no quede un salto en el gráfico.
     # Se extrae la primera fila df_plot_pred con [[:1]] para mantenerlo como DataFrame
     primer_dato_pred = df_plot_pred.iloc[0:1].copy()
-
     # Se guarda un dataframe que tiene concatenados el histórico con el predicho
     df_final = pd.concat([df_plot_hist, df_plot_pred[['Año', 'Valor']]], axis=0).reset_index(drop=True)
 
@@ -3254,20 +3781,49 @@ def tab_ST_ARIMA(df, indicador, p, d, q, n):
     ], ignore_index=True)
 
 
+
+    ###### GRÁFICO DE LA SERIE HISTÓRICA Y PREDICHA
+    if graf:
+        line_width = 4
+        grid_color = 'darkgrey'
+        show_grid = True
+        n_ticks_x = 20
+        font_size_axes = 14
+        font_size_title = 18
+        h_graph = 520
+        marker_size = 8 
+        marker_color = 'red'
+        line_shape = 'spline'
+    else:
+        line_width = 2
+        grid_color = None  # Usará el predeterminado de plotly_white
+        show_grid = False
+        n_ticks_x = 10
+        font_size_axes = 12 # 10 para X y 12 para Y según tu código original
+        font_size_title = 14
+        h_graph = 400
+        marker_size = 5 
+        marker_color = 'red'
+        line_shape = 'linear'
+
     fig_prediccion = go.Figure()
 
     # --- Trazado de datos históricos ---
     fig_prediccion.add_trace(go.Scatter(
         x=df_plot_hist['Año'], y=df_plot_hist['Valor'],
         mode='lines+markers', name='Histórico',
-        line=dict(color='#1f77b4', width=3), showlegend=False
+        line=dict(color='#1f77b4', width=line_width, shape=line_shape),
+        marker=dict(size=marker_size, color=marker_color),
+        showlegend=False
     ))
 
     # --- Trazado de predicción ---
     fig_prediccion.add_trace(go.Scatter(
         x=df_plot_pred['Año'], y=df_plot_pred['Valor'],
         mode='lines+markers', name='Predicción',
-        line=dict(color='#FF7F0E', width=3), showlegend=False
+        line=dict(color='#FF7F0E', width=line_width, shape=line_shape), 
+        marker=dict(size=marker_size, color=marker_color),
+        showlegend=False
     ))
 
     # --- Intervalo de confianza ---
@@ -3280,35 +3836,45 @@ def tab_ST_ARIMA(df, indicador, p, d, q, n):
 
     # --- Configuración de Ejes ---
     fig_prediccion.update_xaxes(
-        tickmode='auto', #'linear',
-        nticks=10, # Número máximo de etiquetas en el eje x
+        tickmode='auto',
+        nticks=n_ticks_x, # Dinámico: 10 o 20
         tickangle=0,
-        tickfont=dict(size=10, color='black', family='Arial Black'),
+        tickfont=dict(size=font_size_axes, color='black', family='Arial Black'),
         tickformat='d',
+        showgrid=show_grid,
+        gridcolor=grid_color
     )
 
     fig_prediccion.update_yaxes(
-        tickfont=dict(size=12, color='black', family='Arial Black'),
+        tickfont=dict(size=font_size_axes, color='black', family='Arial Black'),
         automargin=True,
-        separatethousands=False  # Elimina la coma de miles en el eje Y si se desea consistencia
+        separatethousands=False,
+        showgrid=show_grid,
+        gridcolor=grid_color
     )
 
     # --- Configuración de Layout ---
-    titulo = f"{dict_nlargos[ind_orig].upper()}"
+    titulo_texto = f"{dict_nlargos[ind_orig].upper()}"
     fig_prediccion.update_layout(
-        title={'text': f"<b>{titulo}</b>", 'font': {'size': 14, 'color': 'black'}, 'x': 0.01},
-        height=400,
+        title={
+            'text': f"<b>{titulo_texto}</b>", 
+            'font': {'size': font_size_title, 'color': 'black'}, 
+            'x': 0.01
+        },
+        height=h_graph,
         autosize=True,
         margin=dict(l=5, r=5, t=40, b=5), 
         template="plotly_white",
         hovermode="x unified"
     )
 
-    # 1. Aseguramos que la columna 'Año' contenga solo el string de 4 dígitos
-    # (Esto ya debería venir así del paso anterior, pero lo garantizamos)
-    df_plot_pred['Año'] = df_plot_pred['Año'].astype(str).str[:4]
 
-    # 2. Generamos el HTML con los formateadores específicos
+
+    ###### TABLA CON LOS VALORES PREDICHOS
+    # Para que la columna 'Año' contenga solo el string de 4 dígitos
+    # (Esto ya debería venir así del paso anterior, pero para asegurar)
+    df_plot_pred['Año'] = df_plot_pred['Año'].astype(str).str[:4]
+    # Se genera el HTML con los formateadores específicos
     # Nota: Se usa "{:.2f}" para evitar la coma de miles que produce "{:,.2f}"
     tabla_pred_html = df_plot_pred.to_html(
         classes='table_arima', 
@@ -3322,21 +3888,24 @@ def tab_ST_ARIMA(df, indicador, p, d, q, n):
             'Sup': lambda x: f"{x:.2f}"
         }
     )
-
-    # 3. Estructura final de la tabla con el estilo CSS
+    # Estructura final de la tabla con el estilo CSS
     tabla_pred = f"""
         <div style='font-family: Arial; font-size: 14px; overflow-x: auto; margin-top: 20px;'>
-            <h4 style='color: #000000;'>Valores Pronosticados ({df_plot_pred['Año'].iloc[0]} en adelante)</h4>
+            <h4 style='color: #000000;'>VALORES PRONOSTICADOS (DESDE {df_plot_pred['Año'].iloc[0]})</h4>
             <style>
                 .table_arima {{ width: 100%; border-collapse: collapse; margin-top: 10px; background-color: #FFFFFF !important; }}
                 .table_arima th {{ background-color: #F2F4F4 !important; color: #000000 !important; padding: 12px; text-align: center; border: 1px solid black; font-size: 15px; font-weight: bold; }}
                 .table_arima td {{ background-color: #FFFFFF !important; color: #000000 !important; padding: 10px; border: 1px solid black; text-align: right; font-family: Arial, sans-serif; font-size: 16px; font-weight: bold; }}
                 .table_arima tr:hover {{ background-color: #F2F4F4 !important; }}
             </style>
-            {tabla_pred_html}<br><br>
+            {tabla_pred_html}
+            <br>
         </div>
     """
 
+
+
+    ###### GRÁFICOS DE RESIDUOS
     fig_residuos = make_subplots(
         rows=4, cols=1, 
         subplot_titles=('Residuos Estandarizados', 
@@ -3356,11 +3925,40 @@ def tab_ST_ARIMA(df, indicador, p, d, q, n):
                            row=1, col=1)
     
     # Histograma y Densidad
-    fig_residuos.add_trace(go.Histogram(x=residuos, 
-                                        nbinsx=30, 
-                                        name='Hist.', 
-                                        histnorm='probability density'), 
-                                        row=2, col=1)
+    # 1. Calcular parámetros para la curva normal teórica
+    residuos_mean = np.mean(residuos)
+    residuos_std = np.std(residuos)
+    x_range = np.linspace(min(residuos), max(residuos), 100)
+    norm_pie = stats.norm.pdf(x_range, residuos_mean, residuos_std)
+
+    # 2. Histograma
+    fig_residuos.add_trace(go.Histogram(
+        x=residuos, 
+        nbinsx=30, 
+        name='Histograma', 
+        histnorm='probability density',
+        marker_color='lightblue',
+        opacity=0.7
+    ), row=2, col=1)
+
+    # 3. Añadir curva Normal Teórica (Campana de Gauss)
+    fig_residuos.add_trace(go.Scatter(
+        x=x_range, 
+        y=norm_pie, 
+        mode='lines', 
+        name='Normal Teórica',
+        line=dict(color='red', width=2)
+    ), row=2, col=1)
+
+    # 4. Opcional: Añadir KDE (Densidad empírica real)
+    kde = stats.gaussian_kde(residuos)
+    fig_residuos.add_trace(go.Scatter(
+        x=x_range, 
+        y=kde(x_range), 
+        mode='lines', 
+        name='KDE (Real)',
+        line=dict(color='black', dash='dash')
+    ), row=2, col=1)
     
     # Probabilidad Normal
     qq = stats.probplot(residuos, dist="norm")
@@ -3376,11 +3974,41 @@ def tab_ST_ARIMA(df, indicador, p, d, q, n):
                                       row=3, col=1)
 
     # Correlograma
+    # 1. Calcular el ACF y el intervalo de confianza
+    n = len(residuos)
     acf_res = sm.tsa.stattools.acf(residuos, nlags=20)
-    fig_residuos.add_trace(go.Bar(x=list(range(len(acf_res))), 
-                                  y=acf_res, 
-                                  name='ACF Residuos'), 
-                                  row=4, col=1)
+    # Umbral de significancia al 95% (aprox. 1.96 desviaciones estándar)
+    conf_interval = 1.96 / np.sqrt(n)
+    # 2. Agregar las barras del ACF (Tu código base)
+    fig_residuos.add_trace(go.Bar(
+        x=list(range(len(acf_res))), 
+        y=acf_res, 
+        name='ACF Residuos',
+        marker_color='royalblue'
+    ), row=4, col=1)
+    # 3. Agregar línea de significancia superior
+    fig_residuos.add_hline(
+        y=conf_interval, 
+        line_dash="dash", 
+        line_color="red", 
+        line_width=1,
+        row=4, col=1
+    )
+    # 4. Agregar línea de significancia inferior
+    fig_residuos.add_hline(
+        y=-conf_interval, 
+        line_dash="dash", 
+        line_color="red", 
+        line_width=1,
+        row=4, col=1
+    )
+    # 5. Agregar una región sombreada para mejor visualización
+    fig_residuos.add_hrect(
+        y0=-conf_interval, y1=conf_interval, 
+        fillcolor="rgba(255, 0, 0, 0.1)", 
+        line_width=0,
+        row=4, col=1
+    )
 
     # Área de graficación
     fig_residuos.update_layout(height=1000, 
@@ -3404,14 +4032,149 @@ def tab_ST_ARIMA(df, indicador, p, d, q, n):
         linecolor='gray', mirror=True
     )
 
-    # 1. Ejecución de la comparativa
-    df_comparativa = comparar_modelos_ARIMA(serie, p, d, q)
 
-    # 2. Identificación del mejor modelo
+
+    ###### PRUEBA DE JARQUE-BERA PARA LOS RESIDUOS
+    # La prueba evalúa si los residuos tienen la asimetría y curtosis de una distribución normal.
+    # El método 'jarquebera' devuelve un array donde el índice [0, 1] corresponde al p-value.
+    jb_test = resultado.test_normality(method='jarquebera')
+    p_value_jb = jb_test[0, 1]
+    # Determinación del estado de normalidad
+    # H0: Los residuos siguen una distribución normal.
+    # Ha: Los residuos no siguen una distribución normal (presencia de sesgo o colas pesadas).
+    es_normal = p_value_jb > 0.05
+    color_status_jb = "#28B463" if es_normal else "#CB4335"
+    mensaje_jb = "Residuos con Distribución Normal" if es_normal else "Residuos No Normales"
+    # Definición de la conclusión técnica según el resultado estadístico
+    conclusion_jb = (
+        "La distribución de los errores es simétrica y mesocúrtica." 
+        if es_normal else 
+        "Existen desviaciones en la simetría o curtosis; los intervalos de confianza pueden ser poco fiables."
+    )
+    # Integración de lógica y estilos en un único bloque HTML
+    reporte_jarque_bera = f"""
+    <div style='font-family: Arial; font-size: 14px; margin-top: 10px; border: 1px solid #ddd; padding: 15px; border-radius: 5px; background-color: #fcfcfc;'>
+        <b style='color: #000000;'>Validación de Residuos (Prueba Jarque-Bera):</b><br>
+        <div style='margin-top: 8px;'>
+            Estadístico p-value: <span style='color: {color_status_jb}; font-weight: bold;'>{p_value_jb:.4f}</span><br>
+            Estado: <b style='color: {color_status_jb};'>{mensaje_jb}</b>
+        </div>
+        
+        <div style='margin-top: 10px; padding: 8px; border-left: 4px solid {color_status_jb}; background-color: #f4f6f7;'>
+            <b style='font-size: 13px; color: #2C3E50;'>Conclusión Técnica:</b><br>
+            <span style='color: #212F3D;'>{conclusion_jb}</span>
+        </div>
+        <p style='font-size: 12px; color: #566573; margin-top: 10px; font-style: italic;'>
+            Nota: En inferencia estadística, un p-value > 0.05 indica que no se puede rechazar la normalidad, 
+            lo cual valida que los supuestos del modelo permiten realizar predicciones con intervalos de probabilidad precisos.
+        </p>
+    </div>
+    """
+
+
+
+    ###### PRUEBA LJUNG-BOX PARA LOS RESIDUOS
+    # Ejecución de la prueba de Ljung-Box sobre los residuos
+    # Los residuos se obtienen del modelo ajustado
+    residuos = resultado.resid
+    # Definición de rezagos a evaluar: 
+    # Generalmente se evalúan varios o un valor basado en la longitud de la serie (n_obs)
+    lag_val = min(10, len(residuos) // 5) 
+    # Es vital pasar model_df = p + q para ajustar los grados de libertad.
+    # Esto resta los parámetros del modelo ARIMA de la distribución Chi-cuadrado.
+    lb_test = acorr_ljungbox(
+        residuos, 
+        lags=[lag_val], 
+        return_df=True, 
+        model_df=(p + q)
+    )
+    p_value_lb = lb_test['lb_pvalue'].iloc[0]
+    # Determinación del estado de ruido blanco
+    # H0: Los residuos están distribuidos independientemente (Ruido Blanco)
+    # Ha: Los residuos presentan autocorrelación (Modelo insuficiente)
+    es_ruido_blanco = p_value_lb > 0.05
+    color_status = "#28B463" if es_ruido_blanco else "#CB4335"
+    mensaje_lb = "Residuos independientes (Ruido Blanco)" if es_ruido_blanco else "Residuos Autocorrelacionados"
+    # Definición de la conclusión técnica según el resultado estadístico
+    conclusion_lb = (
+        "Los residuos no muestran patrones sistemáticos." 
+        if es_ruido_blanco else 
+        "El modelo no capturó toda la estructura; deben ajustarse p o q."
+    )
+    # Integración de lógica y estilos en un único bloque HTML
+    reporte_ljung_box = f"""
+    <div style='font-family: Arial; font-size: 14px; margin-top: 10px; border: 1px solid #ddd; padding: 15px; border-radius: 5px; background-color: #fcfcfc;'>
+        <b style='color: #000000;'>Validación de Residuos (Prueba Ljung-Box):</b><br>
+        <div style='margin-top: 8px;'>
+            Estadístico p-value: <span style='color: {color_status}; font-weight: bold;'>{p_value_lb:.4f}</span><br>
+            Estado: <b style='color: {color_status};'>{mensaje_lb}</b>
+        </div>
+        <div style='margin-top: 10px; padding: 8px; border-left: 4px solid {color_status}; background-color: #f4f6f7;'>
+            <b style='font-size: 13px; color: #2C3E50;'>Conclusión Técnica:</b><br>
+            <span style='color: #212F3D;'>{conclusion_lb}</span>
+        </div>
+        <p style='font-size: 12px; color: #566573; margin-top: 10px; font-style: italic;'>
+            Nota: En los modelos ARIMA, un p-value > 0.05 implica que no se puede rechazar H0, 
+            confirmando que el error es ruido blanco y el modelo es estadísticamente adecuado.
+        </p>
+    </div>
+    """
+
+
+
+    # PRUEBA DE ENGLE PARA EFECTOS ARCH (HETEROCEDASTICIDAD)
+    # Evalúa si la varianza de los residuos es constante en el tiempo.
+    # Se utiliza el mismo número de rezagos (lag_val) que en la prueba de Ljung-Box.
+    arch_test = het_arch(residuos, nlags=lag_val)
+    p_value_arch = arch_test[1]
+    # Determinación del estado de homocedasticidad
+    # H0: Los residuos son homocedásticos (Varianza constante)
+    # Ha: Existen efectos ARCH (Heterocedasticidad / Varianza volátil)
+    es_homocedastico = p_value_arch > 0.05
+    color_status_arch = "#28B463" if es_homocedastico else "#CB4335"
+    mensaje_arch = "Varianza Constante (Homocedasticidad)" if es_homocedastico else "Varianza No Constante (Heterocedasticidad)"
+    # Definición de la conclusión técnica y sugerencia de Box-Cox
+    if es_homocedastico:
+        conclusion_arch = "No se detectan efectos ARCH significativos en los residuos."
+        sugerencia_tecnica = "" # No se requiere intervención
+    else:
+        conclusion_arch = "Se detectó volatilidad agrupada en los errores del modelo."
+        sugerencia_tecnica = f"""
+        <div style='margin-top:10px; padding:10px; background-color:#FDEBD0; border-left: 5px solid #D35400; font-size:12px;'>
+            <b style='color: #935116;'>💡 Sugerencia técnica:</b> 
+            Dada la heterocedasticidad detectada, se recomienda aplicar una <b>transformación de Box-Cox</b> 
+            o logarítmica a la serie original antes del ajuste para estabilizar la varianza.
+        </div>"""
+    # Integración de lógica y estilos en un único bloque HTML
+    reporte_engle_arch = f"""
+    <div style='font-family: Arial; font-size: 14px; margin-top: 10px; border: 1px solid #ddd; padding: 15px; border-radius: 5px; background-color: #fcfcfc;'>
+        <b style='color: #000000;'>Validación de Residuos (Prueba de Engle ARCH):</b><br>
+        <div style='margin-top: 8px;'>
+            Estadístico p-value: <span style='color: {color_status_arch}; font-weight: bold;'>{p_value_arch:.4f}</span><br>
+            Estado: <b style='color: {color_status_arch};'>{mensaje_arch}</b>
+        </div>
+        
+        <div style='margin-top: 10px; padding: 8px; border-left: 4px solid {color_status_arch}; background-color: #f4f6f7;'>
+            <b style='font-size: 13px; color: #2C3E50;'>Conclusión Técnica:</b><br>
+            <span style='color: #212F3D;'>{conclusion_arch}</span>
+        </div>
+        {sugerencia_tecnica}
+        <p style='font-size: 12px; color: #566573; margin-top: 10px; font-style: italic;'>
+            Nota: La prueba ARCH de Engle es fundamental para validar que el modelo ARIMA ha capturado 
+            adecuadamente la dinámica de la varianza. Un p-value < 0.05 sugiere que el error cuadrático 
+            está autocorrelacionado.
+        </p>
+    </div>
+    """
+
+
+
+    # TABLA COMPARATIVA ENTRE MODELOS ARIMA BÁSICOS Y EL CALCULADO
+    df_comparativa = comparar_modelos_ARIMA(serie, p, d, q)
+    # Identificación del mejor modelo
     mejor_orden_aic = df_comparativa.iloc[0]['Orden (p,d,q)']
     es_optimo = mejor_orden_aic == str((p, d, q))
-
-    # 3. Construcción de las filas HTML (Debe ir ANTES de armar el reporte final)
+    # Construcción de las filas HTML (Debe ir ANTES de armar el reporte final)
     filas_comp_html = ""
     for _, fila in df_comparativa.iterrows():
         # Resaltar en verde la fila que tenga el mejor AIC
@@ -3423,8 +4186,7 @@ def tab_ST_ARIMA(df, indicador, p, d, q, n):
                 <td style='padding: 8px; border: 1px solid black; text-align: right;'>{fila['BIC']:.2f}</td>
             </tr>
         """
-
-    # 4. Definición del mensaje de eficiencia basado en la bandera 'es_optimo'
+    # Definición del mensaje de eficiencia basado en la bandera 'es_optimo'
     if es_optimo:
         mensaje_eficiencia = (
             f"<div style='color: #000000; font-weight: bold; margin-bottom: 10px;'>"
@@ -3435,8 +4197,7 @@ def tab_ST_ARIMA(df, indicador, p, d, q, n):
             f"<div style='color: #000000; font-weight: bold; margin-bottom: 10px;'>"
             f"El modelo {mejor_orden_aic} presenta un menor AIC. Deben ajustarse los parámetros.</div>"
         )
-
-    # 5. Construcción del Reporte Final (Versión consolidada y única)
+    # Construcción del Reporte Final
     reporte_comparativo = f"""
     <div style='margin-top: 20px; font-family: Arial; padding: 15px; border: 1px solid #D5DBDB; border-radius: 8px; background-color: #FBFCFC;'>
         <b style='color: #000000; font-size: 16px;'>Comparativa de Eficiencia (AIC y BIC)</b>
@@ -3461,9 +4222,21 @@ def tab_ST_ARIMA(df, indicador, p, d, q, n):
     </div>
     """
 
-    reporte_detallado = reporte_lb + reporte_comparativo
+    reporte_pruebas = reporte_jarque_bera + reporte_ljung_box + reporte_engle_arch
+    reporte_detallado =  reporte_pruebas + reporte_comparativo
 
-    return df_final, reporte, fig_prediccion, tabla_pred, fig_residuos, reporte_detallado
+    if graf:
+        return fig_prediccion
+    else:
+        return (df_final, reporte_general, 
+                fig_prediccion, tabla_pred, 
+                fig_residuos, reporte_pruebas, reporte_comparativo)
+
+def tab_ST_ARIMA_graf(df, var, p, d, q):
+
+    figura = tab_ST_ARIMA(df, var, p, d, q, n = 5, graf = True)
+
+    return gr.update(visible=True), figura
 
 def comparar_modelos_ARIMA(serie, p_actual, d, q_actual):
     """
@@ -3593,11 +4366,20 @@ def tab_ST_imputar_df(df, imp_option, indicador, serie, mg, tend, mm, sd):
                 gr.update(visible=True), 
                 # Gráfico de tendencia
                 graph,
-                ## Sección de Descomposición de la Serie
+                ## Sección de Descomposición de la Serie - STL
                 # Información de filtros
                 gr.update(),
-                # Gráfico de descomposición e interpretación
-                gr.Plot(visible=False), gr.update(visible=False),
+                # Área de cuatro gráficos de descomposición
+                gr.update(visible=False), 
+                # Interpretación
+                gr.update(visible=False),
+                ## Sección de Descomposición de la Serie - HW
+                # Información de filtros
+                gr.update(),
+                # Área de cuatro gráficos de descomposición
+                gr.update(visible=False), 
+                # Interpretación
+                gr.update(visible=False),
                 ## Sección de Diferenciación y Prueba ADF
                 # Información de filtros
                 gr.update(),
@@ -3612,26 +4394,17 @@ def tab_ST_imputar_df(df, imp_option, indicador, serie, mg, tend, mm, sd):
                 ## Sección de ACF y PACF
                 # Información de filtros
                 gr.update(),
-                # Gráfico e interpretación de ACF
-                gr.Plot(visible=False), gr.update(visible=False),
-                # Gráfico e interpretación de PACF
-                gr.Plot(visible=False), gr.update(visible=False),
+                # Mensaje de error
+                gr.update(visible=False),
+                # Área de gráficos e info de ACF y PACF
+                gr.update(visible=False),
                 ## Sección ARIMA
                 # Variables de estado 'p' y 'q'
                 gr.update(value=NO_EXISTE), gr.update(value=NO_EXISTE),
                 # Información de filtros y parámetros de ARIMA
                 gr.update(), gr.update(visible=False),
-                # Gráfico de predicciones y tabla de predicciones
-                gr.Plot(visible=False), gr.update(visible=False),
-                # Gráficos de residuos e info de residuos
-                gr.Plot(visible=False), gr.update(visible=False),
-                ## Sección AUTO-ARIMA
-                # Información de filtros y parámetros de AUTO-ARIMA
-                # gr.update(), gr.update(visible=False),
-                # Gráfico de predicciones y tabla de predicciones
-                # gr.Plot(visible=False), gr.update(visible=False),
-                # Info de residuos
-                # gr.update(visible=False),
+                # Área de tablas y gráficos de ARIMA
+                gr.update(visible=False),
                 ## Sección FOURIER
                 # Información de filtros
                 gr.update(),
@@ -3676,11 +4449,20 @@ def tab_ST_restaurar_df(df, cultivo, provincia, departamento,
                 gr.Button(interactive=False),
                 # Área y gráfico de tendencia
                 gr.update(visible=True), graph,
-                ## Sección de Descomposición de la Serie
+                ## Sección de Descomposición de la Serie - STL
                 # Información de filtros
                 gr.update(),
-                # Gráfico de descomposición e interpretación
-                gr.Plot(visible=False), gr.update(visible=False),
+                # Área de cuatro gráficos de descomposición 
+                gr.update(visible=False), 
+                # Interpretación
+                gr.update(visible=False),
+                ## Sección de Descomposición de la Serie - HW
+                # Información de filtros
+                gr.update(),
+                # Área de cuatro gráficos de descomposición 
+                gr.update(visible=False), 
+                # Interpretación
+                gr.update(visible=False),
                 ## Sección de Diferenciación y Prueba ADF
                 # Información de filtros
                 gr.update(),
@@ -3695,26 +4477,17 @@ def tab_ST_restaurar_df(df, cultivo, provincia, departamento,
                 ## Sección de ACF y PACF
                 # Información de filtros
                 gr.update(),
-                # Gráfico e interpretación de ACF
-                gr.Plot(visible=False), gr.update(visible=False),
-                # Gráfico e interpretación de PACF
-                gr.Plot(visible=False), gr.update(visible=False),
+                # Mensaje de error
+                gr.update(visible=False),
+                # Área de gráficos e info de ACF y PACF
+                gr.update(visible=False),
                 ## Sección ARIMA
                 # Variables de estado 'p' y 'q'
                 gr.update(value=NO_EXISTE), gr.update(value=NO_EXISTE),
                 # Información de filtros y parámetros de ARIMA
                 gr.update(), gr.update(visible=False),
-                # Gráfico de predicciones y tabla de predicciones
-                gr.Plot(visible=False), gr.update(visible=False),
-                # Gráficos de residuos e info de residuos
-                gr.Plot(visible=False), gr.update(visible=False),
-                ## Sección AUTO-ARIMA
-                # Información de filtros y parámetros de AUTO-ARIMA
-                # gr.update(), gr.update(visible=False),
-                # Gráfico de predicciones y tabla de predicciones
-                # gr.Plot(visible=False), gr.update(visible=False),
-                # Info de residuos
-                # gr.update(visible=False),
+                # Área de tablas y gráficos de ARIMA
+                gr.update(visible=False),
                 ## Sección FOURIER
                 # Información de filtros
                 gr.update(),
@@ -3744,11 +4517,20 @@ def tab_ST_cortar_df(df, indicador, yinicial, yfinal, serie, mg, tend, mm, sd):
                 gr.Button(interactive=True), gr.update(),
                 # Area y gráfico de tendencia
                 gr.update(), gr.update(),
-                ## Sección de Descomposición de la Serie
+                ## Sección de Descomposición de la Serie - STL
                 # Información de filtros
                 gr.update(),
-                # Gráfico de descomposición e interpretación
-                gr.Plot(visible=False), gr.update(visible=False),
+                # Área de cuatro gráficos de descomposición 
+                gr.update(visible=False), 
+                # Interpretación
+                gr.update(visible=False),
+                ## Sección de Descomposición de la Serie - HW
+                # Información de filtros
+                gr.update(),
+                # Área de cuatro gráficos de descomposición 
+                gr.update(visible=False), 
+                # Interpretación
+                gr.update(visible=False),
                 ## Sección de Diferenciación y Prueba ADF
                 # Información de filtros
                 gr.update(),
@@ -3763,26 +4545,17 @@ def tab_ST_cortar_df(df, indicador, yinicial, yfinal, serie, mg, tend, mm, sd):
                 ## Sección de ACF y PACF
                 # Información de filtros
                 gr.update(),
-                # Gráfico e interpretación de ACF
-                gr.Plot(visible=False), gr.update(visible=False),
-                # Gráfico e interpretación de PACF
-                gr.Plot(visible=False), gr.update(visible=False),
+                # Mensaje de error
+                gr.update(visible=False),
+                # Área de gráficos e info de ACF y PACF
+                gr.update(visible=False),
                 ## Sección ARIMA
                 # Variables de estado 'p' y 'q'
                 gr.update(value=NO_EXISTE), gr.update(value=NO_EXISTE),
                 # Información de filtros y parámetros de ARIMA
                 gr.update(), gr.update(visible=False),
-                # Gráfico de predicciones y tabla de predicciones
-                gr.Plot(visible=False), gr.update(visible=False),
-                # Gráficos de residuos e info de residuos
-                gr.Plot(visible=False), gr.update(visible=False),
-                ## Sección AUTO-ARIMA
-                # Información de filtros y parámetros de AUTO-ARIMA
-                # gr.update(), gr.update(visible=False),
-                # Gráfico de predicciones y tabla de predicciones
-                # gr.Plot(visible=False), gr.update(visible=False),
-                # Info de residuos
-                # gr.update(visible=False),
+                # Área de tablas y gráficos de ARIMA
+                gr.update(visible=False),
                 ## Sección FOURIER
                 # Información de filtros
                 gr.update(),
@@ -3809,11 +4582,20 @@ def tab_ST_cortar_df(df, indicador, yinicial, yfinal, serie, mg, tend, mm, sd):
                 gr.Button(interactive=False), gr.Button(interactive=True),
                 # Area y gráfico de tendencia
                 gr.update(visible=True), graph,
-                ## Sección de Descomposición de la Serie
+                ## Sección de Descomposición de la Serie - STL
                 # Información de filtros
                 gr.update(),
-                # Gráfico de descomposición e interpretación
-                gr.Plot(visible=False), gr.update(visible=False),
+                # Área de cuatro gráficos de descomposición 
+                gr.update(visible=False), 
+                # Interpretación
+                gr.update(visible=False),
+                ## Sección de Descomposición de la Serie - HW
+                # Información de filtros
+                gr.update(),
+                # Área de cuatro gráficos de descomposición 
+                gr.update(visible=False), 
+                # Interpretación
+                gr.update(visible=False),
                 ## Sección de Diferenciación y Prueba ADF
                 # Información de filtros
                 gr.update(),
@@ -3828,26 +4610,17 @@ def tab_ST_cortar_df(df, indicador, yinicial, yfinal, serie, mg, tend, mm, sd):
                 ## Sección de ACF y PACF
                 # Información de filtros
                 gr.update(),
-                # Gráfico e interpretación de ACF
-                gr.Plot(visible=False), gr.update(visible=False),
-                # Gráfico e interpretación de PACF
-                gr.Plot(visible=False), gr.update(visible=False),
+                # Mensaje de error
+                gr.update(visible=False),
+                # Área de gráficos e info de ACF y PACF
+                gr.update(visible=False),
                 ## Sección ARIMA
                 # Variables de estado 'p' y 'q'
                 gr.update(value=NO_EXISTE), gr.update(value=NO_EXISTE),
                 # Información de filtros y parámetros de ARIMA
                 gr.update(), gr.update(visible=False),
-                # Gráfico de predicciones y tabla de predicciones
-                gr.Plot(visible=False), gr.update(visible=False),
-                # Gráficos de residuos e info de residuos
-                gr.Plot(visible=False), gr.update(visible=False),
-                ## Sección AUTO-ARIMA
-                # Información de filtros y parámetros de AUTO-ARIMA
-                # gr.update(), gr.update(visible=False),
-                # Gráfico de predicciones y tabla de predicciones
-                # gr.Plot(visible=False), gr.update(visible=False),
-                # Info de residuos
-                # gr.update(visible=False),
+                # Área de tablas y gráficos de ARIMA
+                gr.update(visible=False),
                 ## Sección FOURIER
                 # Información de filtros
                 gr.update(),
@@ -4510,6 +5283,7 @@ extra_css = f"""
 .portrait-bg-1 {{ background-image: url('data:image/png;base64,{fondo_portada}') !important; }}
 .portrait-bg-2 {{ background-image: url('data:image/png;base64,{fondo_titulo}') !important; }}
 .modal-ayuda {{ background-image: url('data:image/png;base64,{fondo_contenedor}') !important; }}
+.modal-grafico {{ background-image: url('data:image/png;base64,{fondo_contenedor}') !important; }}
 """
 custom_css = base_css + extra_css
 
@@ -4523,8 +5297,6 @@ portada_video = f'''
 </div>
 '''
 # endregion FUNCIONES PARA IMAGENES/VIDEOS EN BASE64 E INCLUSIÓN EN CÓDIGO CSS
-
-
 
 # YAE: ############################################################
 # region FUNCIONES PARA LA PESTAÑA "BOSQUES ALEATORIOS"
@@ -4754,12 +5526,482 @@ def rf_cargaPredecir(dfData, cultivo_seleccionado, provincia_seleccionada, btnRa
 # YAE: ############################################################
 
 
+# comienzo prg MAF
+# --- FUNCIONES PARA LA PESTAÑA "REDES NEURONALES" ---
+def get_timeline_nn(df, provincia=None, departamento=None):
+    if df.empty:
+        return "Sin años disponibles"
+    
+    temp_df = df.copy()
+    if provincia:
+        temp_df = temp_df[temp_df['provincia'] == provincia]
+    if departamento:
+        temp_df = temp_df[temp_df['departamento'] == departamento]
+    
+    if temp_df.empty:
+        return "<span style='color: red;'>Sin años disponibles para esta selección</span>"
+    
+    years = sorted(temp_df['periodo'].unique())
+    if not years:
+        return "<span style='color: red;'>Sin años disponibles</span>"
+    
+    return f"<div style='background-color: #f8f9fa; padding: 10px; border-radius: 8px; border-left: 5px solid #1f77b4; margin-bottom: 15px;'>" \
+           f"<span style='color: #666; font-size: 0.9em; text-transform: uppercase;'>Línea de Tiempo</span><br>" \
+           f"<b style='color: #1f77b4; font-size: 1.1em;'>Años disponibles: {years[0]} - {years[-1]}</b> <small>({len(years)} registros)</small></div>"
+
+def tab_NN_on_crop_change(dataset_type):
+    df, provincias = load_data(dataset_type)
+    if df.empty:
+        return gr.update(choices=[], value=None), gr.update(choices=[], value=None), gr.update(choices=[], value=None), "Sin datos"
+    
+    provincias_sorted = sorted([str(p) for p in provincias])
+    prov_first = provincias_sorted[0]
+    
+    dptos = df[df['provincia'] == prov_first]['departamento'].unique()
+    dptos_sorted = sorted([str(d) for d in dptos if d is not None])
+    dpto_first = dptos_sorted[0]
+    
+    numeric_cols = df.select_dtypes(include=['number']).columns.tolist()
+    indicadores = [dict_ncortos.get(c, c) for c in numeric_cols if c != 'periodo']
+    
+    timeline = get_timeline_nn(df, prov_first, dpto_first)
+    
+    return gr.update(choices=provincias_sorted, value=prov_first), \
+           gr.update(choices=dptos_sorted, value=dpto_first), \
+           gr.update(choices=indicadores, value=indicadores[0] if indicadores else None), \
+           timeline
+
+def tab_NN_on_prov_change(dataset_type, provincia):
+    df, _ = load_data(dataset_type)
+    if df.empty: return gr.update(choices=[], value=None), "Sin datos"
+    
+    dptos = df[df['provincia'] == provincia]['departamento'].unique()
+    dptos_sorted = sorted([str(d) for d in dptos if d is not None])
+    dpto_first = dptos_sorted[0] if dptos_sorted else None
+    
+    timeline = get_timeline_nn(df, provincia, dpto_first)
+    return gr.update(choices=dptos_sorted, value=dpto_first), timeline
+
+def tab_NN_on_dept_change(dataset_type, provincia, departamento):
+    df, _ = load_data(dataset_type)
+    return get_timeline_nn(df, provincia, departamento)
+
+def tab_NN_train_and_predict(dataset_type, provincia, departamento, indicador_nc, hidden_layers, max_iter):
+    df, _ = load_data(dataset_type)
+    if df.empty:
+        return "Error: Dataset no disponible", None, None
+    
+    # Obtener el nombre original de la columna
+    indicador = next((k for k, v in dict_ncortos.items() if v == indicador_nc), indicador_nc)
+    
+    # Filtrar datos
+    res_df = df[(df['provincia'] == provincia) & (df['departamento'] == departamento)].copy()
+    if res_df.empty or len(res_df) < 5:
+        return "Error: Datos insuficientes para entrenar (se requieren al menos 5 registros)", None, None
+    
+    res_df = res_df.sort_values('periodo')
+    X = res_df[['periodo']].values
+    y = res_df[indicador].values
+    
+    # Escalamiento
+    scaler_X = StandardScaler()
+    scaler_y = StandardScaler()
+    X_scaled = scaler_X.fit_transform(X)
+    y_scaled = scaler_y.fit_transform(y.reshape(-1, 1)).flatten()
+    
+    # Configuración de capas ocultas
+    try:
+        layers = tuple(map(int, hidden_layers.split(',')))
+    except:
+        layers = (100,)
+    
+    # Modelo
+    model = MLPRegressor(hidden_layer_sizes=layers, max_iter=int(max_iter), random_state=42)
+    model.fit(X_scaled, y_scaled)
+    
+    # Predicción
+    y_pred_scaled = model.predict(X_scaled)
+    y_pred = scaler_y.inverse_transform(y_pred_scaled.reshape(-1, 1)).flatten()
+    
+    # Métricas
+    r2 = r2_score(y, y_pred)
+    mse = mean_squared_error(y, y_pred)
+    
+    # Gráfico
+    fig = go.Figure()
+    fig.add_trace(go.Scatter(x=res_df['periodo'], y=y, mode='lines+markers', name='Actual', line=dict(color='blue')))
+    fig.add_trace(go.Scatter(x=res_df['periodo'], y=y_pred, mode='lines+markers', name='Predicho (RN)', line=dict(color='red', dash='dash')))
+    
+    fig.update_layout(
+        title=f"RED NEURONAL: {indicador_nc.upper()} - {provincia} ({departamento})",
+        xaxis_title="Año",
+        yaxis_title=indicador_nc,
+        template="plotly_white",
+        height=450
+    )
+    
+    stats_text = f"<b>Métricas del Modelo:</b><br>R²: {r2:.4f}<br>MSE: {mse:.4f}"
+    
+    # Tabla de resultados
+    results_df = pd.DataFrame({
+        "Año": res_df['periodo'],
+        "Valor Real": y,
+        "Valor Predicho": y_pred.round(2)
+    })
+    
+    return stats_text, fig, results_df
+# fin prg MAF
+
+# comienzo prg MAF
+def normalize_str(s):
+    if not isinstance(s, str): return ""
+    s = s.upper().strip()
+    s = ''.join(c for c in unicodedata.normalize('NFD', s) if unicodedata.category(c) != 'Mn')
+    return s
+
+def tab_Dashboard_load_geojsons():
+    try:
+        p_path = "Datasets/ProvinciasArgentina.geojson"
+        if os.path.exists(p_path):
+            with open(p_path, "r", encoding="utf-8") as f:
+                prov = json.load(f)
+
+        #Carga de GeoJSON segmentado en 5 partes
+        dept = {"type": "FeatureCollection", "features": []}
+        for i in range(1, 6):
+            part_path = f"Datasets/DepartamentosArgentina_part{i}.geojson"
+            if os.path.exists(part_path):
+                with open(part_path, "r", encoding="utf-8") as f:
+                    part_data = json.load(f)
+                    if 'features' in part_data:
+                        dept['features'].extend(part_data['features'])
+        
+        if not dept['features']:
+            dept = None
+
+
+        return prov, dept
+    except Exception as e:
+        print(f"Error cargando GeoJSONs: {e}")
+        return None, None
+
+GEOJSON_PROV, GEOJSON_DEPT = tab_Dashboard_load_geojsons()
+
+# mapeo para coordenadas
+DEPT_COORDS = {}
+if GEOJSON_DEPT:
+    for feat in GEOJSON_DEPT['features']:
+        props = feat['properties']
+        p_name = normalize_str(props.get('provincia', ''))
+        d_name = normalize_str(props.get('departamento', ''))
+        # Obtener centroide (promedio simple de coordenadas)
+        try:
+            geom = feat['geometry']
+            if geom['type'] == 'Polygon':
+                coords = np.array(geom['coordinates'][0])
+            elif geom['type'] == 'MultiPolygon':
+                coords = np.array(geom['coordinates'][0][0])
+            else:
+                continue
+            centroid = coords.mean(axis=0)
+            DEPT_COORDS[(p_name, d_name)] = (centroid[1], centroid[0]) # lat, lon
+        except:
+            continue
+
+def tab_Dashboard_get_summary(df, indicador, year_min, year_max):
+
+    if df.empty:
+        return "<div style='text-align: center; color: gray; padding: 10px;'>Seleccione filtros para ver indicadores</div>"
+    
+    ind_label = dict_ncortos.get(indicador, indicador)
+    total = df[indicador].sum()
+    avg = df[indicador].mean()
+    
+    # Provincia con mayor valor
+    prov_sums = df.groupby('provincia')[indicador].sum()
+    max_prov = prov_sums.idxmax() if not prov_sums.empty else "N/A"
+    
+    html = f"""
+    <div style='display: flex; flex-direction: column; align-items: center; background: rgba(31, 119, 180, 0.05); border-radius: 12px; border: 1px solid rgba(31, 119, 180, 0.2); padding: 10px; margin-bottom: 10px;'>
+        <p style='margin: 0 0 10px 0; font-size: 14px; font-weight: bold; color: #1f77b4;'>PERIODO ANALIZADO: {year_min} - {year_max}</p>
+        <div style='display: flex; justify-content: space-around; width: 100%;'>
+            <div style='text-align: center;'>
+                <p style='margin:0; font-size: 14px; color: #666;'>TOTAL {ind_label.upper()}</p>
+                <p style='margin:0; font-size: 24px; font-weight: bold; color: #1f77b4;'>{total:,.0f}</p>
+            </div>
+            <div style='text-align: center;'>
+                <p style='margin:0; font-size: 14px; color: #666;'>RENDIMIENTO PROMEDIO</p>
+                <p style='margin:0; font-size: 24px; font-weight: bold; color: #1f77b4;'>{avg:,.2f}</p>
+            </div>
+            <div style='text-align: center;'>
+                <p style='margin:0; font-size: 14px; color: #666;'>PROVINCIA LÍDER</p>
+                <p style='margin:0; font-size: 24px; font-weight: bold; color: #1f77b4;'>{max_prov}</p>
+            </div>
+        </div>
+    </div>
+    """
+    return html
+
+def get_image_base64(image_name):
+    try:
+        path = os.path.join("Images", image_name)
+        if os.path.exists(path):
+            with open(path, "rb") as image_file:
+                encoded = base64.b64encode(image_file.read()).decode()
+            return f"data:image/png;base64,{encoded}"
+    except:
+        pass
+    return None
+
+def tab_Dashboard_update_map(df, indicador, top_n, cultivo):
+    if df.empty or not GEOJSON_PROV:
+        fig = go.Figure()
+        fig.add_annotation(text="Sin datos para mostrar", showarrow=False, font_size=20)
+        fig.update_layout(template="plotly_white")
+        return fig
+
+    # Datos de coropleta: suma por provincia
+    df_prov = df.groupby('provincia')[indicador].sum().reset_index()
+    # Normalizar nombres de provincias para coincidencia
+    df_prov['prov_norm'] = df_prov['provincia'].apply(normalize_str)
+    
+    # Debemos asegurar que las características de GeoJSON también tengan nombres normalizados 
+    # para el mapeo de ubicaciones si es necesario.
+    # Las características de GEOJSON_PROV tienen "provincia": "Formosa", etc.
+    # Vamos a crear un mapeo en el geojson para que coincida con nuestros nombres normalizados.
+    temp_geojson = json.loads(json.dumps(GEOJSON_PROV))
+    for feat in temp_geojson['features']:
+        feat['properties']['prov_match'] = normalize_str(feat['properties'].get('provincia', ''))
+
+    fig = go.Figure()
+
+    # Capa de Coropleta
+    fig.add_trace(go.Choropleth(
+        geojson=temp_geojson,
+        locations=df_prov['prov_norm'],
+        z=df_prov[indicador],
+        featureidkey="properties.prov_match",
+        colorscale="Blues",
+        marker_opacity=0.6,
+        marker_line_width=0.5,
+        marker_line_color="white",
+        name="Provincias",
+        colorbar=dict(title=dict_ncortos.get(indicador, indicador), x=0)
+    ))
+
+    # Capa de puntos para Departamentos (Mapa de burbujas)
+    if 'departamento' in df.columns:
+        df_dept = df.groupby(['provincia', 'departamento'])[indicador].mean().reset_index()
+        df_dept['prov_norm'] = df_dept['provincia'].apply(normalize_str)
+        df_dept['dept_norm'] = df_dept['departamento'].apply(normalize_str)
+        
+        lats, lons, sizes, texts = [], [], [], []
+        # Calcular total para porcentajes
+        total_val = df_dept[indicador].sum() if not df_dept.empty else 1
+        if total_val == 0: total_val = 1
+        
+        for _, row in df_dept.iterrows():
+            key = (row['prov_norm'], row['dept_norm'])
+            if key in DEPT_COORDS:
+                coord = DEPT_COORDS[key]
+                lats.append(coord[0])
+                lons.append(coord[1])
+                val = row[indicador]
+                sizes.append(val)
+                pct = (val / total_val) * 100
+                texts.append(f"<b>{row['departamento']}</b><br>{row['provincia']}<br>{dict_ncortos.get(indicador, indicador)}: {val:,.2f}<br>Participación: {pct:.2f}%")
+        
+        if lats:
+            # Escalar tamaños para mejor visibilidad
+            max_val = max(sizes) if sizes else 1
+            scaled_sizes = [max(5, (s / max_val) * 25) for s in sizes]
+            
+            fig.add_trace(go.Scattergeo(
+                lat=lats,
+                lon=lons,
+                marker=dict(
+                    size=scaled_sizes,
+                    color="#1f77b4",
+                    opacity=0.8,
+                    line=dict(width=0.5, color='white')
+                ),
+                text=texts,
+                hoverinfo="text",
+                name="Departamentos"
+            ))
+
+
+    fig.update_geos(
+
+        fitbounds="locations",
+        visible=False,
+        projection_type="mercator"
+    )
+    
+    fig.update_layout(
+        margin={"r":0,"t":40,"l":0,"b":0},
+        height=600,
+        paper_bgcolor='rgba(0,0,0,0)',
+        plot_bgcolor='rgba(0,0,0,0)',
+        title=dict(text=f"Mapa de {dict_ncortos.get(indicador, indicador)}", x=0.5, font=dict(size=18, color='#1f77b4'))
+    )
+    
+    # Actualizar etiqueta de la barra de colores si existe en la primera traza
+    # Agregar imagen del cultivo en la esquina
+    img_name = IMAGE_MAP.get(cultivo)
+    if img_name:
+        b64_img = get_image_base64(img_name)
+        if b64_img:
+            fig.add_layout_image(
+                dict(
+                    source=b64_img,
+                    xref="paper", yref="paper",
+                    x=0.98, y=0.98,
+                    sizex=0.2, sizey=0.2,
+                    xanchor="right", yanchor="top",
+                    layer="above"
+                )
+            )
+
+    # Agregar lista de ranking en la esquina inferior derecha (Provincia o Departamento)
+    is_single_prov = df['provincia'].nunique() == 1
+    rank_col = 'departamento' if is_single_prov else 'provincia'
+    rank_title = "Ranking Departamentos" if is_single_prov else "Ranking Provincias"
+    
+    df_rank = df.groupby(rank_col)[indicador].sum().reset_index().sort_values(by=indicador, ascending=False)
+    
+    list_items = []
+    for i, (_, row) in enumerate(df_rank.iterrows()):
+        item_name = row[rank_col]
+        val = row[indicador]
+        # Resaltar el top N
+        if i < top_n:
+            list_items.append(f"● <b>{item_name}</b>: {val:,.0f}")
+        else:
+            list_items.append(f"○ {item_name}: {val:,.0f}")
+    
+    # Limitar la lista si es muy larga para evitar sobrecargar el mapa (ej. top 15)
+    display_items = list_items[:15]
+    if len(list_items) > 15:
+        display_items.append("...")
+        
+    ranking_text = f"<b>{rank_title}</b><br>" + "<br>".join(display_items)
+    
+    fig.add_annotation(
+        text=ranking_text,
+        xref="paper", yref="paper",
+        x=0.99, y=0.01,
+        showarrow=False,
+        align="left",
+        xanchor="right",
+        yanchor="bottom",
+        font=dict(size=10, color="black"),
+        bgcolor="rgba(255, 255, 255, 0.7)",
+        bordercolor="#1f77b4",
+        borderwidth=1,
+        borderpad=4
+    )
+
+    return fig
+
+
+def tab_Dashboard_update_charts(df, indicador, top_n):
+    if df.empty:
+        return None, None
+    
+    ind_label = dict_ncortos.get(indicador, indicador)
+
+    # Gráfico de Torta: Top N Provincias
+    df_top = df.groupby('provincia')[indicador].sum().sort_values(ascending=False).head(top_n).reset_index()
+    fig_pie = px.pie(df_top, values=indicador, names='provincia', 
+                    title=f"Distribución Top {top_n} Provincias ({ind_label})",
+                    color_discrete_sequence=px.colors.sequential.Blues_r)
+    fig_pie.update_layout(margin=dict(t=40, b=20, l=20, r=20), height=350)
+    
+    # Gráfico de Evolución: A lo largo de los años
+    df_year = df.groupby('periodo')[indicador].sum().reset_index()
+    fig_evo = px.area(df_year, x='periodo', y=indicador, 
+                     title=f"Evolución Histórica: {ind_label}",
+                     color_discrete_sequence=['#1f77b4'])
+    
+    # Agregar Línea de Tendencia
+    if len(df_year) > 1:
+        z = np.polyfit(df_year['periodo'], df_year[indicador], 1)
+        p = np.poly1d(z)
+        df_year['trend'] = p(df_year['periodo'])
+        
+        fig_evo.add_trace(go.Scatter(
+            x=df_year['periodo'], 
+            y=df_year['trend'],
+            mode='lines',
+            name='Tendencia',
+            line=dict(color='red', width=2, dash='dot')
+        ))
+
+    fig_evo.update_layout(
+        margin=dict(t=40, b=20, l=20, r=20), 
+        height=350, 
+        template="plotly_white",
+        yaxis_title=ind_label,
+        xaxis_title="Año"
+    )
+    
+    return fig_pie, fig_evo
+
+
+def tab_Dashboard_on_cultivo_change(cultivo):
+    df, provincias = load_data(cultivo)
+    
+    if df.empty:
+        return gr.update(choices=["Todas"], value="Todas"), gr.update(choices=["Todos"], value="Todos"), gr.update(value=1970), gr.update(value=2024)
+    
+    provs = sorted([str(p) for p in df['provincia'].unique() if p])
+    year_min, year_max = int(df['periodo'].min()), int(df['periodo'].max())
+    
+    return gr.update(choices=["Todas"] + provs, value="Todas"), \
+           gr.update(choices=["Todos"], value="Todos"), \
+           gr.update(minimum=year_min, maximum=year_max, value=year_min), \
+           gr.update(minimum=year_min, maximum=year_max, value=year_max)
+
+
+def tab_Dashboard_on_provincia_change(cultivo, provincia):
+    df, _ = load_data(cultivo)
+    if df.empty or provincia == "Todas":
+        return gr.update(choices=["Todos"], value="Todos")
+    
+    depts = sorted([str(d) for d in df[df['provincia'] == provincia]['departamento'].unique() if d])
+    return gr.update(choices=["Todos"] + depts, value="Todos")
+
+def tab_Dashboard_run(cultivo, provincia, departamento, year_min, year_max, indicador, top_n):
+    df, _ = load_data(cultivo)
+    if df.empty:
+        return "<p>No hay datos</p>", go.Figure(), None, None
+    
+    # Filtrado
+    df_f = df[(df['periodo'] >= year_min) & (df['periodo'] <= year_max)]
+
+    if provincia != "Todas":
+        df_f = df_f[df_f['provincia'] == provincia]
+        if departamento != "Todos":
+            df_f = df_f[df_f['departamento'] == departamento]
+    
+    summary = tab_Dashboard_get_summary(df_f, indicador, year_min, year_max)
+    fig_map = tab_Dashboard_update_map(df_f, indicador, top_n, cultivo)
+    fig_pie, fig_evo = tab_Dashboard_update_charts(df_f, indicador, top_n)
+    
+    return summary, fig_map, fig_pie, fig_evo
+
+
+# fin prg MAF
+
+
 
 ###### INTERFACE GRADIO ######
 
 with gr.Blocks(title="Análisis de Cultivos") as app:
     gr.HTML(f"<style>{custom_css}</style>")
     
+    # region: VARIABLES DE ESTADO
     # Almacenamiento para el dataset elegido
     dataset_state = gr.State(pd.DataFrame())
     # Almacenamiento para el dataset elegido y filtrado por campos clave
@@ -4807,6 +6049,16 @@ with gr.Blocks(title="Análisis de Cultivos") as app:
     dataset_AUTO_ARIMA_state_1 = gr.State(pd.DataFrame())
     dataset_AUTO_ARIMA_state_2 = gr.State(pd.DataFrame())
     dataset_AUTO_ARIMA_state_3 = gr.State(pd.DataFrame())
+    # Valores que indican el tipo de gráfico a generar en la ventana modal
+    # que muestra el gráfico ampliado
+    todos = gr.State(0)
+    original = gr.State(1)
+    tendencia = gr.State(2)
+    estacionalidad = gr.State(3)
+    residuos = gr.State(4)
+    periodograma = gr.State(5)
+    # endregion: VARIABLES DE ESTADO
+    
 
 
     gr.Row(elem_classes="header-tab")
@@ -4835,11 +6087,96 @@ with gr.Blocks(title="Análisis de Cultivos") as app:
                             "en las principales regiones productoras del país.",
                             elem_classes="portrait-subtitle")
         
-
         ###### PESTAÑA DASHBOARD
-        with gr.Tab("Dashboard"):
+        # comienzo prg MAF
+        with gr.Tab("Dashboard") as tab_Dashboard:
             with gr.Row(elem_classes="title-tab"):
-                gr.HTML("&nbsp;&nbsp;INDICADORES DE CULTIVOS", elem_classes="title-text")
+                gr.HTML("&nbsp;&nbsp;CULTIVOS DE ARGENTINA - Dashboard", elem_classes="title-text")
+         
+            with gr.Row():
+                with gr.Column(scale=10):
+                    db_summary = gr.HTML(value="<p style='text-align:center'>Cargando resumen...</p>")
+                
+            with gr.Row():
+                with gr.Column(scale=4):
+                    db_map = gr.Plot(show_label=False)
+                
+                with gr.Column(scale=1, elem_classes="custom-tab"):
+                    db_cultivo = gr.Radio(label="Cultivo", 
+                                          choices=list(FILE_MAP.keys()), 
+                                          value="SOJA",
+                                          elem_classes="custom-radio")
+                    
+                    db_provincia = gr.Dropdown(label="Provincia", 
+                                               choices=["Todas"], 
+                                               value="Todas",
+                                               elem_classes="custom-dropdown")
+                    
+                    db_departamento = gr.Dropdown(label="Departamento", 
+                                                  choices=["Todos"], 
+                                                  value="Todos",
+                                                  elem_classes="custom-dropdown")
+                    
+                    db_year_min = gr.Slider(label="Año Inicio", 
+                                            minimum=1900, maximum=2025, 
+                                            value=2000, step=1,
+                                            elem_classes="custom-slider")
+                    
+                    db_year_max = gr.Slider(label="Año Fin", 
+                                            minimum=1900, maximum=2025, 
+                                            value=2024, step=1,
+                                            elem_classes="custom-slider")
+
+                    
+                    db_metric = gr.Dropdown(label="Métrica a Visualizar", 
+                                            choices=[("Rendimiento [Kg/Ha]", "rend_kgxha"), 
+                                                     ("Producción [Tn]", "prod_ton"), 
+                                                     ("Sup. Cosechada [Ha]", "sup_cos_ha"), 
+                                                     ("Sup. Sembrada [Ha]", "sup_sem_ha")],
+                                            value="rend_kgxha",
+                                            elem_classes="custom-dropdown")
+                    
+                    db_top_n = gr.Slider(label="Top N Provincias", 
+                                         minimum=3, maximum=10, 
+                                         value=3, step=1)
+                    
+                    db_btn_refresh = gr.Button("📊 ACTUALIZAR PANEL", variant="primary", elem_classes="custom-button")
+
+            with gr.Row():
+                with gr.Column():
+                    db_chart_pie = gr.Plot(show_label=False)
+                with gr.Column():
+                    db_chart_evo = gr.Plot(show_label=False)
+
+            # Eventos
+            db_cultivo.change(
+                fn=tab_Dashboard_on_cultivo_change,
+                inputs=[db_cultivo],
+                outputs=[db_provincia, db_departamento, db_year_min, db_year_max]
+            )
+          
+            db_provincia.change(
+                fn=tab_Dashboard_on_provincia_change,
+                inputs=[db_cultivo, db_provincia],
+                outputs=[db_departamento]
+            )
+            
+            db_btn_refresh.click(
+                fn=tab_Dashboard_run,
+                inputs=[db_cultivo, db_provincia, db_departamento, db_year_min, db_year_max, db_metric, db_top_n],
+                outputs=[db_summary, db_map, db_chart_pie, db_chart_evo]
+            )
+            
+            tab_Dashboard_row = gr.Row(visible=False) # Dummy to avoid select errors if needed, but original didn't have select
+            
+            tab_Dashboard.select(
+                fn=tab_Dashboard_run,
+                inputs=[db_cultivo, db_provincia, db_departamento, db_year_min, db_year_max, db_metric, db_top_n],
+                outputs=[db_summary, db_map, db_chart_pie, db_chart_evo]
+            )
+
+
+        # fin prg MAF
         
 
         ###### PESTAÑA EDA
@@ -5454,8 +6791,8 @@ with gr.Blocks(title="Análisis de Cultivos") as app:
                                                         elem_classes="custom-checkbox")
             # endregion SUBPESTAÑA 1: SELECCIÓN DE LAS TRES SERIES TEMPORALES
 
-            # region SECCION 2: DESCOMPOSICIÓN DE LAS TRES SERIES TEMPORALES (MÉTODO STL)
-            with gr.Tab("Descomposición de las Series") as subtab_desc_series:
+            # region SUBPESTAÑA 2: DESCOMPOSICIÓN DE LAS SERIES TEMPORALES (MÉTODO STL)
+            with gr.Tab("Descomposición STL") as subtab_STL_decomp:
                 with gr.Row():
                     with gr.Column(elem_classes="custom-tab-2", scale=20):    
                         gr.HTML("&nbsp;&nbsp;2. DESCOMPOSICIÓN DE LAS SERIES - MÉTODO STL (SEASONAL-TREND DECOMPOSITION USING LOESS) PARA SERIES CORTAS", 
@@ -5464,33 +6801,334 @@ with gr.Blocks(title="Análisis de Cultivos") as app:
                         STL_button = gr.Button("Calcular", variant="primary", visible=True, 
                                                 elem_classes="custom-button3")
                 
-                with gr.Row(elem_classes="custom-tab"):
-                    with gr.Column():
-                        with gr.Row():
-                            STL_desc1 = gr.HTML("Debe seleccionarse la Serie 1", elem_classes="info-display-3")
-                        with gr.Row():
-                            with gr.Column():                        
-                                STL_graph1 = gr.Plot(show_label=False, visible=False)
-                                STL_info1 = gr.HTML("Interpretación", visible=False)
+                with gr.Column(elem_classes="custom-tab"):
+                    with gr.Row():
+                        STL_desc1 = gr.HTML("Debe seleccionarse la Serie 1", elem_classes="info-display-3")
+                        STL_desc2 = gr.HTML("Debe seleccionarse la Serie 2", elem_classes="info-display-3")
+                        STL_desc3 = gr.HTML("Debe seleccionarse la Serie 3", elem_classes="info-display-3")
+                    
+                    with gr.Row():
+                        with gr.Column():
+                            with gr.Column(visible=False) as STL_serie_1:                        
+                                STL_graph1a = gr.Plot(show_label=False, visible=False)
+                                STL_graph1b = gr.Plot(show_label=False, visible=False)
+                                with gr.Row():
+                                    gr.HTML("<div style='flex-grow: 1;'></div>")
+                                    STL_btn_graph1b = gr.Button(">", variant="primary", 
+                                                    elem_classes="custom-button6",
+                                                    min_width=1, scale=0)
+                                    STL_btn_help1b = gr.Button("?", variant="primary", 
+                                                    elem_classes="custom-button6",
+                                                    min_width=1, scale=0)
+                                STL_graph1c = gr.Plot(show_label=False, visible=False)
+                                with gr.Row():
+                                    gr.HTML("<div style='flex-grow: 1;'></div>")
+                                    STL_btn_graph1c = gr.Button(">", variant="primary", 
+                                                    elem_classes="custom-button6",
+                                                    min_width=1, scale=0)
+                                    STL_btn_help1c = gr.Button("?", variant="primary", 
+                                                    elem_classes="custom-button6",
+                                                    min_width=1, scale=0)
+                                STL_graph1d = gr.Plot(show_label=False, visible=False)
+                                with gr.Row():
+                                    gr.HTML("<div style='flex-grow: 1;'></div>")
+                                    STL_btn_graph1d = gr.Button(">", variant="primary", 
+                                                    elem_classes="custom-button6",
+                                                    min_width=1, scale=0)
+                                    STL_btn_help1d = gr.Button("?", variant="primary", 
+                                                    elem_classes="custom-button6",
+                                                    min_width=1, scale=0)
+                                STL_graph1e = gr.Plot(show_label=False, visible=False)
+                                with gr.Row():
+                                    gr.HTML("<div style='flex-grow: 1;'></div>")
+                                    STL_btn_graph1e = gr.Button(">", variant="primary", 
+                                                    elem_classes="custom-button6",
+                                                    min_width=1, scale=0)
+                                    STL_btn_help1e = gr.Button("?", variant="primary", 
+                                                    elem_classes="custom-button6",
+                                                    min_width=1, scale=0)
+                            STL_info1 = gr.HTML("Interpretación", visible=False)
 
-                    with gr.Column():
-                        with gr.Row():
-                            STL_desc2 = gr.HTML("Debe seleccionarse la Serie 2", elem_classes="info-display-3")
-                        with gr.Row():
-                            with gr.Column():
-                                STL_graph2 = gr.Plot(show_label=False, visible=False)
-                                STL_info2 = gr.HTML("Interpretación", visible=False)
+                        with gr.Column():
+                            with gr.Column(visible=False) as STL_serie_2:
+                                STL_graph2a = gr.Plot(show_label=False, visible=False)
+                                STL_graph2b = gr.Plot(show_label=False, visible=False)
+                                with gr.Row():
+                                    gr.HTML("<div style='flex-grow: 1;'></div>")
+                                    STL_btn_graph2b = gr.Button(">", variant="primary", 
+                                                    elem_classes="custom-button6",
+                                                    min_width=1, scale=0)
+                                    STL_btn_help2b = gr.Button("?", variant="primary", 
+                                                    elem_classes="custom-button6",
+                                                    min_width=1, scale=0)
+                                STL_graph2c = gr.Plot(show_label=False, visible=False)
+                                with gr.Row():
+                                    gr.HTML("<div style='flex-grow: 1;'></div>")
+                                    STL_btn_graph2c = gr.Button(">", variant="primary", 
+                                                    elem_classes="custom-button6",
+                                                    min_width=1, scale=0)
+                                    STL_btn_help2c = gr.Button("?", variant="primary", 
+                                                    elem_classes="custom-button6",
+                                                    min_width=1, scale=0)
+                                STL_graph2d = gr.Plot(show_label=False, visible=False)
+                                with gr.Row():
+                                    gr.HTML("<div style='flex-grow: 1;'></div>")
+                                    STL_btn_graph2d = gr.Button(">", variant="primary", 
+                                                    elem_classes="custom-button6",
+                                                    min_width=1, scale=0)
+                                    STL_btn_help2d = gr.Button("?", variant="primary", 
+                                                    elem_classes="custom-button6",
+                                                    min_width=1, scale=0)
+                                STL_graph2e = gr.Plot(show_label=False, visible=False)
+                                with gr.Row():
+                                    gr.HTML("<div style='flex-grow: 1;'></div>")
+                                    STL_btn_graph2e = gr.Button(">", variant="primary", 
+                                                    elem_classes="custom-button6",
+                                                    min_width=1, scale=0)
+                                    STL_btn_help2e = gr.Button("?", variant="primary", 
+                                                    elem_classes="custom-button6",
+                                                    min_width=1, scale=0)
+                            STL_info2 = gr.HTML("Interpretación", visible=False)
 
-                    with gr.Column():
-                        with gr.Row():
-                            STL_desc3 = gr.HTML("Debe seleccionarse la Serie 3", elem_classes="info-display-3")
-                        with gr.Row():
-                            with gr.Column():
-                                STL_graph3 = gr.Plot(show_label=False, visible=False)
-                                STL_info3 = gr.HTML("Interpretación", visible=False)
-            # endregion SECCION 2: DESCOMPOSICIÓN DE LAS TRES SERIES TEMPORALES
+                        with gr.Column():
+                            with gr.Column(visible=False) as STL_serie_3:
+                                STL_graph3a = gr.Plot(show_label=False, visible=False)
+                                STL_graph3b = gr.Plot(show_label=False, visible=False)
+                                with gr.Row():
+                                    gr.HTML("<div style='flex-grow: 1;'></div>")
+                                    STL_btn_graph3b = gr.Button(">", variant="primary", 
+                                                    elem_classes="custom-button6",
+                                                    min_width=1, scale=0)
+                                    STL_btn_help3b = gr.Button("?", variant="primary", 
+                                                    elem_classes="custom-button6",
+                                                    min_width=1, scale=0)
+                                STL_graph3c = gr.Plot(show_label=False, visible=False)
+                                with gr.Row():
+                                    gr.HTML("<div style='flex-grow: 1;'></div>")
+                                    STL_btn_graph3c = gr.Button(">", variant="primary", 
+                                                    elem_classes="custom-button6",
+                                                    min_width=1, scale=0)
+                                    STL_btn_help3c = gr.Button("?", variant="primary", 
+                                                    elem_classes="custom-button6",
+                                                    min_width=1, scale=0)
+                                STL_graph3d = gr.Plot(show_label=False, visible=False)
+                                with gr.Row():
+                                    gr.HTML("<div style='flex-grow: 1;'></div>")
+                                    STL_btn_graph3d = gr.Button(">", variant="primary", 
+                                                    elem_classes="custom-button6",
+                                                    min_width=1, scale=0)
+                                    STL_btn_help3d = gr.Button("?", variant="primary", 
+                                                    elem_classes="custom-button6",
+                                                    min_width=1, scale=0)
+                                STL_graph3e = gr.Plot(show_label=False, visible=False)
+                                with gr.Row():
+                                    gr.HTML("<div style='flex-grow: 1;'></div>")
+                                    STL_btn_graph3e = gr.Button(">", variant="primary", 
+                                                    elem_classes="custom-button6",
+                                                    min_width=1, scale=0)
+                                    STL_btn_help3e = gr.Button("?", variant="primary", 
+                                                    elem_classes="custom-button6",
+                                                    min_width=1, scale=0)
+                            STL_info3 = gr.HTML("Interpretación", visible=False)
 
-            # region SUBPESTAÑA 3: DIFERENCIACIÓN DE LAS SERIES Y PRUEBA ADF
+                # region: VENTANAS FLOTANTES (MODALES)
+                with gr.Column(visible=False) as STL_modal_1:
+                    with gr.Column(elem_classes="overlay"):
+                        pass # Solo para el fondo oscuro
+                    with gr.Column(elem_classes="modal-ayuda"):
+                        gr.HTML(load_html("assets/STL_Tendencia.html"))
+                        STL_btn_cerrar1 = gr.Button("Cerrar", variant="primary",
+                                                        elem_classes="custom-button9")
+                        
+                with gr.Column(visible=False) as STL_modal_2:    
+                    with gr.Column(elem_classes="overlay"):
+                        pass # Solo para el fondo oscuro
+                    with gr.Column(elem_classes="modal-ayuda"):
+                        gr.HTML(load_html("assets/STL_Estacionalidad.html"))
+                        STL_btn_cerrar2 = gr.Button("Cerrar", variant="primary",
+                                                        elem_classes="custom-button9")
+                        
+                with gr.Column(visible=False) as STL_modal_3:    
+                    with gr.Column(elem_classes="overlay"):
+                        pass # Solo para el fondo oscuro
+                    with gr.Column(elem_classes="modal-ayuda"):        
+                        gr.HTML(load_html("assets/STL_Residuos.html"))
+                        STL_btn_cerrar3 = gr.Button("Cerrar", variant="primary",
+                                                        elem_classes="custom-button9")
+                        
+                with gr.Column(visible=False) as STL_modal_4:
+                    with gr.Column(elem_classes="overlay"):
+                        pass # Solo para el fondo oscuro
+                    with gr.Column(elem_classes="modal-ayuda"):        
+                        gr.HTML(load_html("assets/STL_PeriodogramaLS.html"))
+                        STL_btn_cerrar4 = gr.Button("Cerrar", variant="primary",
+                                                        elem_classes="custom-button9")
+                        
+                # --- MODAL: GRÁFICOS DESCOMPOSICIÓN STL ---
+                with gr.Column(visible=False) as STL_modal_graph:
+                    with gr.Column(elem_classes="overlay"):
+                        pass # Solo para el fondo oscuro
+                    with gr.Column(elem_classes="modal-grafico"):
+                        STL_graph = gr.Plot(show_label=False)
+                        STL_btn_cerrar_graph = gr.Button("Cerrar", variant="primary", elem_classes="custom-button9")
+                 
+                # endregion: VENTANAS FLOTANTES (MODALES)
+
+            # endregion SECCION 2: DESCOMPOSICIÓN DE LAS TRES SERIES TEMPORALES (MÉTODO STL)
+
+            # region SUBPESTAÑA 3: DESCOMPOSICIÓN DE LAS SERIES TEMPORALES (MÉTODO HOLT-WINTERS)
+            with gr.Tab("Descomposición Holt-Winters") as subtab_HW_decomp:
+                with gr.Row():
+                    with gr.Column(elem_classes="custom-tab-2", scale=20):    
+                        gr.HTML("&nbsp;&nbsp;2. DESCOMPOSICIÓN DE LAS SERIES - MÉTODO HOLT-WINTERS (SUAVIZADO EXPONENCIAL)", 
+                                elem_classes="subtitle-text")
+                    with gr.Column(min_width=150):
+                        HW_button = gr.Button("Calcular", variant="primary", visible=True, 
+                                                elem_classes="custom-button3")
+                
+                with gr.Column(elem_classes="custom-tab"):
+                    with gr.Row():
+                        HW_desc1 = gr.HTML("Debe seleccionarse la Serie 1", elem_classes="info-display-3")
+                        HW_desc2 = gr.HTML("Debe seleccionarse la Serie 2", elem_classes="info-display-3")
+                        HW_desc3 = gr.HTML("Debe seleccionarse la Serie 3", elem_classes="info-display-3")
+                    
+                    with gr.Row():
+                        with gr.Column():
+                            with gr.Column(visible=False) as HW_serie_1:                        
+                                HW_graph1a = gr.Plot(show_label=False, visible=False)
+                                HW_graph1b = gr.Plot(show_label=False, visible=False)
+                                with gr.Row():
+                                    gr.HTML("<div style='flex-grow: 1;'></div>")
+                                    HW_btn_graph1b = gr.Button(">", variant="primary", 
+                                                    elem_classes="custom-button6",
+                                                    min_width=1, scale=0)
+                                    HW_btn_help1b = gr.Button("?", variant="primary", 
+                                                    elem_classes="custom-button6",
+                                                    min_width=1, scale=0)
+                                    
+                                HW_graph1c = gr.Plot(show_label=False, visible=False)
+                                with gr.Row():
+                                    gr.HTML("<div style='flex-grow: 1;'></div>")
+                                    HW_btn_graph1c = gr.Button(">", variant="primary", 
+                                                    elem_classes="custom-button6",
+                                                    min_width=1, scale=0)
+                                    HW_btn_help1c = gr.Button("?", variant="primary", 
+                                                        elem_classes="custom-button6",
+                                                    min_width=1, scale=0)
+                                HW_graph1d = gr.Plot(show_label=False, visible=False)
+                                with gr.Row():
+                                    gr.HTML("<div style='flex-grow: 1;'></div>")
+                                    HW_btn_graph1d = gr.Button(">", variant="primary", 
+                                                    elem_classes="custom-button6",
+                                                    min_width=1, scale=0)
+                                    HW_btn_help1d = gr.Button("?", variant="primary", 
+                                                        elem_classes="custom-button6",
+                                                    min_width=1, scale=0)
+                            HW_info1 = gr.HTML("Interpretación", visible=False)
+
+                        with gr.Column():
+                            with gr.Column(visible=False) as HW_serie_2:
+                                HW_graph2a = gr.Plot(show_label=False, visible=False)
+                                HW_graph2b = gr.Plot(show_label=False, visible=False)
+                                with gr.Row():
+                                    gr.HTML("<div style='flex-grow: 1;'></div>")
+                                    HW_btn_graph2b = gr.Button(">", variant="primary", 
+                                                    elem_classes="custom-button6",
+                                                    min_width=1, scale=0)
+                                    HW_btn_help2b = gr.Button("?", variant="primary", 
+                                                    elem_classes="custom-button6",
+                                                    min_width=1, scale=0)
+                                HW_graph2c = gr.Plot(show_label=False, visible=False)
+                                with gr.Row():
+                                    gr.HTML("<div style='flex-grow: 1;'></div>")
+                                    HW_btn_graph2c = gr.Button(">", variant="primary", 
+                                                    elem_classes="custom-button6",
+                                                    min_width=1, scale=0)
+                                    HW_btn_help2c = gr.Button("?", variant="primary", 
+                                                    elem_classes="custom-button6",
+                                                    min_width=1, scale=0)
+                                HW_graph2d = gr.Plot(show_label=False, visible=False)
+                                with gr.Row():
+                                    gr.HTML("<div style='flex-grow: 1;'></div>")
+                                    HW_btn_graph2d = gr.Button(">", variant="primary", 
+                                                    elem_classes="custom-button6",
+                                                    min_width=1, scale=0)
+                                    HW_btn_help2d = gr.Button("?", variant="primary", 
+                                                    elem_classes="custom-button6",
+                                                    min_width=1, scale=0)
+                            HW_info2 = gr.HTML("Interpretación", visible=False)
+
+                        with gr.Column():
+                            with gr.Column(visible=False) as HW_serie_3:
+                                HW_graph3a = gr.Plot(show_label=False, visible=False)
+                                HW_graph3b = gr.Plot(show_label=False, visible=False)
+                                with gr.Row():
+                                    gr.HTML("<div style='flex-grow: 1;'></div>")
+                                    HW_btn_graph3b = gr.Button(">", variant="primary", 
+                                                    elem_classes="custom-button6",
+                                                    min_width=1, scale=0)
+                                    HW_btn_help3b = gr.Button("?", variant="primary", 
+                                                    elem_classes="custom-button6",
+                                                    min_width=1, scale=0)
+                                HW_graph3c = gr.Plot(show_label=False, visible=False)
+                                with gr.Row():
+                                    gr.HTML("<div style='flex-grow: 1;'></div>")
+                                    HW_btn_graph3c = gr.Button(">", variant="primary", 
+                                                    elem_classes="custom-button6",
+                                                    min_width=1, scale=0)
+                                    HW_btn_help3c = gr.Button("?", variant="primary", 
+                                                    elem_classes="custom-button6",
+                                                    min_width=1, scale=0)
+                                HW_graph3d = gr.Plot(show_label=False, visible=False)
+                                with gr.Row():
+                                    gr.HTML("<div style='flex-grow: 1;'></div>")
+                                    HW_btn_graph3d = gr.Button(">", variant="primary", 
+                                                    elem_classes="custom-button6",
+                                                    min_width=1, scale=0)
+                                    HW_btn_help3d = gr.Button("?", variant="primary", 
+                                                    elem_classes="custom-button6",
+                                                    min_width=1, scale=0)
+                            HW_info3 = gr.HTML("Interpretación", visible=False)
+
+                # region: VENTANAS FLOTANTES (MODALES)
+                
+                # --- MODAL 1: TENDENCIA (HOLT-WINTERS) ---
+                with gr.Column(visible=False) as HW_modal_1:
+                    with gr.Column(elem_classes="overlay"):
+                        pass # Solo para el fondo oscuro
+                    with gr.Column(elem_classes="modal-ayuda"):
+                        gr.HTML(load_html("assets/HW_Tendencia.html"))
+                        HW_btn_cerrar1 = gr.Button("Cerrar", variant="primary", elem_classes="custom-button9")
+                        
+                # --- MODAL 2: ESTACIONALIDAD (HOLT-WINTERS) ---
+                with gr.Column(visible=False) as HW_modal_2:    
+                    with gr.Column(elem_classes="overlay"):
+                        pass # Solo para el fondo oscuro
+                    with gr.Column(elem_classes="modal-ayuda"):
+                        gr.HTML(load_html("assets/HW_Estacionalidad.html"))
+                        HW_btn_cerrar2 = gr.Button("Cerrar", variant="primary", elem_classes="custom-button9")
+
+                # --- MODAL 3: RESIDUOS (ERROR DE AJUSTE) ---
+                with gr.Column(visible=False) as HW_modal_3:    
+                    with gr.Column(elem_classes="overlay"):
+                        pass # Solo para el fondo oscuro
+                    with gr.Column(elem_classes="modal-ayuda"):        
+                        gr.HTML(load_html("assets/HW_Residuos.html"))
+                        HW_btn_cerrar3 = gr.Button("Cerrar", variant="primary", elem_classes="custom-button9")
+                        
+                # --- MODAL: GRÁFICOS DESCOMPOSICIÓN HOLT-WINTERS ---
+                with gr.Column(visible=False) as HW_modal_graph:
+                    with gr.Column(elem_classes="overlay"):
+                        pass # Solo para el fondo oscuro
+                    with gr.Column(elem_classes="modal-grafico"):
+                        HW_graph = gr.Plot(show_label=False)
+                        HW_btn_cerrar_graph = gr.Button("Cerrar", variant="primary", elem_classes="custom-button9")
+                        
+                # endregion: VENTANAS FLOTANTES (MODALES)
+
+            # endregion SECCION 3: DESCOMPOSICIÓN DE LAS TRES SERIES TEMPORALES (MÉTODO HOLT-WINTERS)
+
+            # region SUBPESTAÑA 4: DIFERENCIACIÓN DE LAS SERIES Y PRUEBA ADF
             with gr.Tab("Diferenciación de las Series") as subtab_dif_series:
                 with gr.Row():
                     with gr.Column(elem_classes="custom-tab-2", scale=20):    
@@ -5533,9 +7171,9 @@ with gr.Blocks(title="Análisis de Cultivos") as app:
                         with gr.Row():
                             with gr.Column():
                                 ADF_info3 = gr.HTML("Interpretación", visible=False)
-            # endregion SUBPESTAÑA 3: DIFERENCIACIÓN DE LAS SERIES Y PRUEBA ADF
+            # endregion SUBPESTAÑA 4: DIFERENCIACIÓN DE LAS SERIES Y PRUEBA ADF
 
-            # region SUBPESTAÑA 4: CÁLCULO DE AUTOCORRELACIONES DE LAS SERIES
+            # region SUBPESTAÑA 5: CÁLCULO DE AUTOCORRELACIONES DE LAS SERIES
             with gr.Tab("ACF y PACF de las Series") as subtab_ACF_PACF:
                 with gr.Row():
                     with gr.Column(elem_classes="custom-tab-2", scale=20):    
@@ -5545,39 +7183,86 @@ with gr.Blocks(title="Análisis de Cultivos") as app:
                         ACF_PACF_button = gr.Button("Calcular", variant="primary", visible=True, 
                                                 elem_classes="custom-button3")
 
-                with gr.Row(elem_classes="custom-tab"):
-                    with gr.Column():
-                        with gr.Row():
-                            ACF_desc1 = gr.HTML("Debe seleccionarse la Serie 1", elem_classes="info-display-3")
-                        with gr.Row():
-                            with gr.Column():                        
+                with gr.Column(elem_classes="custom-tab"):
+                    with gr.Row():
+                        ACF_desc1 = gr.HTML("Debe seleccionarse la Serie 1", elem_classes="info-display-3")
+                        ACF_desc2 = gr.HTML("Debe seleccionarse la Serie 2", elem_classes="info-display-3")
+                        ACF_desc3 = gr.HTML("Debe seleccionarse la Serie 3", elem_classes="info-display-3")
+
+                    with gr.Row():
+                        with gr.Column():
+                            ACF_error1 = gr.HTML("Mensaje de Error", visible=False)
+                            with gr.Column(visible=False) as ACF_serie_1:
                                 ACF_graph1 = gr.Plot(show_label=False, visible=False)
+                                with gr.Row():
+                                    gr.HTML("<div style='flex-grow: 1;'></div>")
+                                    ACF_btn_help1 = gr.Button("?", variant="primary", 
+                                                    elem_classes="custom-button6",
+                                                    min_width=1, scale=0)
                                 ACF_info1 = gr.HTML("Interpretación ACF", visible=False)
                                 PACF_graph1 = gr.Plot(show_label=False, visible=False)
+                                with gr.Row():
+                                    gr.HTML("<div style='flex-grow: 1;'></div>")
+                                    PACF_btn_help1 = gr.Button("?", variant="primary", 
+                                                    elem_classes="custom-button6",
+                                                    min_width=1, scale=0)
                                 PACF_info1 = gr.HTML("Interpretación PACF", visible=False)
 
-                    with gr.Column():
-                        with gr.Row():
-                            ACF_desc2 = gr.HTML("Debe seleccionarse la Serie 2", elem_classes="info-display-3")
-                        with gr.Row():
-                            with gr.Column():
+                        with gr.Column():
+                            ACF_error2 = gr.HTML("Mensaje de Error", visible=False)
+                            with gr.Column(visible=False) as ACF_serie_2:
                                 ACF_graph2 = gr.Plot(show_label=False, visible=False)
+                                with gr.Row():
+                                    gr.HTML("<div style='flex-grow: 1;'></div>")
+                                    ACF_btn_help2 = gr.Button("?", variant="primary", 
+                                                    elem_classes="custom-button6",
+                                                    min_width=1, scale=0)
                                 ACF_info2 = gr.HTML("Interpretación ACF", visible=False)
                                 PACF_graph2 = gr.Plot(show_label=False, visible=False)
+                                with gr.Row():
+                                    gr.HTML("<div style='flex-grow: 1;'></div>")
+                                    PACF_btn_help2 = gr.Button("?", variant="primary", 
+                                                    elem_classes="custom-button6",
+                                                    min_width=1, scale=0)
                                 PACF_info2 = gr.HTML("Interpretación PACF", visible=False)
 
-                    with gr.Column():
-                        with gr.Row():
-                            ACF_desc3 = gr.HTML("Debe seleccionarse la Serie 3", elem_classes="info-display-3")
-                        with gr.Row():
-                            with gr.Column():
+                        with gr.Column():
+                            ACF_error3 = gr.HTML("Mensaje de Error", visible=False)
+                            with gr.Column(visible=False) as ACF_serie_3:
                                 ACF_graph3 = gr.Plot(show_label=False, visible=False)
+                                with gr.Row():
+                                    gr.HTML("<div style='flex-grow: 1;'></div>")
+                                    ACF_btn_help3 = gr.Button("?", variant="primary", 
+                                                    elem_classes="custom-button6",
+                                                    min_width=1, scale=0)
                                 ACF_info3 = gr.HTML("Interpretación ACF", visible=False)
                                 PACF_graph3 = gr.Plot(show_label=False, visible=False)
+                                with gr.Row():
+                                    gr.HTML("<div style='flex-grow: 1;'></div>")
+                                    PACF_btn_help3 = gr.Button("?", variant="primary", 
+                                                    elem_classes="custom-button6",
+                                                    min_width=1, scale=0)
                                 PACF_info3 = gr.HTML("Interpretación PACF", visible=False)
-            # endregion SUBPESTAÑA 4: CÁLCULO DE AUTOCORRELACIONES DE LAS SERIES
 
-            # region SUBPESTAÑA 5: APLICACIÓN DEL MODELO ARIMA
+                # --- MODAL: AYUDA GRÁFICO ACF ---
+                with gr.Column(visible=False) as ACF_modal_help:
+                    with gr.Column(elem_classes="overlay"):
+                        pass # Solo para el fondo oscuro
+                    with gr.Column(elem_classes="modal-ayuda"):
+                        gr.HTML(load_html("assets/ACF_Grafico.html"))
+                        ACF_btn_cerrar_help = gr.Button("Cerrar", variant="primary", elem_classes="custom-button9")
+                
+                # --- MODAL: AYUDA GRÁFICO PACF ---
+                with gr.Column(visible=False) as PACF_modal_help:
+                    with gr.Column(elem_classes="overlay"):
+                        pass # Solo para el fondo oscuro
+                    with gr.Column(elem_classes="modal-ayuda"):
+                        gr.HTML(load_html("assets/PACF_Grafico.html"))
+                        PACF_btn_cerrar_help = gr.Button("Cerrar", variant="primary", elem_classes="custom-button9")
+                
+            # endregion SUBPESTAÑA 5: CÁLCULO DE AUTOCORRELACIONES DE LAS SERIES
+
+            # region SUBPESTAÑA 6: APLICACIÓN DEL MODELO ARIMA
             with gr.Tab("Modelo ARIMA") as subtab_ARIMA:
                 with gr.Row():
                     with gr.Column(elem_classes="custom-tab-2", scale=20): 
@@ -5595,42 +7280,113 @@ with gr.Blocks(title="Análisis de Cultivos") as app:
                             "luego de la diferenciación, el modelo más adecuado es ARIMA(p, d, q).",
                             elem_classes="info-display-2a")
             
-                with gr.Row(elem_classes="custom-tab"):
-                    with gr.Column():
-                        with gr.Row():
-                            ARIMA_desc1 = gr.HTML("Debe seleccionarse la Serie 1", elem_classes="info-display-3")
-                        with gr.Row():
-                            with gr.Column():                        
-                                ARIMA_info1 = gr.HTML("Parámetros y Estadísticos de ARIMA", visible=False)
-                                ARIMA_graph1 = gr.Plot(show_label=False, visible=False)
-                                ARIMA_preds1 = gr.HTML("Tabla de Valores Predichos", visible=False)
-                                ARIMA_graph1_resids = gr.Plot(show_label=False, visible=False)
-                                ARIMA_resids1 = gr.HTML("Prueba Ljung-Box de Residuos", visible=False)
+                with gr.Column(elem_classes="custom-tab"):
+                    with gr.Row():
+                        ARIMA_desc1 = gr.HTML("Debe seleccionarse la Serie 1", elem_classes="info-display-3")
+                        ARIMA_desc2 = gr.HTML("Debe seleccionarse la Serie 2", elem_classes="info-display-3")
+                        ARIMA_desc3 = gr.HTML("Debe seleccionarse la Serie 3", elem_classes="info-display-3")
+                    
+                    with gr.Row():
+                        with gr.Column():
+                            ARIMA_info1 = gr.HTML("Parámetros y Estadísticos de ARIMA", visible=False)
+                            with gr.Column(visible=False) as ARIMA_serie_1:
+                                ARIMA_graph1 = gr.Plot(show_label=False)
+                                with gr.Row():
+                                    gr.HTML("<div style='flex-grow: 1;'></div>")
+                                    ARIMA_btn_graph1 = gr.Button(">", variant="primary", 
+                                                    elem_classes="custom-button6",
+                                                    min_width=1, scale=0)
+                                ARIMA_preds1 = gr.HTML("Tabla de Valores Predichos")
+                                ARIMA_graph1_resids = gr.Plot(show_label=False)
+                                with gr.Row():
+                                    gr.HTML("<div style='flex-grow: 1;'></div>")
+                                    ARIMA_btn_help1 = gr.Button("?", variant="primary", 
+                                                    elem_classes="custom-button6",
+                                                    min_width=1, scale=0)
+                                ARIMA_resids1 = gr.HTML("Pruebas de Residuos")
+                                with gr.Row():
+                                    gr.HTML("<div style='flex-grow: 1;'></div>")
+                                    ARIMA_btn_resids1 = gr.Button("?", variant="primary", 
+                                                    elem_classes="custom-button6",
+                                                    min_width=1, scale=0)
+                                ARIMA_comparat1 = gr.HTML("Comparativa de Modelos")
 
-                    with gr.Column():
-                        with gr.Row():
-                            ARIMA_desc2 = gr.HTML("Debe seleccionarse la Serie 2", elem_classes="info-display-3")
-                        with gr.Row():
-                            with gr.Column():
-                                ARIMA_info2 = gr.HTML("Parámetros y Estadísticos de ARIMA", visible=False)
-                                ARIMA_graph2 = gr.Plot(show_label=False, visible=False)
-                                ARIMA_preds2 = gr.HTML("Tabla de Valores Predichos", visible=False)
-                                ARIMA_graph2_resids = gr.Plot(show_label=False, visible=False)
-                                ARIMA_resids2 = gr.HTML("Prueba Ljung-Box de Residuos", visible=False)
+                        with gr.Column():
+                            ARIMA_info2 = gr.HTML("Parámetros y Estadísticos de ARIMA", visible=False)
+                            with gr.Column(visible=False) as ARIMA_serie_2:
+                                ARIMA_graph2 = gr.Plot(show_label=False)
+                                with gr.Row():
+                                    gr.HTML("<div style='flex-grow: 1;'></div>")
+                                    ARIMA_btn_graph2 = gr.Button(">", variant="primary", 
+                                                    elem_classes="custom-button6",
+                                                    min_width=1, scale=0)
+                                ARIMA_preds2 = gr.HTML("Tabla de Valores Predichos")
+                                ARIMA_graph2_resids = gr.Plot(show_label=False)
+                                with gr.Row():
+                                    gr.HTML("<div style='flex-grow: 1;'></div>")
+                                    ARIMA_btn_help2 = gr.Button("?", variant="primary", 
+                                                    elem_classes="custom-button6",
+                                                    min_width=1, scale=0)
+                                ARIMA_resids2 = gr.HTML("Pruebas de Residuos")
+                                with gr.Row():
+                                    gr.HTML("<div style='flex-grow: 1;'></div>")
+                                    ARIMA_btn_resids2 = gr.Button("?", variant="primary", 
+                                                    elem_classes="custom-button6",
+                                                    min_width=1, scale=0)
+                                ARIMA_comparat2 = gr.HTML("Comparativa de Modelos")
 
-                    with gr.Column():
-                        with gr.Row():
-                            ARIMA_desc3 = gr.HTML("Debe seleccionarse la Serie 3", elem_classes="info-display-3")
-                        with gr.Row():
-                            with gr.Column():
-                                ARIMA_info3 = gr.HTML("Parámetros y Estadísticos de ARIMA", visible=False)
-                                ARIMA_graph3 = gr.Plot(show_label=False, visible=False)
-                                ARIMA_preds3 = gr.HTML("Tabla de Valores Predichos", visible=False)
-                                ARIMA_graph3_resids = gr.Plot(show_label=False, visible=False)
-                                ARIMA_resids3 = gr.HTML("Prueba Ljung-Box de Residuos", visible=False)
+                        with gr.Column():
+                            ARIMA_info3 = gr.HTML("Parámetros y Estadísticos de ARIMA", visible=False)
+                            with gr.Column(visible=False) as ARIMA_serie_3:
+                                ARIMA_graph3 = gr.Plot(show_label=False)
+                                with gr.Row():
+                                    gr.HTML("<div style='flex-grow: 1;'></div>")
+                                    ARIMA_btn_graph3 = gr.Button(">", variant="primary", 
+                                                    elem_classes="custom-button6",
+                                                    min_width=1, scale=0)
+                                ARIMA_preds3 = gr.HTML("Tabla de Valores Predichos")
+                                ARIMA_graph3_resids = gr.Plot(show_label=False)
+                                with gr.Row():
+                                    gr.HTML("<div style='flex-grow: 1;'></div>")
+                                    ARIMA_btn_help3 = gr.Button("?", variant="primary", 
+                                                    elem_classes="custom-button6",
+                                                    min_width=1, scale=0)
+                                ARIMA_resids3 = gr.HTML("Pruebas de Residuos")
+                                with gr.Row():
+                                    gr.HTML("<div style='flex-grow: 1;'></div>")
+                                    ARIMA_btn_resids3 = gr.Button("?", variant="primary", 
+                                                    elem_classes="custom-button6",
+                                                    min_width=1, scale=0)
+                                ARIMA_comparat3 = gr.HTML("Comparativa de Modelos")
+                
+                # --- MODAL: GRÁFICO ARIMA ---
+                with gr.Column(visible=False) as ARIMA_modal_graph:
+                    with gr.Column(elem_classes="overlay"):
+                        pass # Solo para el fondo oscuro
+                    with gr.Column(elem_classes="modal-grafico"):
+                        ARIMA_graph = gr.Plot(show_label=False)
+                        ARIMA_btn_cerrar_graph = gr.Button("Cerrar", 
+                                                variant="primary", elem_classes="custom-button9")
+                
+                # --- MODAL: AYUDA GRÁFICOS DE RESIDUOS ---
+                with gr.Column(visible=False) as ARIMA_modal_help:
+                    with gr.Column(elem_classes="overlay"):
+                        pass # Solo para el fondo oscuro
+                    with gr.Column(elem_classes="modal-ayuda"):
+                        gr.HTML(load_html("assets/ARIMA_Graficos_Residuos.html"))
+                        ARIMA_btn_cerrar_help = gr.Button("Cerrar", variant="primary", elem_classes="custom-button9")
+                
+                # --- MODAL: AYUDA PRUEBAS DE RESIDUOS
+                with gr.Column(visible=False) as ARIMA_modal_resids:
+                    with gr.Column(elem_classes="overlay"):
+                        pass # Solo para el fondo oscuro
+                    with gr.Column(elem_classes="modal-ayuda"):
+                        gr.HTML(load_html("assets/ARIMA_Pruebas_Residuos.html"))
+                        ARIMA_btn_cerrar_resids = gr.Button("Cerrar", variant="primary", elem_classes="custom-button9")
+                        
             # endregion SUBPESTAÑA 5: APLICACIÓN DEL MODELO ARIMA
 
-            # region SUBPESTAÑA 6: TRANSFORMADAS DE FOURIER
+            # region SUBPESTAÑA 7: TRANSFORMADAS DE FOURIER
             with gr.Tab("Transformada de Fourier") as subtab_Fourier:
                 
                 with gr.Row():
@@ -5718,200 +7474,52 @@ with gr.Blocks(title="Análisis de Cultivos") as app:
                             Fourier_info3 = gr.HTML("Estadísticos Serie 3", visible=False)
                             
 
-                # --- VENTANAS FLOTANTES (MODALES) ---
+                # region VENTANAS FLOTANTES (MODALES)
                 with gr.Column(visible=False) as Fourier_modal_1:
                     with gr.Column(elem_classes="overlay"):
                         pass # Solo para el fondo oscuro
                     with gr.Column(elem_classes="modal-ayuda"):
-                        gr.HTML("""
-                            <div style='text-align: left; line-height: 1.6;
-                                font-size: 14pt;'>
-                                <p><b>CICLOS DOMINANTES O SIGNIFICATIVOS EN EL TIEMPO<br>APLICANDO 
-                                LA INVERSA DE LA TRANSFORMADA RÁPIDA DE FOURIER (FFT)</b></p>
-                            </div>
-                            """)
-                        gr.HTML("""
-                            <div style='text-align: left; line-height: 1.6; font-size: 12pt;''>
-                                <p>La serie temporal, previamente diferenciada, 
-                                se descompuso en sus frecuencias constituyentes mediante la 
-                                <b> Transformada Rápida de Fourier (FFT)</b>, 
-                                obteniéndose las diferentes ondas o ciclos que la conforman.</p>
-                                <p>Luego se aplicó un <b>filtro de umbral estadístico</b> que eliminó
-                                los componentes u ondas cuya amplitud no era significativa 
-                                (inferior a la media + 2 SD), por considerarse ruido aleatorio.</p>
-                                <p>Aplicando la <b> inversa de la FFT</b>, se reconstruyó la señal 
-                                (serie temporal) utilizando únicamente los ciclos significativos, 
-                                obteniendo así la tendencia cíclica estructural libre de 
-                                fluctuaciones aleatorias o ruido blanco. El gráfico presenta
-                                la señal filtrada.</p>
-                            </div>
-                            """)
+                        gr.HTML(load_html("assets/FFT_Ciclos_Frecuencia.html"))
                         Fourier_btn_cerrar1 = gr.Button("Cerrar", variant="primary",
-                                                        elem_classes="custom-button6")
+                                                        elem_classes="custom-button9")
                         
                 with gr.Column(visible=False) as Fourier_modal_2:    
                     with gr.Column(elem_classes="overlay"):
                         pass # Solo para el fondo oscuro
                     with gr.Column(elem_classes="modal-ayuda"):
-                        gr.HTML("""
-                            <div style='text-align: left; line-height: 1.6; font-size: 14pt;'>
-                                <p><b>ESPECTRO DE POTENCIA:<br>MAGNITUD EN EL DOMINIO 
-                                DE LA FRECUENCIA</b></p>
-                            </div>
-                            """)
-                        gr.HTML("""
-                            <div style='text-align: left; line-height: 1.6; font-size: 12pt;'>
-                                <p>Este gráfico representa el <b>Periodograma</b> de la serie, 
-                                donde se traslada la información del dominio del tiempo al dominio 
-                                de la frecuencia. El eje horizontal muestra la frecuencia 
-                                (ciclos por unidad de tiempo), mientras que el eje vertical 
-                                indica la <b>amplitud (magnitud)</b> de cada componente oscilatorio.</p>
-                                <p>La línea punteada roja establece el <b>umbral de significancia 
-                                estadística</b> (Media + 2 Desviaciones Estándar). Los picos 
-                                que sobresalen de este límite identifican las frecuencias 
-                                que contienen la mayor parte de la energía de la señal, 
-                                permitiendo distinguir entre variaciones sistemáticas y 
-                                el ruido estocástico de alta frecuencia.</p>
-                            </div>
-                            """)
+                        gr.HTML(load_html("assets/FFT_Ciclos_Tiempo.html"))
                         Fourier_btn_cerrar2 = gr.Button("Cerrar", variant="primary",
-                                                        elem_classes="custom-button6")
+                                                        elem_classes="custom-button9")
                         
                 with gr.Column(visible=False) as Fourier_modal_3:    
                     with gr.Column(elem_classes="overlay"):
                         pass # Solo para el fondo oscuro
                     with gr.Column(elem_classes="modal-ayuda"):        
-                        gr.HTML("""
-                            <div style='text-align: left; line-height: 1.6; font-size: 14pt;'>
-                                <p><b>ANÁLISIS DE PERIODICIDAD:<br>IDENTIFICACIÓN DE 
-                                CICLOS TEMPORALES</b></p>
-                            </div>
-                            """)
-                        gr.HTML("""
-                            <div style='text-align: left; line-height: 1.6; font-size: 12pt;'>
-                                <p>A diferencia del gráfico anterior, aquí se presenta la magnitud 
-                                en función del <b>Período (T = 1/f)</b>. Esta visualización es 
-                                fundamental en la ciencia de datos aplicada a series temporales, 
-                                ya que permite interpretar los resultados en unidades de tiempo 
-                                naturales (años, meses o días).</p>
-                                <p>El gráfico permite identificar con precisión la 
-                                <b>longitud de los ciclos dominantes</b>. Por ejemplo, 
-                                un pico significativo en el valor 5 indica la presencia de 
-                                un componente estructural que se repite aproximadamente 
-                                cada 5 unidades de tiempo. La validación mediante el umbral estadístico 
-                                garantiza que la periodicidad detectada no sea producto del azar.</p>
-                            </div>
-                            """)
+                        gr.HTML(load_html("assets/FFT_Periodicidad.html"))
                         Fourier_btn_cerrar3 = gr.Button("Cerrar", variant="primary",
-                                                        elem_classes="custom-button6")
+                                                        elem_classes="custom-button9")
                         
                 with gr.Column(visible=False) as Fourier_modal_4:    
                     with gr.Column(elem_classes="overlay"):
                         pass # Solo para el fondo oscuro
                     with gr.Column(elem_classes="modal-ayuda"):
-                        gr.HTML("""
-                            <div style='text-align: left; line-height: 1.6; font-size: 14pt;'>
-                                <p><b>ESPECTROGRAMA:<br>TRANSFORMADA DE FOURIER DE 
-                                TIEMPO REDUCIDO (STFT)</b></p>
-                            </div>
-                            """)
-                        gr.HTML("""
-                            <div style='text-align: left; line-height: 1.6; font-size: 12pt;'>
-                                <p>La FFT estándar asume que las frecuencias son estacionarias 
-                                (no cambian con el tiempo). El <b>Espectrograma</b> supera esta 
-                                limitación mediante una ventana deslizante que calcula la distribución 
-                                de frecuencias en diferentes segmentos cronológicos.</p>
-                                <p>El mapa de calor (Heatmap) permite observar la <b>evolución temporal 
-                                de las frecuencias</b>: el eje X representa el tiempo, el eje Y 
-                                la frecuencia, y la intensidad del color la magnitud. 
-                                Es una herramienta crítica para detectar cambios en la estructura 
-                                de la serie, como la aparición o desaparición de ciclos en períodos 
-                                específicos. Se aplica a series temporales sin diferenciar. El método
-                                STFT permite revelar la dinámica temporal de las frecuencias 
-                                que la diferenciación suele ocultar.</p>
-                                <p>La STFT aborda la no estacionariedad de una manera distinta a la 
-                                diferenciación: en lugar de estabilizar la media de toda la serie, 
-                                divide la señal original en pequeños segmentos o "ventanas" de tiempo. 
-                                Al ser las ventanas lo suficientemente cortas, se asume que dentro de 
-                                ese breve intervalo la señal es cuasi-estacionaria. Este método permite 
-                                observar cómo cambian las frecuencias de la serie original (incluyendo tendencias 
-                                de baja frecuencia) a lo largo del tiempo, algo que la diferenciación eliminaría.</p>
-                                <p><b>Nota: </b>la barra de color representa la magnitud de la Transformada de Fourier
-                                de Tiempo Reducido; colores claros indican una alta concentración de energía o amplitud 
-                                en esa combinación específica de tiempo y frecuencia (el ciclo está muy presente 
-                                en ese momento histórico); colores xscuros indican que esa frecuencia tiene una 
-                                presencia nula o insignificante en ese punto del tiempo.</p>
-                                <p>La escala de color es el indicador de relevancia:</p>
-                                <p>* Densidad: indica qué tan "fuerte" es un ciclo.</p>
-                                <p>* Persistencia: si una franja de color intenso se extiende horizontalmente,
-                                el ciclo es persistente en el tiempo.</p>
-                                <p>* Localización: si el color intenso es solo una mancha aislada, indica 
-                                un evento cíclico transitorio o un choque externo que afectó la serie 
-                                solo en un momento dado.</p>
-                            </div>
-                            """)
+                        gr.HTML(load_html("assets/Espectrograma.html"))
                         Fourier_btn_cerrar4 = gr.Button("Cerrar", variant="primary",
-                                                        elem_classes="custom-button6")
+                                                        elem_classes="custom-button9")
                         
                 with gr.Column(visible=False) as Fourier_modal_5:    
                     with gr.Column(elem_classes="overlay"):
                         pass # Solo para el fondo oscuro
                     with gr.Column(elem_classes="modal-ayuda"):
-                        gr.HTML("""
-                            <div style='text-align: left; line-height: 1.6; font-size: 14pt;'>
-                                <p><b>ESCALOGRAMA:<br>ANÁLISIS TIEMPO-FRECUENCIA<br>MEDIANTE TRANSFORMADA WAVELET CONTINUA (CWT)</b></p>
-                            </div>
-                            """)
-                        gr.HTML("""
-                            <div style='text-align: left; line-height: 1.6; font-size: 12pt;'>
-                                <p>La <b>Transformada Wavelet (Ondícula)</b> ofrece una resolución 
-                                multiescala superior a la STFT. Utilizando la familia de wavelets de 
-                                <i>Morlet Compleja</i>, este gráfico descompone la serie en componentes 
-                                que están localizados tanto en tiempo como en frecuencia de forma óptima.</p>
-                                <p>Este análisis es especialmente eficaz para señales no estacionarias 
-                                y con transitorios abruptos. Las regiones de mayor intensidad 
-                                revelan dónde se concentra la energía de la señal. Permite identificar 
-                                <b>fenómenos cíclicos transitorios</b> que podrían diluirse en un análisis 
-                                de Fourier global, proporcionando una visión detallada de la intermitencia 
-                                de los ciclos. Este método se aplica a la serie original, sin diferenciar,
-                                La CWT es una herramienta diseñada para analizar señales no estacionarias.
-                                La Wavelet se expande y se contrae (escalamiento) para detectar tanto cambios 
-                                abruptos como tendencias de largo plazo. No necesita que la serie sea 
-                                estacionaria porque su base (la wavelet madre) es local en el tiempo. 
-                                Captura la estructura multiescala de la serie original. Si se aplica 
-                                Wavelets a la serie diferenciada, se estarían analizando las oscilaciones 
-                                de los cambios marginales, perdiendo la información de la evolución 
-                                de los ciclos en sus niveles de magnitud originales.</p>
-                                <p><b>Nota sobre la visualización:</b> para mejorar la interpretabilidad, 
-                                los valores de intensidad (color) representan el <b>logaritmo de la 
-                                potencia de la wavelet</b>. Esta transformación logarítmica es fundamental 
-                                para normalizar la escala visual, permitiendo identificar simultáneamente 
-                                ciclos de gran magnitud y fluctuaciones sutiles que, de otro modo, 
-                                quedarían ocultas por la dominancia de las bajas frecuencias.</p>
-                                <p>A diferencia de los métodos globales, la CWT revela la intermitencia 
-                                de los fenómenos, mostrando con precisión en qué momentos históricos se 
-                                activan o disipan ciertas periodicidades.</p>
-                                <p><b>Nota: </b>la barra de color representa el Logaritmo de la Potencia 
-                                de la Wavelet. Colores hacia el Blanco/Amarillo representan los "picos de potencia". 
-                                Al aplicar el logaritmo, estos puntos resaltan las periodicidades que dominan 
-                                la estructura de la serie original. Colores Oscuros/Azules representan zonas de 
-                                silencio espectral donde no existe una oscilación coherente con la escala 
-                                (frecuencia) analizada.</p>
-                                <p>La escala de color es el indicador de relevancia:</p>
-                                <p>* Densidad: indica qué tan "fuerte" es un ciclo.</p>
-                                <p>* Persistencia: si una franja de color intenso se extiende horizontalmente,
-                                el ciclo es persistente en el tiempo.</p>
-                                <p>* Localización: si el color intenso es solo una mancha aislada, indica 
-                                un evento cíclico transitorio o un choque externo que afectó la serie 
-                                solo en un momento dado.</p>
-                            </div>
-                            """)
+                        gr.HTML(load_html("assets/Escalograma.html"))
                         Fourier_btn_cerrar5 = gr.Button("Cerrar", variant="primary",
-                                                        elem_classes="custom-button6")
+                                                        elem_classes="custom-button9")
+                # endregion VENTANAS FLOTANTES (MODALES)
 
-            # enderegion SUBPESTAÑA 6: TRANSFORMADAS DE FOURIER
+            # endregion SUBPESTAÑA 7: TRANSFORMADAS DE FOURIER
 
-
+            # region EVENTOS DE COMPONENTES DE LA PESTAÑA SERIES TEMPORALES
+            
             cult1.select(
                 fn = tab_ST_on_cult_select,
                 inputs = [cult1, graph_serie, graph_mg, graph_tend, graph_mm, graph_sd],
@@ -5922,13 +7530,12 @@ with gr.Blocks(title="Análisis de Cultivos") as app:
                             rest1_button, yinic1, yfin1, err1,
                             tend1_area, tend1,
                             dataset_filter_state_1, dataset_diff_state_1,
-                            STL_desc1, STL_graph1, STL_info1,
+                            STL_desc1, STL_serie_1, STL_info1,
+                            HW_desc1, HW_serie_1, HW_info1,
                             ADF_desc1, leveldiff1, level_diff_state_1, diff_graph1, ADF_info1,
-                            ACF_desc1, ACF_graph1, ACF_info1,
-                            PACF_graph1, PACF_info1,
+                            ACF_desc1, ACF_error1, ACF_serie_1,
                             ARIMA_p_1, ARIMA_q_1,
-                            ARIMA_desc1, ARIMA_info1, ARIMA_graph1,
-                            ARIMA_preds1, ARIMA_graph1_resids, ARIMA_resids1,
+                            ARIMA_desc1, ARIMA_info1, ARIMA_serie_1,
                             Fourier_desc1, Fourier_series_orig, Fourier_series_dif,
                             Fourier_serie_1, Fourier_info1]
             )
@@ -5943,13 +7550,12 @@ with gr.Blocks(title="Análisis de Cultivos") as app:
                             rest2_button, yinic2, yfin2, err2, 
                             tend2_area, tend2, 
                             dataset_filter_state_2, dataset_diff_state_2,
-                            STL_desc2, STL_graph2, STL_info2,
+                            STL_desc2, STL_serie_2, STL_info2,
+                            HW_desc2, HW_serie_2, HW_info2,
                             ADF_desc2, leveldiff2, level_diff_state_2, diff_graph2, ADF_info2,
-                            ACF_desc2, ACF_graph2, ACF_info2,
-                            PACF_graph2, PACF_info2,
+                            ACF_desc2, ACF_error2, ACF_serie_2,
                             ARIMA_p_2, ARIMA_q_2,
-                            ARIMA_desc2, ARIMA_info2, ARIMA_graph2,
-                            ARIMA_preds2, ARIMA_graph2_resids, ARIMA_resids2,
+                            ARIMA_desc2, ARIMA_info2, ARIMA_serie_2,
                             Fourier_desc2, Fourier_series_orig, Fourier_series_dif,
                             Fourier_serie_2, Fourier_info2]
             )
@@ -5964,13 +7570,12 @@ with gr.Blocks(title="Análisis de Cultivos") as app:
                             rest3_button, yinic3, yfin3, err3,
                             tend3_area, tend3,
                             dataset_filter_state_3, dataset_diff_state_3,
-                            STL_desc3, STL_graph3, STL_info3,
+                            STL_desc3, STL_serie_3, STL_info3,
+                            HW_desc3, HW_serie_3, HW_info3,
                             ADF_desc3, leveldiff3, level_diff_state_3, diff_graph3, ADF_info3,
-                            ACF_desc3, ACF_graph3, ACF_info3,
-                            PACF_graph3, PACF_info3,
+                            ACF_desc3, ACF_error3, ACF_serie_3,
                             ARIMA_p_3, ARIMA_q_3,
-                            ARIMA_desc3, ARIMA_info3, ARIMA_graph3,
-                            ARIMA_preds3, ARIMA_graph3_resids, ARIMA_resids3,
+                            ARIMA_desc3, ARIMA_info3, ARIMA_serie_3,
                             Fourier_desc3, Fourier_series_orig, Fourier_series_dif,
                             Fourier_serie_3, Fourier_info3]
             )
@@ -5984,14 +7589,13 @@ with gr.Blocks(title="Análisis de Cultivos") as app:
                             imp1_button, cut1_button, rest1_button, 
                             yinic1, yfin1, err1,
                             tend1_area, tend1, 
-                            STL_desc1, STL_graph1, STL_info1,
+                            STL_desc1, STL_serie_1, STL_info1,
+                            HW_desc1, HW_serie_1, HW_info1,
                             ADF_desc1, leveldiff1, diff_graph1, ADF_info1,
                             level_diff_state_1,
-                            ACF_desc1, ACF_graph1, ACF_info1,
-                            PACF_graph1, PACF_info1,
+                            ACF_desc1, ACF_error1, ACF_serie_1,
                             ARIMA_p_1, ARIMA_q_1,
-                            ARIMA_desc1, ARIMA_info1, ARIMA_graph1, ARIMA_preds1,
-                            ARIMA_graph1_resids, ARIMA_resids1,
+                            ARIMA_desc1, ARIMA_info1, ARIMA_serie_1,
                             Fourier_desc1, Fourier_series_orig, Fourier_series_dif,
                             Fourier_serie_1, Fourier_info1]
             )
@@ -6005,14 +7609,13 @@ with gr.Blocks(title="Análisis de Cultivos") as app:
                             imp2_button, cut2_button, rest2_button, 
                             yinic2, yfin2, err2,
                             tend2_area, tend2, 
-                            STL_desc2, STL_graph2, STL_info2,
+                            STL_desc2, STL_serie_2, STL_info2,
+                            HW_desc2, HW_serie_2, HW_info2,
                             ADF_desc2, leveldiff2, diff_graph2, ADF_info2,
                             level_diff_state_2,
-                            ACF_desc2, ACF_graph2, ACF_info2,
-                            PACF_graph2, PACF_info2,
+                            ACF_desc2, ACF_error2, ACF_serie_2,
                             ARIMA_p_2, ARIMA_q_2,
-                            ARIMA_desc2, ARIMA_info2, ARIMA_graph2, ARIMA_preds2,
-                            ARIMA_graph2_resids, ARIMA_resids2,
+                            ARIMA_desc2, ARIMA_info2, ARIMA_serie_2,
                             Fourier_desc2, Fourier_series_orig, Fourier_series_dif,
                             Fourier_serie_2, Fourier_info2]
             )
@@ -6026,14 +7629,13 @@ with gr.Blocks(title="Análisis de Cultivos") as app:
                             imp3_button, cut3_button, rest3_button, 
                             yinic3, yfin3, err3,
                             tend3_area, tend3, 
-                            STL_desc3, STL_graph3, STL_info3,
+                            STL_desc3, STL_serie_3, STL_info3,
+                            HW_desc3, HW_serie_3, HW_info3,
                             ADF_desc3, leveldiff3, diff_graph3, ADF_info3,
                             level_diff_state_3,
-                            ACF_desc3, ACF_graph3, ACF_info3,
-                            PACF_graph3, PACF_info3,
+                            ACF_desc3, ACF_error3, ACF_serie_3,
                             ARIMA_p_3, ARIMA_q_3,
-                            ARIMA_desc3, ARIMA_info3, ARIMA_graph3, ARIMA_preds3,
-                            ARIMA_graph3_resids, ARIMA_resids3,
+                            ARIMA_desc3, ARIMA_info3, ARIMA_serie_3,
                             Fourier_desc3, Fourier_series_orig, Fourier_series_dif,
                             Fourier_serie_3, Fourier_info3]
             )
@@ -6047,14 +7649,13 @@ with gr.Blocks(title="Análisis de Cultivos") as app:
                             imp1_button, cut1_button, rest1_button, 
                             yinic1, yfin1, err1,
                             tend1_area, tend1, 
-                            STL_desc1, STL_graph1, STL_info1,
+                            STL_desc1, STL_serie_1, STL_info1,
+                            HW_desc1, HW_serie_1, HW_info1,
                             ADF_desc1, leveldiff1, diff_graph1, ADF_info1,
                             level_diff_state_1,
-                            ACF_desc1, ACF_graph1, ACF_info1,
-                            PACF_graph1, PACF_info1,
+                            ACF_desc1, ACF_error1, ACF_serie_1,
                             ARIMA_p_1, ARIMA_q_1,
-                            ARIMA_desc1, ARIMA_info1, ARIMA_graph1, ARIMA_preds1,
-                            ARIMA_graph1_resids, ARIMA_resids1,
+                            ARIMA_desc1, ARIMA_info1, ARIMA_serie_1,
                             Fourier_desc1, Fourier_series_orig, Fourier_series_dif,
                             Fourier_serie_1, Fourier_info1]
             )
@@ -6068,14 +7669,13 @@ with gr.Blocks(title="Análisis de Cultivos") as app:
                             imp2_button, cut2_button, rest2_button, 
                             yinic2, yfin2, err2,
                             tend2_area, tend2, 
-                            STL_desc2, STL_graph2, STL_info2,
+                            STL_desc2, STL_serie_2, STL_info2,
+                            HW_desc2, HW_serie_2, HW_info2,
                             ADF_desc2, leveldiff2, diff_graph2, ADF_info2,
                             level_diff_state_2,
-                            ACF_desc2, ACF_graph2, ACF_info2,
-                            PACF_graph2, PACF_info2,
+                            ACF_desc2, ACF_error2, ACF_serie_2,
                             ARIMA_p_2, ARIMA_q_2,
-                            ARIMA_desc2, ARIMA_info2, ARIMA_graph2, ARIMA_preds2,
-                            ARIMA_graph2_resids, ARIMA_resids2,
+                            ARIMA_desc2, ARIMA_info2, ARIMA_serie_2,
                             Fourier_desc2, Fourier_series_orig, Fourier_series_dif,
                             Fourier_serie_2, Fourier_info2]
             )
@@ -6089,14 +7689,13 @@ with gr.Blocks(title="Análisis de Cultivos") as app:
                             imp3_button, cut3_button, rest3_button, 
                             yinic3, yfin3, err3,
                             tend3_area, tend3, 
-                            STL_desc3, STL_graph3, STL_info3,
+                            STL_desc3, STL_serie_3, STL_info3,
+                            HW_desc3, HW_serie_3, HW_info3,
                             ADF_desc3, leveldiff3, diff_graph3, ADF_info3,
                             level_diff_state_3, 
-                            ACF_desc3, ACF_graph3, ACF_info3,
-                            PACF_graph3, PACF_info3,
+                            ACF_desc3, ACF_error3, ACF_serie_3,
                             ARIMA_p_3, ARIMA_q_3,
-                            ARIMA_desc3, ARIMA_info3, ARIMA_graph3, ARIMA_preds3,
-                            ARIMA_graph3_resids, ARIMA_resids3,
+                            ARIMA_desc3, ARIMA_info3, ARIMA_serie_3,
                             Fourier_desc3, Fourier_series_orig, Fourier_series_dif,
                             Fourier_serie_3, Fourier_info3]
             )
@@ -6110,14 +7709,13 @@ with gr.Blocks(title="Análisis de Cultivos") as app:
                             imp1_button, cut1_button, rest1_button, 
                             yinic1, yfin1, err1,
                             tend1_area, tend1, 
-                            STL_desc1, STL_graph1, STL_info1,
+                            STL_desc1, STL_serie_1, STL_info1,
+                            HW_desc1, HW_serie_1, HW_info1,
                             ADF_desc1, leveldiff1, diff_graph1, ADF_info1,
                             level_diff_state_1,
-                            ACF_desc1, ACF_graph1, ACF_info1,
-                            PACF_graph1, PACF_info1,
+                            ACF_desc1, ACF_error1, ACF_serie_1,
                             ARIMA_p_1, ARIMA_q_1,
-                            ARIMA_desc1, ARIMA_info1, ARIMA_graph1, ARIMA_preds1,
-                            ARIMA_graph1_resids, ARIMA_resids1,
+                            ARIMA_desc1, ARIMA_info1, ARIMA_serie_1,
                             Fourier_desc1, Fourier_series_orig, Fourier_series_dif,
                             Fourier_serie_1, Fourier_info1]
             )
@@ -6131,14 +7729,13 @@ with gr.Blocks(title="Análisis de Cultivos") as app:
                             imp2_button, cut2_button, rest2_button, 
                             yinic2, yfin2, err2,
                             tend2_area, tend2, 
-                            STL_desc2, STL_graph2, STL_info2,
+                            STL_desc2, STL_serie_2, STL_info2,
+                            HW_desc2, HW_serie_2, HW_info2,
                             ADF_desc2, leveldiff2, diff_graph2, ADF_info2,
                             level_diff_state_2,
-                            ACF_desc2, ACF_graph2, ACF_info2,
-                            PACF_graph2, PACF_info2,
+                            ACF_desc2, ACF_error2, ACF_serie_2,
                             ARIMA_p_2, ARIMA_q_2,
-                            ARIMA_desc2, ARIMA_info2, ARIMA_graph2, ARIMA_preds2,
-                            ARIMA_graph2_resids, ARIMA_resids2,
+                            ARIMA_desc2, ARIMA_info2, ARIMA_serie_2,
                             Fourier_desc2, Fourier_series_orig, Fourier_series_dif,
                             Fourier_serie_2, Fourier_info2]
             )
@@ -6152,14 +7749,13 @@ with gr.Blocks(title="Análisis de Cultivos") as app:
                             imp3_button, cut3_button, rest3_button, 
                             yinic3, yfin3, err3,
                             tend3_area, tend3, 
-                            STL_desc3, STL_graph3, STL_info3,
+                            STL_desc3, STL_serie_3, STL_info3,
+                            HW_desc3, HW_serie_3, HW_info3,
                             ADF_desc3, leveldiff3, diff_graph3, ADF_info3,
                             level_diff_state_3, 
-                            ACF_desc3, ACF_graph3, ACF_info3,
-                            PACF_graph3, PACF_info3,
+                            ACF_desc3, ACF_error3, ACF_serie_3,
                             ARIMA_p_3, ARIMA_q_3,
-                            ARIMA_desc3, ARIMA_info3, ARIMA_graph3, ARIMA_preds3,
-                            ARIMA_graph3_resids, ARIMA_resids3,
+                            ARIMA_desc3, ARIMA_info3, ARIMA_serie_3,
                             Fourier_desc3, Fourier_series_orig, Fourier_series_dif,
                             Fourier_serie_3, Fourier_info3]
             )
@@ -6202,10 +7798,9 @@ with gr.Blocks(title="Análisis de Cultivos") as app:
             leveldiff1.change(
                 fn = tab_ST_on_level_change,
                 outputs = [diff_graph1, ADF_info1, level_diff_state_1,
-                            ACF_graph1, ACF_info1, PACF_graph1, PACF_info1,
+                            ACF_error1, ACF_serie_1,
                             ARIMA_p_1, ARIMA_q_1,
-                            ARIMA_info1, ARIMA_graph1, ARIMA_preds1,
-                            ARIMA_graph1_resids, ARIMA_resids1,
+                            ARIMA_info1, ARIMA_serie_1,
                             Fourier_series_orig, Fourier_series_dif,
                             Fourier_serie_1, Fourier_info1]
             )
@@ -6213,10 +7808,9 @@ with gr.Blocks(title="Análisis de Cultivos") as app:
             leveldiff2.change(
                 fn = tab_ST_on_level_change,
                 outputs = [diff_graph2, ADF_info2, level_diff_state_2,
-                            ACF_graph2, ACF_info2, PACF_graph2, PACF_info2,
+                            ACF_error2, ACF_serie_2,
                             ARIMA_p_2, ARIMA_q_2,
-                            ARIMA_info2, ARIMA_graph2, ARIMA_preds2,
-                            ARIMA_graph2_resids, ARIMA_resids2,
+                            ARIMA_info2, ARIMA_serie_2,
                             Fourier_series_orig, Fourier_series_dif,
                             Fourier_serie_2, Fourier_info2]
             )
@@ -6224,10 +7818,9 @@ with gr.Blocks(title="Análisis de Cultivos") as app:
             leveldiff3.change(
                 fn = tab_ST_on_level_change,
                 outputs = [diff_graph3, ADF_info3, level_diff_state_3,
-                            ACF_graph3, ACF_info3, PACF_graph3, PACF_info3,
+                            ACF_error3, ACF_serie_3,
                             ARIMA_p_3, ARIMA_q_3,
-                            ARIMA_info3, ARIMA_graph3, ARIMA_preds3,
-                            ARIMA_graph3_resids, ARIMA_resids3,
+                            ARIMA_info3, ARIMA_serie_3,
                             Fourier_series_orig, Fourier_series_dif,
                             Fourier_serie_3, Fourier_info3]
             )
@@ -6240,14 +7833,14 @@ with gr.Blocks(title="Análisis de Cultivos") as app:
                             yinic1, yfin1, err1,
                             imp1_button, rest1_button,
                             tend1_area, tend1,
-                            STL_desc1, STL_graph1, STL_info1,
+                            STL_desc1, STL_serie_1, STL_info1,
+                            HW_desc1, HW_serie_1, HW_info1,
                             ADF_desc1, leveldiff1, diff_graph1, ADF_info1,
                             level_diff_state_1,
-                            ACF_desc1, ACF_graph1, ACF_info1,
+                            ACF_desc1, ACF_error1, ACF_serie_1,
                             PACF_graph1, PACF_info1,
                             ARIMA_p_1, ARIMA_q_1,
-                            ARIMA_desc1, ARIMA_info1, ARIMA_graph1, ARIMA_preds1,
-                            ARIMA_graph1_resids, ARIMA_resids1,
+                            ARIMA_desc1, ARIMA_info1, ARIMA_serie_1,
                             Fourier_desc1, Fourier_series_orig, Fourier_series_dif,
                             Fourier_serie_1, Fourier_info1]
             )
@@ -6260,14 +7853,13 @@ with gr.Blocks(title="Análisis de Cultivos") as app:
                             yinic2, yfin2, err2,
                             imp2_button, rest2_button,
                             tend2_area, tend2,
-                            STL_desc2, STL_graph2, STL_info2,
+                            STL_desc2, STL_serie_2, STL_info2,
+                            HW_desc2, HW_serie_2, HW_info2,
                             ADF_desc2, leveldiff2, diff_graph2, ADF_info2,
                             level_diff_state_2,
-                            ACF_desc2, ACF_graph2, ACF_info2,
-                            PACF_graph2, PACF_info2,
+                            ACF_desc2, ACF_error2, ACF_serie_2,
                             ARIMA_p_2, ARIMA_q_2,
-                            ARIMA_desc2, ARIMA_info2, ARIMA_graph2, ARIMA_preds2,
-                            ARIMA_graph2_resids, ARIMA_resids2,
+                            ARIMA_desc2, ARIMA_info2, ARIMA_serie_2,
                             Fourier_desc2, Fourier_series_orig, Fourier_series_dif,
                             Fourier_serie_2, Fourier_info2]
             )
@@ -6280,14 +7872,13 @@ with gr.Blocks(title="Análisis de Cultivos") as app:
                             yinic3, yfin3, err3,
                             imp3_button, rest3_button,
                             tend3_area, tend3,
-                            STL_desc3, STL_graph3, STL_info3,
+                            STL_desc3, STL_serie_3, STL_info3,
+                            HW_desc3, HW_serie_3, HW_info3,
                             ADF_desc3, leveldiff3, diff_graph3, ADF_info3,
                             level_diff_state_3, 
-                            ACF_desc3, ACF_graph3, ACF_info3,
-                            PACF_graph3, PACF_info3,
+                            ACF_desc3, ACF_error3, ACF_serie_3,
                             ARIMA_p_3, ARIMA_q_3,
-                            ARIMA_desc3, ARIMA_info3, ARIMA_graph3, ARIMA_preds3,
-                            ARIMA_graph3_resids, ARIMA_resids3,
+                            ARIMA_desc3, ARIMA_info3, ARIMA_serie_3,
                             Fourier_desc3, Fourier_series_orig, Fourier_series_dif,
                             Fourier_serie_3, Fourier_info3]
             )
@@ -6300,14 +7891,13 @@ with gr.Blocks(title="Análisis de Cultivos") as app:
                             inicio1, final1, regs1, regsno1, yinic1, yfin1, err1,
                             imp1_button, cut1_button, rest1_button, 
                             tend1_area, tend1,
-                            STL_desc1, STL_graph1, STL_info1,
+                            STL_desc1, STL_serie_1, STL_info1,
+                            HW_desc1, HW_serie_1, HW_info1,
                             ADF_desc1, leveldiff1, diff_graph1, ADF_info1,
                             level_diff_state_1,
-                            ACF_desc1, ACF_graph1, ACF_info1,
-                            PACF_graph1, PACF_info1,
+                            ACF_desc1, ACF_error1, ACF_serie_1,
                             ARIMA_p_1, ARIMA_q_1,
-                            ARIMA_desc1, ARIMA_info1, ARIMA_graph1, ARIMA_preds1,
-                            ARIMA_graph1_resids, ARIMA_resids1,
+                            ARIMA_desc1, ARIMA_info1, ARIMA_serie_1,
                             Fourier_desc1, Fourier_series_orig, Fourier_series_dif,
                             Fourier_serie_1, Fourier_info1]
             )
@@ -6320,14 +7910,13 @@ with gr.Blocks(title="Análisis de Cultivos") as app:
                             inicio2, final2, regs2, regsno2, yinic2, yfin2, err2,
                             imp2_button, cut2_button, rest2_button,
                             tend2_area, tend2,
-                            STL_desc2, STL_graph2, STL_info2,
+                            STL_desc2, STL_serie_2, STL_info2,
+                            HW_desc2, HW_serie_2, HW_info2,
                             ADF_desc2, leveldiff2, diff_graph2, ADF_info2,
                             level_diff_state_2,
-                            ACF_desc2, ACF_graph2, ACF_info2,
-                            PACF_graph2, PACF_info2,
+                            ACF_desc2, ACF_error2, ACF_serie_2,
                             ARIMA_p_2, ARIMA_q_2,
-                            ARIMA_desc2, ARIMA_info2, ARIMA_graph2, ARIMA_preds2,
-                            ARIMA_graph2_resids, ARIMA_resids2,
+                            ARIMA_desc2, ARIMA_info2, ARIMA_serie_2,
                             Fourier_desc2, Fourier_series_orig, Fourier_series_dif,
                             Fourier_serie_2, Fourier_info2]
             )
@@ -6340,14 +7929,13 @@ with gr.Blocks(title="Análisis de Cultivos") as app:
                             inicio3, final3, regs3, regsno3, yinic3, yfin3, err3,
                             imp3_button, cut3_button, rest3_button,
                             tend3_area, tend3,
-                            STL_desc3, STL_graph3, STL_info3,
+                            STL_desc3, STL_serie_3, STL_info3,
+                            HW_desc3, HW_serie_3, HW_info3,
                             ADF_desc3, leveldiff3, diff_graph3, ADF_info3,
                             level_diff_state_3, 
-                            ACF_desc3, ACF_graph3, ACF_info3,
-                            PACF_graph3, PACF_info3,
+                            ACF_desc3, ACF_error3, ACF_serie_3,
                             ARIMA_p_3, ARIMA_q_3,
-                            ARIMA_desc3, ARIMA_info3, ARIMA_graph3, ARIMA_preds3,
-                            ARIMA_graph3_resids, ARIMA_resids3,
+                            ARIMA_desc3, ARIMA_info3, ARIMA_serie_3,
                             Fourier_desc3, Fourier_series_orig, Fourier_series_dif,
                             Fourier_serie_3, Fourier_info3]
             )
@@ -6360,14 +7948,13 @@ with gr.Blocks(title="Análisis de Cultivos") as app:
                             yinic1, yfin1, err1,
                             cut1_button, rest1_button,
                             tend1_area, tend1,
-                            STL_desc1, STL_graph1, STL_info1,
+                            STL_desc1, STL_serie_1, STL_info1,
+                            HW_desc1, HW_serie_1, HW_info1,
                             ADF_desc1, leveldiff1, diff_graph1, ADF_info1,
                             level_diff_state_1,
-                            ACF_desc1, ACF_graph1, ACF_info1,
-                            PACF_graph1, PACF_info1,
+                            ACF_desc1, ACF_error1, ACF_serie_1,
                             ARIMA_p_1, ARIMA_q_1,
-                            ARIMA_desc1, ARIMA_info1, ARIMA_graph1, ARIMA_preds1,
-                            ARIMA_graph1_resids, ARIMA_resids1,
+                            ARIMA_desc1, ARIMA_info1, ARIMA_serie_1,
                             Fourier_desc1, Fourier_series_orig, Fourier_series_dif,
                             Fourier_serie_1, Fourier_info1]
             )
@@ -6380,14 +7967,13 @@ with gr.Blocks(title="Análisis de Cultivos") as app:
                             yinic2, yfin2, err2,
                             cut2_button, rest2_button,
                             tend2_area, tend2,
-                            STL_desc2, STL_graph2, STL_info2,
+                            STL_desc2, STL_serie_2, STL_info2,
+                            HW_desc2, HW_serie_2, HW_info2,
                             ADF_desc2, leveldiff2, diff_graph2, ADF_info2,
                             level_diff_state_2,
-                            ACF_desc2, ACF_graph2, ACF_info2,
-                            PACF_graph2, PACF_info2,
+                            ACF_desc2, ACF_error2, ACF_serie_2,
                             ARIMA_p_2, ARIMA_q_2,
-                            ARIMA_desc2, ARIMA_info2, ARIMA_graph2, ARIMA_preds2,
-                            ARIMA_graph2_resids, ARIMA_resids2,
+                            ARIMA_desc2, ARIMA_info2, ARIMA_serie_2,
                             Fourier_desc2, Fourier_series_orig, Fourier_series_dif,
                             Fourier_serie_2, Fourier_info2]
             )
@@ -6400,23 +7986,42 @@ with gr.Blocks(title="Análisis de Cultivos") as app:
                             yinic3, yfin3, err3,
                             cut3_button, rest3_button,
                             tend3_area, tend3,
-                            STL_desc3, STL_graph3, STL_info3,
+                            STL_desc3, STL_serie_3, STL_info3,
+                            HW_desc3, HW_serie_3, HW_info3,
                             ADF_desc3, leveldiff3, diff_graph3, ADF_info3,
                             level_diff_state_3, 
-                            ACF_desc3, ACF_graph3, ACF_info3,
-                            PACF_graph3, PACF_info3,
+                            ACF_desc3, ACF_error3, ACF_serie_3,
                             ARIMA_p_3, ARIMA_q_3,
-                            ARIMA_desc3, ARIMA_info3, ARIMA_graph3, ARIMA_preds3,
-                            ARIMA_graph3_resids, ARIMA_resids3,
+                            ARIMA_desc3, ARIMA_info3, ARIMA_serie_3,
                             Fourier_desc3, Fourier_series_orig, Fourier_series_dif,
                             Fourier_serie_3, Fourier_info3]
             )
 
             STL_button.click(
-                fn = tab_ST_stl_decomp_all,
+                fn = tab_ST_STL_decomp_all,
                 inputs = [dataset_filter_state_1, dataset_filter_state_2, dataset_filter_state_3,
                             var1, var2, var3],
-                outputs = [STL_graph1, STL_info1, STL_graph2, STL_info2, STL_graph3, STL_info3]
+                outputs = [STL_serie_1, STL_graph1a, STL_graph1b,
+                            STL_graph1c, STL_graph1d, STL_graph1e,
+                            STL_info1,
+                            STL_serie_2, STL_graph2a, STL_graph2b,
+                            STL_graph2c, STL_graph2d, STL_graph2e,
+                            STL_info2,
+                            STL_serie_3, STL_graph3a, STL_graph3b,
+                            STL_graph3c, STL_graph3d, STL_graph3e,
+                            STL_info3]
+            )
+
+            HW_button.click(
+                fn = tab_ST_HW_decomp_all,
+                inputs = [dataset_filter_state_1, dataset_filter_state_2, dataset_filter_state_3,
+                            var1, var2, var3],
+                outputs = [HW_serie_1, HW_graph1a, HW_graph1b,
+                            HW_graph1c, HW_graph1d, HW_info1,
+                            HW_serie_2, HW_graph2a, HW_graph2b,
+                            HW_graph2c, HW_graph2d, HW_info2,
+                            HW_serie_3, HW_graph3a, HW_graph3b,
+                            HW_graph3c, HW_graph3d, HW_info3]
             )
 
             ADF_button.click(
@@ -6433,9 +8038,9 @@ with gr.Blocks(title="Análisis de Cultivos") as app:
                 fn = tab_ST_ACF_PACF_all,
                 inputs = [dataset_diff_state_1, dataset_diff_state_2, dataset_diff_state_3,
                             var1, var2, var3, level_diff_state_1, level_diff_state_2, level_diff_state_3],
-                outputs = [ACF_graph1, ACF_info1, ARIMA_q_1,
-                            ACF_graph2, ACF_info2, ARIMA_q_2,
-                            ACF_graph3, ACF_info3, ARIMA_q_3,
+                outputs = [ACF_error1, ACF_serie_1, ACF_graph1, ACF_info1, ARIMA_q_1,
+                            ACF_error2, ACF_serie_2, ACF_graph2, ACF_info2, ARIMA_q_2,
+                            ACF_error3, ACF_serie_3, ACF_graph3, ACF_info3, ARIMA_q_3,
                             PACF_graph1, PACF_info1, ARIMA_p_1,
                             PACF_graph2, PACF_info2, ARIMA_p_2,
                             PACF_graph3, PACF_info3, ARIMA_p_3]
@@ -6449,14 +8054,14 @@ with gr.Blocks(title="Análisis de Cultivos") as app:
                             level_diff_state_1, level_diff_state_2, level_diff_state_3,
                             ARIMA_q_1, ARIMA_q_2, ARIMA_q_3],
                 outputs = [dataset_ARIMA_state_1,
-                            ARIMA_info1, ARIMA_graph1, ARIMA_preds1,
-                            ARIMA_graph1_resids, ARIMA_resids1,
+                            ARIMA_info1, ARIMA_serie_1, ARIMA_graph1, ARIMA_preds1,
+                            ARIMA_graph1_resids, ARIMA_resids1, ARIMA_comparat1,
                             dataset_ARIMA_state_2,
-                            ARIMA_info2, ARIMA_graph2, ARIMA_preds2,
-                            ARIMA_graph2_resids, ARIMA_resids2,
+                            ARIMA_info2, ARIMA_serie_2, ARIMA_graph2, ARIMA_preds2,
+                            ARIMA_graph2_resids, ARIMA_resids2, ARIMA_comparat2,
                             dataset_ARIMA_state_3,
-                            ARIMA_info3, ARIMA_graph3, ARIMA_preds3,
-                            ARIMA_graph3_resids, ARIMA_resids3]
+                            ARIMA_info3, ARIMA_serie_3, ARIMA_graph3, ARIMA_preds3,
+                            ARIMA_graph3_resids, ARIMA_resids3, ARIMA_comparat3]
             )
 
             Fourier_button.click(
@@ -6526,6 +8131,196 @@ with gr.Blocks(title="Análisis de Cultivos") as app:
             Fourier_btn_cerrar5.click(fn = lambda: gr.update(visible=False), 
                                         inputs = None, outputs = Fourier_modal_5)
 
+            STL_btn_graph1b.click(fn = tab_ST_STL_graph,
+                                        inputs = [dataset_filter_state_1, var1, tendencia], 
+                                        outputs = [STL_modal_graph, STL_graph])
+            STL_btn_help1b.click(fn = lambda: gr.update(visible=True), 
+                                        inputs = None, outputs = STL_modal_1)
+            STL_btn_graph1c.click(fn = tab_ST_STL_graph,
+                                        inputs = [dataset_filter_state_1, var1, estacionalidad], 
+                                        outputs = [STL_modal_graph, STL_graph])
+            STL_btn_help1c.click(fn = lambda: gr.update(visible=True),
+                                        inputs = None, outputs = STL_modal_2)
+            STL_btn_graph1d.click(fn = tab_ST_STL_graph,
+                                        inputs = [dataset_filter_state_1, var1, residuos], 
+                                        outputs = [STL_modal_graph, STL_graph])
+            STL_btn_help1d.click(fn = lambda: gr.update(visible=True), 
+                                        inputs = None, outputs = STL_modal_3)
+            STL_btn_graph1e.click(fn = tab_ST_STL_graph,
+                                        inputs = [dataset_filter_state_1, var1, periodograma], 
+                                        outputs = [STL_modal_graph, STL_graph])
+            STL_btn_help1e.click(fn = lambda: gr.update(visible=True), 
+                                        inputs = None, outputs = STL_modal_4)
+            
+            STL_btn_graph2b.click(fn = tab_ST_STL_graph,
+                                        inputs = [dataset_filter_state_2, var2, tendencia], 
+                                        outputs = [STL_modal_graph, STL_graph])
+            STL_btn_help2b.click(fn = lambda: gr.update(visible=True), 
+                                        inputs = None, outputs = STL_modal_1)
+            STL_btn_graph2c.click(fn = tab_ST_STL_graph,
+                                        inputs = [dataset_filter_state_2, var2, estacionalidad], 
+                                        outputs = [STL_modal_graph, STL_graph])
+            STL_btn_help2c.click(fn = lambda: gr.update(visible=True),
+                                        inputs = None, outputs = STL_modal_2)
+            STL_btn_graph2d.click(fn = tab_ST_STL_graph,
+                                        inputs = [dataset_filter_state_2, var2, residuos], 
+                                        outputs = [STL_modal_graph, STL_graph])
+            STL_btn_help2d.click(fn = lambda: gr.update(visible=True), 
+                                        inputs = None, outputs = STL_modal_3)
+            STL_btn_graph2e.click(fn = tab_ST_STL_graph,
+                                        inputs = [dataset_filter_state_2, var2, periodograma], 
+                                        outputs = [STL_modal_graph, STL_graph])
+            STL_btn_help2e.click(fn = lambda: gr.update(visible=True), 
+                                        inputs = None, outputs = STL_modal_4)
+            
+            STL_btn_graph3b.click(fn = tab_ST_STL_graph,
+                                        inputs = [dataset_filter_state_3, var3, tendencia], 
+                                        outputs = [STL_modal_graph, STL_graph])
+            STL_btn_help3b.click(fn = lambda: gr.update(visible=True), 
+                                        inputs = None, outputs = STL_modal_1)
+            STL_btn_graph3c.click(fn = tab_ST_STL_graph,
+                                        inputs = [dataset_filter_state_3, var3, estacionalidad], 
+                                        outputs = [STL_modal_graph, STL_graph])
+            STL_btn_help3c.click(fn = lambda: gr.update(visible=True),
+                                        inputs = None, outputs = STL_modal_2)
+            STL_btn_graph3d.click(fn = tab_ST_STL_graph,
+                                        inputs = [dataset_filter_state_3, var3, residuos], 
+                                        outputs = [STL_modal_graph, STL_graph])
+            STL_btn_help3d.click(fn = lambda: gr.update(visible=True), 
+                                        inputs = None, outputs = STL_modal_3)
+            STL_btn_graph3e.click(fn = tab_ST_STL_graph,
+                                        inputs = [dataset_filter_state_3, var3, periodograma], 
+                                        outputs = [STL_modal_graph, STL_graph])
+            STL_btn_help3e.click(fn = lambda: gr.update(visible=True), 
+                                        inputs = None, outputs = STL_modal_4)
+
+            STL_btn_cerrar1.click(fn = lambda: gr.update(visible=False), 
+                                        inputs = None, outputs = STL_modal_1)
+            STL_btn_cerrar2.click(fn = lambda: gr.update(visible=False),
+                                        inputs = None, outputs = STL_modal_2)
+            STL_btn_cerrar3.click(fn = lambda: gr.update(visible=False), 
+                                        inputs = None, outputs = STL_modal_3)
+            STL_btn_cerrar4.click(fn = lambda: gr.update(visible=False), 
+                                        inputs = None, outputs = STL_modal_4)
+            
+            STL_btn_cerrar_graph.click(fn = lambda: gr.update(visible=False), 
+                                        inputs = None, outputs = STL_modal_graph)
+
+            HW_btn_graph1b.click(fn = tab_ST_HW_graph,
+                                        inputs = [dataset_filter_state_1, var1, tendencia], 
+                                        outputs = [HW_modal_graph, HW_graph])
+            HW_btn_help1b.click(fn = lambda: gr.update(visible=True), 
+                                        inputs = None, outputs = HW_modal_1)
+            HW_btn_graph1c.click(fn = tab_ST_HW_graph,
+                                        inputs = [dataset_filter_state_1, var1, estacionalidad], 
+                                        outputs = [HW_modal_graph, HW_graph])
+            HW_btn_help1c.click(fn = lambda: gr.update(visible=True),
+                                        inputs = None, outputs = HW_modal_2)
+            HW_btn_graph1d.click(fn = tab_ST_HW_graph,
+                                        inputs = [dataset_filter_state_1, var1, residuos], 
+                                        outputs = [HW_modal_graph, HW_graph])
+            HW_btn_help1d.click(fn = lambda: gr.update(visible=True), 
+                                        inputs = None, outputs = HW_modal_3)
+            
+            HW_btn_graph2b.click(fn = tab_ST_HW_graph,
+                                        inputs = [dataset_filter_state_2, var2, tendencia], 
+                                        outputs = [HW_modal_graph, HW_graph])
+            HW_btn_help2b.click(fn = lambda: gr.update(visible=True), 
+                                        inputs = None, outputs = HW_modal_1)
+            HW_btn_graph2c.click(fn = tab_ST_HW_graph,
+                                        inputs = [dataset_filter_state_2, var2, estacionalidad], 
+                                        outputs = [HW_modal_graph, HW_graph])
+            HW_btn_help2c.click(fn = lambda: gr.update(visible=True),
+                                        inputs = None, outputs = HW_modal_2)
+            HW_btn_graph2d.click(fn = tab_ST_HW_graph,
+                                        inputs = [dataset_filter_state_2, var2, residuos], 
+                                        outputs = [HW_modal_graph, HW_graph])
+            HW_btn_help2d.click(fn = lambda: gr.update(visible=True), 
+                                        inputs = None, outputs = HW_modal_3)
+            
+            HW_btn_graph3b.click(fn = tab_ST_HW_graph,
+                                        inputs = [dataset_filter_state_3, var3, tendencia], 
+                                        outputs = [HW_modal_graph, HW_graph])
+            HW_btn_help3b.click(fn = lambda: gr.update(visible=True), 
+                                        inputs = None, outputs = HW_modal_1)
+            HW_btn_graph3c.click(fn = tab_ST_HW_graph,
+                                        inputs = [dataset_filter_state_3, var3, estacionalidad], 
+                                        outputs = [HW_modal_graph, HW_graph])
+            HW_btn_help3c.click(fn = lambda: gr.update(visible=True),
+                                        inputs = None, outputs = HW_modal_2)
+            HW_btn_graph3d.click(fn = tab_ST_HW_graph,
+                                        inputs = [dataset_filter_state_3, var3, residuos], 
+                                        outputs = [HW_modal_graph, HW_graph])
+            HW_btn_help3d.click(fn = lambda: gr.update(visible=True), 
+                                        inputs = None, outputs = HW_modal_3)
+
+            HW_btn_cerrar1.click(fn = lambda: gr.update(visible=False), 
+                                        inputs = None, outputs = HW_modal_1)
+            HW_btn_cerrar2.click(fn = lambda: gr.update(visible=False),
+                                        inputs = None, outputs = HW_modal_2)
+            HW_btn_cerrar3.click(fn = lambda: gr.update(visible=False), 
+                                        inputs = None, outputs = HW_modal_3)
+            
+            HW_btn_cerrar_graph.click(fn = lambda: gr.update(visible=False), 
+                                        inputs = None, outputs = HW_modal_graph)
+            
+            ACF_btn_help1.click(fn = lambda: gr.update(visible=True),
+                                        inputs = None, outputs = ACF_modal_help)
+            ACF_btn_help2.click(fn = lambda: gr.update(visible=True),
+                                        inputs = None, outputs = ACF_modal_help)
+            ACF_btn_help3.click(fn = lambda: gr.update(visible=True),
+                                        inputs = None, outputs = ACF_modal_help)
+            ACF_btn_cerrar_help.click(fn = lambda: gr.update(visible=False), 
+                                        inputs = None, outputs = ACF_modal_help)
+
+            PACF_btn_help1.click(fn = lambda: gr.update(visible=True),
+                                        inputs = None, outputs = PACF_modal_help)
+            PACF_btn_help2.click(fn = lambda: gr.update(visible=True),
+                                        inputs = None, outputs = PACF_modal_help)
+            PACF_btn_help3.click(fn = lambda: gr.update(visible=True),
+                                        inputs = None, outputs = PACF_modal_help)
+            PACF_btn_cerrar_help.click(fn = lambda: gr.update(visible=False), 
+                                        inputs = None, outputs = PACF_modal_help)
+
+
+            ARIMA_btn_graph1.click(fn = tab_ST_ARIMA_graf,
+                                        inputs = [dataset_filter_state_1, var1, 
+                                                  ARIMA_p_1, level_diff_state_1, ARIMA_q_1],
+                                        outputs = [ARIMA_modal_graph, ARIMA_graph])
+            ARIMA_btn_graph2.click(fn = tab_ST_ARIMA_graf,
+                                        inputs = [dataset_filter_state_2, var2, 
+                                                  ARIMA_p_2, level_diff_state_2, ARIMA_q_2],
+                                        outputs = [ARIMA_modal_graph, ARIMA_graph])
+            ARIMA_btn_graph3.click(fn = tab_ST_ARIMA_graf,
+                                        inputs = [dataset_filter_state_3, var3, 
+                                                  ARIMA_p_3, level_diff_state_3, ARIMA_q_3],
+                                        outputs = [ARIMA_modal_graph, ARIMA_graph])
+            ARIMA_btn_cerrar_graph.click(fn = lambda: gr.update(visible=False), 
+                                        inputs = None, outputs = ARIMA_modal_graph)
+            
+            ARIMA_btn_help1.click(fn = lambda: gr.update(visible=True), 
+                                        inputs = None, outputs = ARIMA_modal_help)
+            ARIMA_btn_help2.click(fn = lambda: gr.update(visible=True), 
+                                        inputs = None, outputs = ARIMA_modal_help)
+            ARIMA_btn_help3.click(fn = lambda: gr.update(visible=True), 
+                                        inputs = None, outputs = ARIMA_modal_help)
+            ARIMA_btn_cerrar_help.click(fn = lambda: gr.update(visible=False),
+                                        inputs = None, outputs = ARIMA_modal_help)
+
+            ARIMA_btn_resids1.click(fn = lambda: gr.update(visible=True), 
+                                        inputs = None, outputs = ARIMA_modal_resids)
+            ARIMA_btn_resids2.click(fn = lambda: gr.update(visible=True), 
+                                        inputs = None, outputs = ARIMA_modal_resids)
+            ARIMA_btn_resids3.click(fn = lambda: gr.update(visible=True), 
+                                        inputs = None, outputs = ARIMA_modal_resids)
+            ARIMA_btn_cerrar_resids.click(fn = lambda: gr.update(visible=False),
+                                        inputs = None, outputs = ARIMA_modal_resids)
+
+            
+            # endregion EVENTOS DE COMPONENTES DE LA PESTAÑA SERIES TEMPORALES
+
+   
+        ###### PESTAÑA BOSQUES ALEATORIOS
         #YAE_GRF: ###############################
         ###### PESTAÑA BOSQUES ALEATORIOS
         with gr.Tab("Bosques Aleatorios"):
@@ -6603,6 +8398,7 @@ with gr.Blocks(title="Análisis de Cultivos") as app:
                             )
          # fin BOSQUES ALEATORIOS
         #YAE_GRF: ###############################
+                
         
         ###### PESTAÑA PROBABILIDAD BAYESIANA
         with gr.Tab("Probabilidad Bayesiana"):
@@ -6611,10 +8407,70 @@ with gr.Blocks(title="Análisis de Cultivos") as app:
         
         
         ###### PESTAÑA REDES NEURONALES
-        with gr.Tab("Redes Neuronales"):
+        # comienzo prg MAF
+        with gr.Tab("Redes Neuronales") as tab_NN:
+            # comienzo prg MAF
             with gr.Row(elem_classes="title-tab"):
                 gr.HTML("&nbsp;&nbsp;ANÁLISIS DE INDICADORES EDUCATIVOS MEDIANTE REDES NEURONALES", elem_classes="title-text")
-        
+            
+            # --- Timeline / Year Range ---
+            with gr.Row():
+                nn_timeline = gr.HTML("<div style='color: gray; padding: 10px;'>Cargando información del periodo...</div>")
+
+            with gr.Row():
+                with gr.Column(scale=1):
+                    with gr.Row():
+                        nn_cultivo = gr.Dropdown(label="CULTIVO", choices=list(FILE_MAP.keys()), value="ARROZ")
+                    with gr.Row():
+                        nn_provincia = gr.Dropdown(label="PROVINCIA", choices=[])
+                    with gr.Row():
+                        nn_departamento = gr.Dropdown(label="DEPARTAMENTO", choices=[])
+                    with gr.Row():
+                        nn_indicador = gr.Dropdown(label="INDICADOR", choices=[])
+                    with gr.Row():
+                        nn_hidden = gr.Textbox(label="Capas Ocultas (ej: 100,50)", value="100")
+                    with gr.Row():
+                        nn_iter = gr.Number(label="Iteraciones Máx.", value=1000)
+                    with gr.Row():
+                        nn_btn_train = gr.Button("Entrenar y Predecir", variant="primary")
+                
+                with gr.Column(scale=2):
+                    nn_stats = gr.HTML("<b>Resultados del Entrenamiento</b>")
+                    nn_plot = gr.Plot()
+                    nn_table = gr.Dataframe(label="Datos Comparativos")
+
+            # Eventos
+            tab_NN.select(
+                fn=tab_NN_on_crop_change,
+                inputs=[nn_cultivo],
+                outputs=[nn_provincia, nn_departamento, nn_indicador, nn_timeline]
+            )
+            
+            nn_cultivo.change(
+                fn=tab_NN_on_crop_change,
+                inputs=[nn_cultivo],
+                outputs=[nn_provincia, nn_departamento, nn_indicador, nn_timeline]
+            )
+
+            nn_provincia.change(
+                fn=tab_NN_on_prov_change,
+                inputs=[nn_cultivo, nn_provincia],
+                outputs=[nn_departamento, nn_timeline]
+            )
+
+            nn_departamento.change(
+                fn=tab_NN_on_dept_change,
+                inputs=[nn_cultivo, nn_provincia, nn_departamento],
+                outputs=[nn_timeline]
+            )
+
+
+            nn_btn_train.click(
+                fn=tab_NN_train_and_predict,
+                inputs=[nn_cultivo, nn_provincia, nn_departamento, nn_indicador, nn_hidden, nn_iter],
+                outputs=[nn_stats, nn_plot, nn_table]
+            )
+            # fin prg MAF
         
         ###### PESTAÑA KNN & SVM
         with gr.Tab("KNN & SVM"):
