@@ -8429,9 +8429,8 @@ with gr.Blocks(title="Análisis de Cultivos") as app:
             with gr.Row(elem_classes="title-tab"):
                 gr.HTML("&nbsp;&nbsp;ANÁLISIS DE INDICADORES EDUCATIVOS MEDIANTE REDES NEURONALES", elem_classes="title-text")
             
-            # --- Timeline / Year Range ---
             with gr.Row():
-                nn_timeline = gr.HTML("<div style='color: gray; padding: 10px;'>Cargando información del periodo...</div>")
+                 nn_timeline = gr.HTML("<div style='color: gray; padding: 10px;'>Cargando información del periodo...</div>")
 
             with gr.Row():
                 with gr.Column(scale=1):
